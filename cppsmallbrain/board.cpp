@@ -122,6 +122,9 @@ public:
 
     const U64 rank_2_mask = 18446744069431296255ULL;
     const U64 rank_7_mask = 18374966859431673855ULL;
+    const U64 rank_8_mask = 18374686479671623680ULL;
+    const U64 rank_1_mask = 255ULL;
+
     enum { wk = 1, wq = 2, bk = 4, bq = 8 };
     
 
@@ -399,16 +402,16 @@ public:
 
     }
     int square_file(int sq) {
+        //Gets the file index of the square where 0 is the a-file
         return sq & 7;
     }
     int square_rank(int sq) {
+        //Gets the rank index of the square where 0 is the first rank."""
         return sq >> 3;
     }
     int square_distance(int a, int b) {
         return std::max(abs(square_file(a) - square_file(b)), abs(square_rank(a) - square_rank(b)));
     }
-
-
 
     int distance_to_edge_right(int sq) {
         return (7 - square_file(sq));
@@ -645,14 +648,14 @@ public:
         U64 king_move = 0ULL;
         init_rays();
         king_move |= (1ULL << sq);
-        U64 king_up = king_move << 8;
-        U64 king_down = king_move >> 8;
-        U64 king_right = king_move << 1;
-        U64 king_left = king_move >> 1;
-        U64 king_up_right = king_move << 9;
-        U64 king_up_left = king_move << 7;
-        U64 king_down_right = king_move >> 7;
-        U64 king_down_left = king_move >> 9;
+        U64 king_up = king_move << 8 & ~rank_1_mask;
+        U64 king_down = king_move >> 8 & ~rank_8_mask;
+        U64 king_right = king_move << 1 & not_a_file;
+        U64 king_left = king_move >> 1 & not_h_file;
+        U64 king_up_right = king_move << 9 & not_a_file;
+        U64 king_up_left = king_move << 7 & not_h_file;
+        U64 king_down_right = king_move >> 7 & not_a_file;
+        U64 king_down_left = (king_move >> 9) & not_h_file;
         U64 king_valid_move;
         U64 blockers = both;
         if (piece_color(sq)) {
@@ -853,7 +856,7 @@ public:
 
             if (_rays[SOUTH_WEST][sq] & enemy) {
                 index = _bitscanreverse(enemy & _rays[SOUTH_WEST][sq]);
-                if (piece_at(index) == BPAWN or piece_at(index) == BKING) {
+                if (piece_at(index) == BKING) {
                     if (square_distance(sq, index) == 1) {
                         return true;
                     }
@@ -873,7 +876,7 @@ public:
 
             if (_rays[SOUTH_EAST][sq] & enemy) {
                 index = _bitscanreverse(enemy & _rays[SOUTH_EAST][sq]);
-                if (piece_at(index) == BPAWN or piece_at(index) == BKING) {
+                if (piece_at(index) == BKING) {
                     if (square_distance(sq, index) == 1) {
 
                         return true;
@@ -963,7 +966,7 @@ public:
 
             if (_rays[NORTH_WEST][sq] & enemy) {
                 index = _bitscanforward(enemy & _rays[NORTH_WEST][sq]);
-                if (piece_at(index) == WPAWN or piece_at(index) == WKING) {
+                if (piece_at(index) == WKING) {
                     if (square_distance(sq, index) == 1) {
                         return true;
                     }
@@ -983,7 +986,7 @@ public:
 
             if (_rays[NORTH_EAST][sq] & enemy) {
                 index = _bitscanforward(enemy & _rays[NORTH_EAST][sq]);
-                if (piece_at(index) == WPAWN or piece_at(index) == WKING) {
+                if (piece_at(index) == WKING) {
                     if (square_distance(sq, index) == 1) {
                         return true;
                     }
@@ -1060,6 +1063,33 @@ public:
                 if (std::bitset<64>(occupancies[test]).test(to_square) == 1) {
                     for (int i = 0; i < 6; i++) {
                         if (std::bitset<64>(bitboards[i + (test * 6)]).test(to_square) == 1) {
+                            //Capturing rook loses others side castle rights
+                            if (piece_at(to_square) == WROOK) {
+                                if (to_square == 7) {
+                                    if (castling_rights & wk) {
+                                        castling_rights ^= wk;
+                                    }
+                                }
+                                if (to_square == 0) {
+                                    if (castling_rights & wq) {
+                                        castling_rights ^= wq;
+                                    }
+                                }
+                            }
+                            if (piece_at(to_square) == BROOK) {
+                                if (to_square == 63) {
+                                    if (castling_rights & bk) {
+                                        castling_rights ^= bk;
+                                    }
+                                    
+                                }
+                                if (to_square == 56) {
+                                    if (castling_rights & bq) {
+                                        castling_rights ^= bq;
+                                    }
+                                }
+                            }
+                            
                             bitboards[i + (test * 6)] &= ~(1ULL << to_square);
                             break;
                         }
@@ -1069,37 +1099,45 @@ public:
                 bitboards[piece] |= (1ULL << to_square);
                 
                 // King move loses castle rights
-                if ((castling_rights & wk or castling_rights & wq) and piece == WKING ) {
+                if (piece == WKING ) {
                     if (to_square != 6 and to_square != 2) {
-                        castling_rights ^= wk;
-                        castling_rights ^= wq;
-                    }
-
+                        if (castling_rights & wq) {
+                            castling_rights ^= wq;
+                        }
+                        if (castling_rights & wk) {
+                            castling_rights ^= wk;
+                        } 
+                    } 
                 }
-                if ((castling_rights & bk or castling_rights & bq) and piece == BKING) {
-                    if (to_square != 62 and to_square != 57) {
-                        castling_rights ^= bk;
-                        castling_rights ^= bq;
+                if (piece == BKING) {
+                    if (to_square != 62 and to_square != 58) {
+                        if (castling_rights & bq) {
+                            castling_rights ^= bq;
+                        }
+                        if (castling_rights & bk) {
+                            castling_rights ^= bk;
+                        }
                     }
-
+                    
                 }
                 // Rook move loses castle rights
                 if (piece == WROOK) {
-                    if (from_square == 7 and to_square != 5 and castling_rights & wk) {
+                    if (from_square == 7 and castling_rights & wk) {
                         castling_rights ^= wk;
                     }
-                    if (from_square == 0 and to_square != 3 and castling_rights & wq) {
+                    if (from_square == 0 and castling_rights & wq) {
                         castling_rights ^= wq;
                     }
                 }
                 if (piece == BROOK) {
-                    if (from_square == 63 and to_square != 61 and castling_rights & bk) {
+                    if (from_square == 63 and castling_rights & bk) {
                         castling_rights ^= bk;
                     }
-                    if (from_square == 56 and to_square != 59 and castling_rights & bq) {
+                    if (from_square == 56 and castling_rights & bq) {
                         castling_rights ^= bq;
                     }
                 }
+
                 //Castling
                 if (piece == WKING and square_distance(from_square, to_square) == 2) {
                     if (to_square == 6) {
@@ -1131,14 +1169,17 @@ public:
                     }
                 }
                 // Remove enemy piece if en passant capture
-                if (piece == WPAWN and (abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9) and en_passant_square != no_sq) {
-                    en_passant_square = no_sq;
-                    bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
+                if ((abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9) and en_passant_square != no_sq) {
+                    if (piece == WPAWN and square_rank(to_square) == 5) { //
+                        en_passant_square = no_sq;
+                        bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
+                    }
+                    if (piece == BPAWN and square_rank(to_square) == 2) {
+                        en_passant_square = no_sq;
+                        bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
+                    }
                 }
-                if (piece == BPAWN and (abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9) and en_passant_square != no_sq) {
-                    en_passant_square = no_sq;
-                    bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
-                }
+
                 // remove en passant if it wasnt played immediately
                 if (en_passant_square != no_sq) {
                     en_passant_square = no_sq;
@@ -1154,7 +1195,7 @@ public:
                 if (promotion_piece > 0) {
                     bitboards[piece] &= ~(1ULL << to_square);
                     promotion_piece = promotion_piece + (side_to_move * 6);
-                    std::cout << promotion_piece << std::endl;
+                    
                     bitboards[promotion_piece] |= (1ULL << to_square);
                 }
                 side_to_move ^= 1;
@@ -1365,7 +1406,7 @@ void print_movelist(MoveList ml) {
     for (int i = 0; i < ml.movelist.size(); i++) {
         for (int j = 0; j < ml.movelist[i].size(); j++) {
             
-            std::cout << square_to_coordinates[ml.movelist[i][j]] << ' ' << std::endl; //ml.movelist[i][j]
+            std::cout << square_to_coordinates[ml.movelist[i][j]] << ' '; //ml.movelist[i][j]
         }
         index++;
         std::cout << std::endl;
@@ -1475,7 +1516,7 @@ int main()
     //std::string fen = "k4r2/8/8/8/8/8/8/4K2R w K - 0 1";
     //std::string fen = "8/8/2pp4/8/3RB3/3P2k1/8/4B3 b - - 0 1";
     //std::string fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
-    std::string fen = "r3k2N/p1ppq1b1/bn2pnp1/3P4/1p2P3/2N2Q2/PPPBBPpP/R3K2R b KQq - 0 2";
+    std::string fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10";
     //int index;
     //index = _bitscanforward(0);
     //std::cout << "index: " << index;
@@ -1494,7 +1535,7 @@ int main()
     // 
     
     auto begin = std::chrono::high_resolution_clock::now();
-    int search = 2;
+    int search = 4;
     U64 x = perft(board, search, search);
     auto end = std::chrono::high_resolution_clock::now();
     auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
@@ -1506,6 +1547,7 @@ int main()
     //board.print_bitboard(board.occupancies[0]);
     //board.print_bitboard(board.occupancies[1]);
     //board.print_bitboard(board.both);
+    //std::cout << board.both;
     // 
     //
 
@@ -1518,7 +1560,7 @@ int main()
     //board.print_bitboard(board.Valid_Moves_Rook(0));
     //board.print_bitboard(board.Valid_Moves_Queen(3));
     //board.print_bitboard(board.Valid_Moves_King(4));
-    //board.print_bitboard(board.Valid_Moves_King(4));
+    //board.print_bitboard(board.Valid_Moves_King(31));
     //std::cout << board.in_check(35, 1);
 
     //board.print_bitboard();
