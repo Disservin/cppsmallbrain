@@ -365,8 +365,7 @@ inline U64 board::Valid_Moves_Pawn(int sq) {
         pawn_move_union_valid_left_right = (pawn_move_attack_union & occupancies[1]);
         // en passant
         if (en_passant_square != no_sq) {
-            pawn_move_union_valid_left_right = (pawn_move_union_valid_left_right | ((1ULL << en_passant_square) & (pawn_move_attack_union))) & ~occupancies[0];
-                
+            pawn_move_union_valid_left_right = (pawn_move_union_valid_left_right | ((1ULL << en_passant_square) & (pawn_move_attack_union))) & ~occupancies[0];    
         }
         // North pawn push
         pawn_move_forward = pawn_move << 8 & ~both;
@@ -953,169 +952,168 @@ BoardState board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wr
 }
 
 void board::make_move(Move move) {
-    
+
     int from_square = move.from_square;
     int to_square = move.to_square;
     int promotion_piece = move.promotion;
     int piece = move.piece;
     piece = piece + (side_to_move * 6);
 
-     // piece needs to be set at its bitboard
-    if (_test_bit(bitboards[piece], from_square)) {
-        if (not _test_bit(bitboards[piece],to_square)){
-            BoardState boardstate = encode_board_state(bitboards[0], bitboards[1], bitboards[2], bitboards[3], bitboards[4], bitboards[5], bitboards[6], bitboards[7], bitboards[8], bitboards[9], bitboards[10], bitboards[11], en_passant_square | 0ULL, castling_rights | 0ULL);
-            move_stack[move_stack_index] = boardstate;
-            move_stack_index++;
-            int test = side_to_move ^ 1;
-            //Capture
-            if (_test_bit(occupancies[test], to_square))
-                for (int i = 0; i < 6; i++) {
-                    if (_test_bit(bitboards[i + (test * 6)], to_square)){
-                        //Capturing rook loses others side castle rights
-                        int captured_piece = i + (test * 6);
-                        if (captured_piece == WROOK) {
-                            if (to_square == 7) {
-                                if (castling_rights & wk) {
-                                    castling_rights ^= wk;
-                                }
-                            }
-                            if (to_square == 0) {
-                                if (castling_rights & wq) {
-                                    castling_rights ^= wq;
-                                }
+    // piece needs to be set at its bitboard
+    if (not _test_bit(bitboards[piece], to_square)) {
+        BoardState boardstate = encode_board_state(bitboards[0], bitboards[1], bitboards[2], bitboards[3], bitboards[4], bitboards[5], bitboards[6], bitboards[7], bitboards[8], bitboards[9], bitboards[10], bitboards[11], en_passant_square | 0ULL, castling_rights | 0ULL);
+        move_stack[move_stack_index] = boardstate;
+        move_stack_index++;
+        int test = side_to_move ^ 1;
+        //Capture
+        if (_test_bit(occupancies[test], to_square)) {
+            for (int i = 0; i < 6; i++) {
+                if (_test_bit(bitboards[i + (test * 6)], to_square)) {
+                    //Capturing rook loses others side castle rights
+                    int captured_piece = i + (test * 6);
+                    if (captured_piece == WROOK) {
+                        if (to_square == 7) {
+                            if (castling_rights & wk) {
+                                castling_rights ^= wk;
                             }
                         }
-                        if (captured_piece == BROOK) {
-                            if (to_square == 63) {
-                                if (castling_rights & bk) {
-                                    castling_rights ^= bk;
-                                }
-                                    
-                            }
-                            if (to_square == 56) {
-                                if (castling_rights & bq) {
-                                    castling_rights ^= bq;
-                                }
+                        if (to_square == 0) {
+                            if (castling_rights & wq) {
+                                castling_rights ^= wq;
                             }
                         }
-                        // Remove captured piece
-                        bitboards[captured_piece] &= ~(1ULL << to_square);
-                        break;
                     }
+                    if (captured_piece == BROOK) {
+                        if (to_square == 63) {
+                            if (castling_rights & bk) {
+                                castling_rights ^= bk;
+                            }
+
+                        }
+                        if (to_square == 56) {
+                            if (castling_rights & bq) {
+                                castling_rights ^= bq;
+                            }
+                        }
+                    }
+                    // Remove captured piece
+                    bitboards[captured_piece] &= ~(1ULL << to_square);
+                    break;
                 }
             }
-            // Remove and set piece
-            bitboards[piece] &= ~(1ULL << from_square);
-            bitboards[piece] |= (1ULL << to_square);
-                
-            // King move loses castle rights
-            if (piece == WKING ) {
-                if (to_square != 6 and to_square != 2) {
-                    if (castling_rights & wq) {
-                        castling_rights ^= wq;
-                    }
-                    if (castling_rights & wk) {
-                        castling_rights ^= wk;
-                    } 
-                } 
-            }
-            if (piece == BKING) {
-                if (to_square != 62 and to_square != 58) {
-                    if (castling_rights & bq) {
-                        castling_rights ^= bq;
-                    }
-                    if (castling_rights & bk) {
-                        castling_rights ^= bk;
-                    }
-                }
-                    
-            }
-            // Rook move loses castle rights
-            if (piece == WROOK) {
-                if (from_square == 7 and castling_rights & wk) {
-                    castling_rights ^= wk;
-                }
-                if (from_square == 0 and castling_rights & wq) {
+        }
+        // Remove and set piece
+        bitboards[piece] &= ~(1ULL << from_square);
+        bitboards[piece] |= (1ULL << to_square);
+
+        // King move loses castle rights
+        if (piece == WKING) {
+            if (to_square != 6 and to_square != 2) {
+                if (castling_rights & wq) {
                     castling_rights ^= wq;
                 }
-            }
-            if (piece == BROOK) {
-                if (from_square == 63 and castling_rights & bk) {
-                    castling_rights ^= bk;
+                if (castling_rights & wk) {
+                    castling_rights ^= wk;
                 }
-                if (from_square == 56 and castling_rights & bq) {
+            }
+        }
+        if (piece == BKING) {
+            if (to_square != 62 and to_square != 58) {
+                if (castling_rights & bq) {
                     castling_rights ^= bq;
                 }
-            }
-
-            // Actual sastling
-            if (piece == WKING and square_distance(from_square, to_square) == 2) {
-                if (to_square == 6) {
-                    if (castling_rights & wk) {
-                        castling_rights ^= wk;
-                        bitboards[WROOK] &= ~(1ULL << 7);
-                        bitboards[WROOK] |= (1ULL << 5);
-                    }
-
-                }
-                else {
-                    if (castling_rights & wq) {
-                        castling_rights ^= wq;
-                        bitboards[WROOK] &= ~(1ULL << 0);
-                        bitboards[WROOK] |= (1ULL << 3);
-                    }
-                }
-            }
-            if (piece == BKING and square_distance(from_square, to_square) == 2) {
-                if (to_square == 62) {
+                if (castling_rights & bk) {
                     castling_rights ^= bk;
-                    bitboards[BROOK] &= ~(1ULL << 63);
-                    bitboards[BROOK] |= (1ULL << 61);
-                }
-                else {
-                    castling_rights ^= bq;
-                    bitboards[BROOK] &= ~(1ULL << 56);
-                    bitboards[BROOK] |= (1ULL << 59);
-                }
-            }
-            // Remove enemy piece if en passant capture
-            if ((abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9) and en_passant_square != no_sq) {
-                if (piece == WPAWN and square_rank(to_square) == 5) { //
-                    en_passant_square = no_sq;
-                    bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
-                }
-                if (piece == BPAWN and square_rank(to_square) == 2) {
-                    en_passant_square = no_sq;
-                    bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
                 }
             }
 
-            // remove en passant if it wasnt played immediately
-            if (en_passant_square != no_sq) {
+        }
+        // Rook move loses castle rights
+        if (piece == WROOK) {
+            if (from_square == 7 and castling_rights & wk) {
+                castling_rights ^= wk;
+            }
+            if (from_square == 0 and castling_rights & wq) {
+                castling_rights ^= wq;
+            }
+        }
+        if (piece == BROOK) {
+            if (from_square == 63 and castling_rights & bk) {
+                castling_rights ^= bk;
+            }
+            if (from_square == 56 and castling_rights & bq) {
+                castling_rights ^= bq;
+            }
+        }
+
+        // Actual sastling
+        if (piece == WKING and square_distance(from_square, to_square) == 2) {
+            if (to_square == 6) {
+                if (castling_rights & wk) {
+                    castling_rights ^= wk;
+                    bitboards[WROOK] &= ~(1ULL << 7);
+                    bitboards[WROOK] |= (1ULL << 5);
+                }
+
+            }
+            else {
+                if (castling_rights & wq) {
+                    castling_rights ^= wq;
+                    bitboards[WROOK] &= ~(1ULL << 0);
+                    bitboards[WROOK] |= (1ULL << 3);
+                }
+            }
+        }
+        if (piece == BKING and square_distance(from_square, to_square) == 2) {
+            if (to_square == 62) {
+                castling_rights ^= bk;
+                bitboards[BROOK] &= ~(1ULL << 63);
+                bitboards[BROOK] |= (1ULL << 61);
+            }
+            else {
+                castling_rights ^= bq;
+                bitboards[BROOK] &= ~(1ULL << 56);
+                bitboards[BROOK] |= (1ULL << 59);
+            }
+        }
+        // Remove enemy piece if en passant capture
+        if ((abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9) and en_passant_square != no_sq) {
+            if (piece == WPAWN and square_rank(to_square) == 5) { //
                 en_passant_square = no_sq;
+                bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
             }
-            // set en passant square if pawns double move
-            if (piece == WPAWN and abs(from_square - to_square) == 16) {
-                en_passant_square = from_square + 8;
+            if (piece == BPAWN and square_rank(to_square) == 2) {
+                en_passant_square = no_sq;
+                bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
             }
-            if (piece == BPAWN and abs(from_square - to_square) == 16) {
-                en_passant_square = from_square - 8;
-            }
-            // Promotion
-            if (promotion_piece > 0 and promotion_piece < 7) {
-                bitboards[piece] &= ~(1ULL << to_square);
-                promotion_piece = promotion_piece + (side_to_move * 6);
-                    
-                bitboards[promotion_piece] |= (1ULL << to_square);
-            }
-            side_to_move ^= 1;
-            update_occupancies();
         }
-        else {
-            std::cout << "Not valid move" << std::endl;
-        }
-    };
 
+        // remove en passant if it wasnt played immediately
+        if (en_passant_square != no_sq) {
+            en_passant_square = no_sq;
+        }
+        // set en passant square if pawns double move
+        if (piece == WPAWN and abs(from_square - to_square) == 16) {
+            en_passant_square = from_square + 8;
+        }
+        if (piece == BPAWN and abs(from_square - to_square) == 16) {
+            en_passant_square = from_square - 8;
+        }
+        // Promotion
+        if (promotion_piece > 0 and promotion_piece < 7) {
+            bitboards[piece] &= ~(1ULL << to_square);
+            promotion_piece = promotion_piece + (side_to_move * 6);
+
+            bitboards[promotion_piece] |= (1ULL << to_square);
+        }
+        side_to_move ^= 1;
+        update_occupancies();
+    }
+    else {
+        std::cout << "Not valid move" << std::endl;
+    }
+
+};
 void board::unmake_move(int piece, int from_square, int to_square) {
     if (move_stack_index >= 0) {
         move_stack_index--;
@@ -1503,38 +1501,38 @@ int test() {
     std::string fen6 = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ";
     auto begin = std::chrono::high_resolution_clock::now();
     if (perft_test(fen1, 5) == 4865609) { // 4 == 197281     5 == 4865609
-        std::cout << "Correct" << std::endl;
+        std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
         std::cout << "False" << std::endl;
     };
 
     if (perft_test(fen2, 4) == 4085603) { // 4 == 4085603      3 == 97862
-        std::cout << "Correct" << std::endl;
+        std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
         std::cout << "False" << std::endl;
     };
     if (perft_test(fen3, 6) == 11030083) {    // 6 == 11030083        5 == 674624
-        std::cout << "Correct" << std::endl;
+        std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
         std::cout << "False" << std::endl;
     };
     if (perft_test(fen4, 4) == 422333) {    //
-        std::cout << "Correct" << std::endl;
+        std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
         std::cout << "False" << std::endl;
     };
     if (perft_test(fen5, 4) == 2103487) {
-        std::cout << "Correct" << std::endl;
+        std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
         std::cout << "False" << std::endl;
     };
     if (perft_test(fen6, 4) == 3894594) {     // 4 == 3894594     3 == 89890
-        std::cout << "Correct" << std::endl;
+        std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
         std::cout << "False" << std::endl;
@@ -1545,93 +1543,3 @@ int test() {
     std::cout << time_diff / 1000000000.0f << " seconds" << std::endl;
     return 0;
 }
-//void print_movelist(MoveList ml) {
-//    std::string square_to_coordinates[64] = {
-//    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-//    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-//    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-//    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-//    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-//    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-//    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-//    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-//    };
-//    int index = 0;
-//    for (int i = 0; i < ml.movelist.size(); i++) {
-//        for (int j = 0; j < ml.movelist[i].size(); j++) {
-//            std::cout << square_to_coordinates[ml.movelist[i][j]] << ' '; //ml.movelist[i][j]
-//        }
-//        index++;
-//        std::cout << std::endl;
-//    }
-//    std::cout << std::endl;
-//    std::cout << index << std::endl;
-//};
-
-//int main()
-//{
-//    //std::string fen = "6k1/4Pp2/8/6PP/1pbP3P/2P3pP/P1K2PPP/8 w - - 0 1";
-//    //std::string fen = "6k1/4Pp2/8/3N2PP/1pbPPp1P/2P3pP/P1K1PPPP/8 w - - 0 1";
-//    //std::string fen = "6k1/4Pp2/8/3N2PP/1pbPPp1P/2P3pP/P1K1PPPP/8 w - - 0 1";
-//    //std::string fen = "8/8/2pp4/8/3RB3/3PQ3/8/8 w - - 0 1";
-//    //std::string fen = "k4r2/8/8/8/8/8/8/4K2R w K - 0 1";
-//    //std::string fen = "8/8/2pp4/8/3RB3/3P2k1/8/4B3 b - - 0 1";
-//    //std::string fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
-//    std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-//    //int index;
-//    //index = _bitscanforward(0);
-//    //std::cout << "index: " << index;
-//    // 
-//    board board;
-//    board.apply_fen(fen);
-//    board.split_fen(fen);
-//    //perft_console();
-//
-//    //print_movelist(board.generate_moves());
-//    
-//    //std::cout << board.generate_moves().movelist.size() << std::endl;
-//
-//    //test t;
-//    //test_fun(t, 3);
-//    // 
-//    
-//    auto begin = std::chrono::high_resolution_clock::now();
-//    int search = 4;
-//    U64 x = perft(board, search, search);
-//    auto end = std::chrono::high_resolution_clock::now();
-//    auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-//    std::cout << "nodes " << x << " nps " << x / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
-//
-//    //for (int i = 0; i < 12; i++) {
-//    //    board.print_bitboard(board.bitboards[i]);
-//    //}
-//    //board.print_bitboard(board.occupancies[0]);
-//    //board.print_bitboard(board.occupancies[1]);
-//    //board.print_bitboard(board.both);
-//    //std::cout << board.both;
-//    // 
-//    //
-//
-//    
-//    
-//    //board.get_board();
-//    //board.print_bitboard(board.Valid_Moves_Pawn(48));
-//    //board.print_bitboard(board.Valid_Moves_Knight(1));
-//    //board.print_bitboard(board.Valid_Moves_Bishop(2));
-//    //board.print_bitboard(board.Valid_Moves_Rook(0));
-//    //board.print_bitboard(board.Valid_Moves_Queen(3));
-//    //board.print_bitboard(board.Valid_Moves_King(4));
-//    //board.print_bitboard(board.Valid_Moves_King(31));
-//    //std::cout << board.in_check(35, 1);
-//
-//    //board.print_bitboard();
-//    // board.get_board();
-//    // board.make_move(10, 9);
-//    // board.get_board();
-//    //
-//
-//    // board.Valid_Moves_King(10);
-//    // board.get_full_moves();
-//     //std::cout << "White: " << board.occupancies[0] << " Black: " << std::bitset<64>(board.occupancies[1]) << std::endl;
-//    return 0;
-//}
