@@ -1,9 +1,8 @@
-#include <intrin.h>
 #pragma once
+#include <intrin.h>
 #pragma intrinsic(_BitScanForward)
 #pragma intrinsic(_BitScanReverse)
-#define U64 unsigned long long int
-
+#define U64 unsigned __int64
 
 U64 _rays[8][64];
 
@@ -11,19 +10,27 @@ const U64 not_a_file = 0xfefefefefefefefe;
 
 const U64 not_h_file = 0x7f7f7f7f7f7f7f7f;
 
-
+inline int _test_bit(U64 bit, int sq) {
+    __int64 test = bit;
+    if (_bittest64(&test, sq)) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
 inline int _bitscanforward(U64 mask) {
-    //if (mask == 0) {
-    //    return -1;
-    //}
+    if (mask == 0) {
+        return -1;
+    }
     unsigned long index;
     _BitScanForward64(&index, mask);
     return index & 4294967295;
 }
 inline int _bitscanreverse(U64 mask) {
-    //if (mask == 0) {
-    //    return -1;
-    //}
+    if (mask == 0) {
+        return -1;
+    }
     unsigned long index;
     _BitScanReverse64(&index, mask);
     return index & 4294967295;
