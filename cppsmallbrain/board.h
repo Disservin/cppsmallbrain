@@ -9,15 +9,27 @@
 #define set_bit(bitboard, index) (bitboard |= (1ULL << index))
 #define pop_bit(bitboard, index) (get_bit(bitboard, index) ? bitboard ^= (1ULL << index):0)
 
-
-
-
-
-
+struct BoardState {
+    U64 wpawn;
+    U64 wknight;
+    U64 wbishop;
+    U64 wrook;
+    U64 wqueen;
+    U64 wking;
+    U64 bpawn;
+    U64 bknight;
+    U64 bbishop;
+    U64 brook;
+    U64 bqueen;
+    U64 bking;
+    U64 en_passant;
+    U64 castle_rights;
+};
 struct MA {
-    std::vector<std::vector<unsigned long long>> myarray;
+    std::vector<std::vector<long long>> myarray;
 };
 struct Move {
+    int piece;
     int from_square;
     int to_square;
     int promotion;
@@ -25,7 +37,7 @@ struct Move {
     int en_passent;
 };
 struct MoveList {
-    std::vector<std::vector<unsigned long>> movelist;
+    std::vector<Move> movelist;
 };
 
 class board
@@ -74,7 +86,9 @@ public:
         "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
         "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
     };
-    std::vector<std::vector<U64> >  move_stack;
+    //std::vector<std::vector<U64> >  move_stack;
+    BoardState move_stack[256]={};
+    int move_stack_index = 0;
     /*WhitePawns, WhiteKnights, WhiteBishops, WhiteRooks, WhiteQueens, WhiteKing,
       BlackPawns, BlackKnights, BlackBishops, BlackRooks, BlackQueens, BlackKing*/
     U64 bitboards[12] = { 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL };
@@ -112,22 +126,22 @@ public:
     int full_moves = 0;
 
     // not A file constant
-    const U64 not_a_file = 0xfefefefefefefefe;
+    static constexpr U64 not_a_file = 0xfefefefefefefefe;
 
     // not H file constant
-    const U64 not_h_file = 0x7f7f7f7f7f7f7f7f;
+    static constexpr U64 not_h_file = 0x7f7f7f7f7f7f7f7f;
 
     // not HG file constant
-    const U64 not_hg_file = 4557430888798830399ULL;
+    static constexpr U64 not_hg_file = 4557430888798830399ULL;
 
     // not AB file constant
-    const U64 not_ab_file = 18229723555195321596ULL;
+    static constexpr U64 not_ab_file = 18229723555195321596ULL;
 
     //Ranks
-    const U64 rank_1_mask = 255ULL;
-    const U64 rank_2_mask = 18446744069431296255ULL;
-    const U64 rank_7_mask = 18374966859431673855ULL;
-    const U64 rank_8_mask = 18374686479671623680ULL;
+    static constexpr U64 rank_1_mask = 255ULL;
+    static constexpr U64 rank_2_mask = 18446744069431296255ULL;
+    static constexpr U64 rank_7_mask = 18374966859431673855ULL;
+    static constexpr U64 rank_8_mask = 18374686479671623680ULL;
 
     std::vector<std::string> split_fen(std::string fen);
     void apply_fen(std::string fen);
@@ -140,7 +154,7 @@ public:
 
     bool piece_color(int sq);
 
-    int piece_at(int sq);
+    int piece_at(int sq, int given = -1);
 
     int square_file(int sq);
     int square_rank(int sq);
@@ -161,7 +175,8 @@ public:
 
     U64 Valid_Moves_King(int sq);
     bool in_check(int sq, int cast_check = -1);
-    void make_move(int piece, int from_square, int to_square, int promotion_piece = 0);
+    BoardState encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking, U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking, int ep, int castle);
+    void make_move(Move move);
     void unmake_move(int piece, int from_square, int to_square);
 
     MoveList generate_moves();
@@ -172,5 +187,7 @@ int perft_test(std::string fen, int depth);
 
 int test();
 
-U64 perft(board board, int depth, int max);
+long long perft(board board, int depth, int max);
+
+U64 speed_test_perft(board board, int depth, int max);
 
