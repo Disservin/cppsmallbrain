@@ -37,7 +37,8 @@ struct Move {
     int en_passent;
 };
 struct MoveList {
-    std::vector<Move> movelist;
+    //std::vector<Move> movelist;
+    Move movelist[256];
 };
 
 class board
@@ -89,6 +90,7 @@ public:
     //std::vector<std::vector<U64> >  move_stack;
     BoardState move_stack[256]={};
     int move_stack_index = 0;
+    std::size_t count = 0;
     /*WhitePawns, WhiteKnights, WhiteBishops, WhiteRooks, WhiteQueens, WhiteKing,
       BlackPawns, BlackKnights, BlackBishops, BlackRooks, BlackQueens, BlackKing*/
     U64 bitboards[12] = { 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL };

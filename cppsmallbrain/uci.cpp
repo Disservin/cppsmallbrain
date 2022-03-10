@@ -3,8 +3,8 @@
 #include <iostream>
 #include "board.h"
 
-// g++ -Ofast -march=native -mavx2 .\board.cpp .\uci.cpp
-// g++ -Ofast -march=native -m64 .\board.cpp .\uci.cpp
+// g++ -Ofast -march=native -mavx2 .\board.cpp .\uci.cpp -w
+// g++ -Ofast -march=native -m64 .\board.cpp .\uci.cpp 
 int main() {
 	board board;
 	std::cout << "Commands: " << std::endl;
