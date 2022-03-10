@@ -12,14 +12,13 @@ int main() {
 	std::cout << "go perft ..." << std::endl;
 	std::cout << "test perft" << std::endl;
 	std::cout << "speed test" << std::endl;
-	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+	std::string fen = "rnbq1bnr/ppppkpRp/4p3/8/8/1P6/P1PPPPPP/RN1QKBNR w KQ - 0 1";
 	board.apply_fen(fen);
 	while (true) {
 		std::string input;
 		std::cout << "\n";
 		std::getline(std::cin, input);
 		if (input.find("position fen") != std::string::npos) {
-			std::cout << "here";
 			std::size_t start_index = input.find("fen");
 			fen = input.substr(start_index + 4);
 			board.apply_fen(fen);

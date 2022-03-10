@@ -296,7 +296,74 @@ inline int board::piece_at(int sq, int given) {
         }
     }
     return -1;
+}
+inline int board::piece_type_at(int sq) {
+    /* returns color specific int for piece*/
+    bool white = false;
 
+    if (_test_bit(bitboards[WPAWN], sq) or _test_bit(bitboards[BPAWN], sq)) {
+        return PAWN;
+    }
+    if (_test_bit(bitboards[WKNIGHT], sq) or _test_bit(bitboards[BKNIGHT], sq)) {
+        return KNIGHT;
+    }
+    if (_test_bit(bitboards[WBISHOP], sq) or _test_bit(bitboards[BBISHOP], sq)) {
+        return BISHOP;
+    }
+    if (_test_bit(bitboards[WROOK], sq) or _test_bit(bitboards[BROOK], sq)) {
+        return ROOK;
+    }
+    if (_test_bit(bitboards[WQUEEN], sq) or _test_bit(bitboards[BQUEEN], sq)) {
+        return QUEEN;
+    }
+    if (_test_bit(bitboards[WKING], sq) or _test_bit(bitboards[BKING], sq)) {
+        return KING;
+    }
+    return -1;
+}
+std::string board::piece_type(int piece) {
+    if (piece == -1) {
+        return "-";
+    }
+    if (piece == 0) {
+        return "P";
+    }
+    if (piece == 1) {
+        return "K";
+    }
+    if (piece == 2) {
+        return "B";
+    }
+    if (piece == 3) {
+        return "R";
+    }
+    if (piece == 4) {
+        return "Q";
+    }
+    if (piece == 5) {
+        return "K";
+    }
+    if (piece == 6) {
+        return "p";
+    }
+    if (piece == 7) {
+        return "k";
+    }
+    if (piece == 8) {
+        return "b";
+    }
+    if (piece == 9) {
+        return "r";
+    }
+    if (piece == 10) {
+        return "q";
+    }
+    if (piece == 11) {
+        return "k";
+    }
+    else {
+        return "??";
+    }
 }
 
 inline int board::square_file(int sq) {
@@ -478,9 +545,7 @@ inline bool board::is_square_attacked(int sq, int cast_check) {
                 }
             }
         }
-        int deltas[4] = { 17,15,10,6 };
-        U64 knight_move = sliding_attacks(sq, deltas);
-        if (knight_move & (knights & enemy)) {
+        if (knightattacks[sq] & (knights & enemy)) {
             return true;
         }
     }
@@ -627,9 +692,7 @@ inline bool board::is_square_attacked(int sq, int cast_check) {
                 }
             }
         }
-        int deltas[4] = { 17,15,10,6 };
-        U64 knight_move = sliding_attacks(sq, deltas);
-        if (knight_move & (knights & enemy)) {
+        if (knightattacks[sq] & (knights & enemy)) {
             return true;
         }
     }
@@ -648,7 +711,50 @@ inline int board::distance_to_edge_left(int sq) {
     /* 0 if a file*/
     return square_file(sq);
 }
+inline bool board::horizontal_pawn_pin(int sq) {
+    U64 us;
+    U64 enemy;
+    if (_test_bit(occupancies[0], sq)) {
+        us = occupancies[0] ;
+        enemy = occupancies[1] & (rooks | queens);
+        if (_rays[EAST][sq] & both & enemy and _rays[WEST][sq] & us) {
+            int index = _bitscanforward(_rays[EAST][sq] & both & enemy);
+            int index2 = _bitscanreverse(_rays[WEST][sq] & us);
+            if (not(piece_color(index)) and (_test_bit(bitboards[WKING], index2))) {
+                return true;
+            }
+        }
+        if (_rays[WEST][sq] & both & enemy and _rays[EAST][sq] & us) {
+            int index = _bitscanreverse(_rays[WEST][sq] & both & enemy);
+            int index2 = _bitscanforward(_rays[EAST][sq] & us);
 
+            if (not(piece_color(index)) and (_test_bit(bitboards[WKING], index2))) {
+                return true;
+            }
+        }
+    }
+    else {
+        us = occupancies[1];
+        enemy = occupancies[0] & (rooks | queens);
+        if (_rays[EAST][sq] & both & enemy and _rays[WEST][sq] & us) {
+            int index = _bitscanforward(_rays[EAST][sq] & both & enemy);
+            int index2 = _bitscanreverse(_rays[WEST][sq] & us);
+            if ((piece_color(index)) and ( _test_bit(bitboards[BKING], index2))) {
+                return true;
+            }
+        }
+        if (_rays[WEST][sq] & both & enemy and _rays[EAST][sq] & us) {
+            int index = _bitscanreverse(_rays[WEST][sq] & both & enemy);
+            int index2 = _bitscanforward(_rays[EAST][sq] & us);
+
+            if ((piece_color(index)) and (_test_bit(bitboards[BKING], index2))) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 inline BoardState board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
                                             U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
                                             int ep, int castle) 
@@ -747,14 +853,12 @@ inline U64 board::Valid_Moves_Pawn(int sq) {
     return valid_move;
 }
 inline U64 board::Valid_Moves_Knight(int sq) {
-    U64 knight_move = 0ULL;
-    int deltas[4] = { 17,15,10,6 };
-    knight_move = sliding_attacks(sq, deltas);
+    U64 knight_move;
     if(_test_bit(occupancies[0],sq)){
-        knight_move = knight_move & (occupancies[1] | ~occupancies[0]);
+        knight_move = knightattacks[sq] & (occupancies[1] | ~occupancies[0]);
     }
     else {
-        knight_move = knight_move & (occupancies[0] | ~occupancies[1]);
+        knight_move = knightattacks[sq] & (occupancies[0] | ~occupancies[1]);
     }
     return knight_move;
 }
@@ -962,9 +1066,7 @@ inline U64 board::Valid_Moves_King(int sq) {
     return king_valid_move;
 };
 
-
-
-inline void board::make_move(Move move) {
+inline void board::make_move(Move &move) {
 
     int from_square = move.from_square;
     int to_square = move.to_square;
@@ -972,7 +1074,7 @@ inline void board::make_move(Move move) {
     int piece = move.piece;
     piece = piece + (side_to_move * 6);
     int captured_piece = -1;
-    // piece needs to be set at its bitboard
+    // piece needs to be set at its bitboard remove this for performance if you are 100% theres a piece at that square
     if (not _test_bit(bitboards[piece], to_square)) {
         BoardState boardstate = encode_board_state(bitboards[0], bitboards[1], bitboards[2], bitboards[3], bitboards[4], bitboards[5], bitboards[6], bitboards[7], bitboards[8], bitboards[9], bitboards[10], bitboards[11], en_passant_square, castling_rights);
         move_stack[move_stack_index] = boardstate;
@@ -1128,9 +1230,8 @@ inline void board::make_move(Move move) {
     else {
         std::cout << "Not valid move" << std::endl;
     }
-
 };
-inline void board::unmake_move(Move move) {
+inline void board::unmake_move() {
     if (move_stack_index >= 0) {
         move_stack_index--;
         BoardState board;
@@ -1154,7 +1255,6 @@ inline void board::unmake_move(Move move) {
     }
     //No need to remove the entry because it will be overwritten 
 }
-
 MoveList board::generate_moves() {
     int pawn_moves = 0;
     int knight_moves = 0;
@@ -1200,12 +1300,11 @@ MoveList board::generate_moves() {
                 possible_moves.movelist[count] = move;
                 count++;
             }
-            unmake_move(move);
+            unmake_move();
             move_mask = _blsr_u64(move_mask);
         }
         king_mask = _blsr_u64(king_mask);
     }
-
     king_sq = _bitscanforward(kings & we);
     unsigned long pawn_index;
     while (pawn_mask) {
@@ -1223,40 +1322,31 @@ MoveList board::generate_moves() {
             move.from_square = pawn_index;
             move.to_square = to_index;
             make_move(move);
-            if (not(is_square_attacked(king_sq, side_to_move))) {
-                //Promotion
+            if (not(is_square_attacked(king_sq))) {
+                // Promotion
                 if (square_rank(to_index) == 7 or square_rank(to_index) == 0) {
                     move.promotion = QUEEN;
-                    //possible_moves.movelist.push_back(move);
                     possible_moves.movelist[count] = move;
                     count++;
                     move.promotion = ROOK;
-                    //possible_moves.movelist.push_back(move);
                     possible_moves.movelist[count] = move;
                     count++;
                     move.promotion = KNIGHT;
-                    //possible_moves.movelist.push_back(move);
                     possible_moves.movelist[count] = move;
                     count++;
                     move.promotion = BISHOP;
-                    //possible_moves.movelist.push_back(move);
                     possible_moves.movelist[count] = move;
                     count++;
                 }
                 else {
-                    move.piece = PAWN;
-                    move.from_square = pawn_index;
-                    move.to_square = to_index;
-                    //move.en_passent = no_sq;
                     move.promotion = -1;
-                    //possible_moves.movelist.push_back(move);
                     possible_moves.movelist[count] = move;
                     count++;
                 }
                 pawn_moves++;
                 index++;
             }
-            unmake_move(move);
+            unmake_move();
             move_mask = _blsr_u64(move_mask);
         }
         pawn_mask = _blsr_u64(pawn_mask);
@@ -1279,18 +1369,16 @@ MoveList board::generate_moves() {
             move.promotion = -1;
             make_move(move);
             if (not(is_square_attacked(king_sq, side_to_move))) {
-                //possible_moves.movelist.push_back(move);
                 possible_moves.movelist[count] = move;
                 count++;
                 knight_moves++;
                 index++;
             }
-            unmake_move(move);
+            unmake_move();
             move_mask = _blsr_u64(move_mask);
         }
         knight_mask = _blsr_u64(knight_mask);
     }
-
     unsigned long bishop_index;
     while (bishop_mask) {
         bishop_index = _bitscanforward(bishop_mask);
@@ -1309,24 +1397,20 @@ MoveList board::generate_moves() {
             move.promotion = -1;
             make_move(move);
             if (not(is_square_attacked(king_sq, side_to_move))) {
-                //possible_moves.movelist.push_back(move);
                 possible_moves.movelist[count] = move;
                 count++;
                 bishop_moves++;
                 index++;
             }
-            unmake_move(move);
+            unmake_move();
             move_mask = _blsr_u64(move_mask);
         }
         bishop_mask = _blsr_u64(bishop_mask);
     }
-
     unsigned long rook_index;
     while (rook_mask) {
-
         rook_index = _bitscanforward(rook_mask);
         U64 move_mask = Valid_Moves_Rook(rook_index);
-
         while (move_mask) {
             unsigned long to_index = _bitscanforward(move_mask);
             if (occupancies[enemy]) {
@@ -1341,13 +1425,12 @@ MoveList board::generate_moves() {
             move.promotion = -1;
             make_move(move);
             if (not(is_square_attacked(king_sq, side_to_move))) {
-                //possible_moves.movelist.push_back(move);
                 possible_moves.movelist[count] = move;
                 count++;
                 rook_moves++;
                 index++;
             }
-            unmake_move(move);
+            unmake_move();
             move_mask = _blsr_u64(move_mask);
         }
         rook_mask = _blsr_u64(rook_mask);
@@ -1370,18 +1453,20 @@ MoveList board::generate_moves() {
             move.promotion = -1;
             make_move(move);
             if (not(is_square_attacked(king_sq, side_to_move))) {
-                //possible_moves.movelist.push_back(move);
                 possible_moves.movelist[count] = move;
                 count++;
                 queen_moves++;
                 index++;
             }
-            unmake_move(move);
+            unmake_move();
             move_mask = _blsr_u64(move_mask);
         }
         queen_mask = _blsr_u64(queen_mask);
     }
     return possible_moves;
+}
+void board::init() {
+    std::cout << " " << horizontal_pawn_pin(53) << " ";
 }
 void board::print_bitboard(std::bitset<64> bitset) {
     std::string str_bitset = bitset.to_string();
@@ -1392,6 +1477,14 @@ void board::print_bitboard(std::bitset<64> bitset) {
         reverse(x.begin(), x.end());
         std::cout << x << std::endl;
         n += 8;
+    }
+    std::cout << '\n' << std::endl;
+}
+
+void board::print_board() {
+    for (int i = 63; i >= 0; i -= 8)
+    {
+        std::cout << " " << piece_type(piece_at(i-7)) << " " << piece_type(piece_at(i-6)) << " " << piece_type(piece_at(i-5)) << " " << piece_type(piece_at(i-4)) << " " << piece_type(piece_at(i-3)) << " " << piece_type(piece_at(i-2)) << " " << piece_type(piece_at(i-1)) << " " << piece_type(piece_at(i)) << " " << std::endl;
     }
     std::cout << '\n' << std::endl;
 }
@@ -1408,7 +1501,7 @@ U64 Perft::speed_test_perft(int depth) {
             Move move = n_moves.movelist[i];
             this_board.make_move(move);
             nodes += speed_test_perft(depth - 1);
-            this_board.unmake_move(move);
+            this_board.unmake_move();
         }
     }
     return nodes;
@@ -1427,7 +1520,7 @@ U64 Perft::bulk_perft(int depth, int max) {
             Move move = n_moves.movelist[i];
             this_board.make_move(move);
             nodes += bulk_perft(depth - 1, max);
-            this_board.unmake_move(move);
+            this_board.unmake_move();
             if (depth == max) {
                 pf.from_square = move.from_square;
                 pf.to_square = move.to_square;
