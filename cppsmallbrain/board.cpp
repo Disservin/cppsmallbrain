@@ -26,6 +26,7 @@ std::vector<std::string> board::split_fen(std::string fen)
     }
     return seglist;
 }
+
 void board::apply_fen(std::string fen)
 {
     
@@ -211,6 +212,7 @@ void board::get_half_moves() {
 void board::get_full_moves() {
     std::cout << "full_moves: " << full_moves << std::endl;
 }
+
 inline void board::update_occupancies() {
     // White
     occupancies[0] = bitboards[0] | bitboards[1] | bitboards[2] | bitboards[3] | bitboards[4] | bitboards[5];
@@ -225,6 +227,7 @@ inline void board::update_occupancies() {
     queens  = bitboards[4] | bitboards[10];
     kings   = bitboards[5] | bitboards[11];
 }
+
 inline bool board::piece_color(int sq) {
     /* returns true if piece is white*/
     if (_test_bit(occupancies[0], sq)) {
@@ -295,6 +298,7 @@ inline int board::piece_at(int sq, int given) {
     return -1;
 
 }
+
 inline int board::square_file(int sq) {
     //Gets the file index of the square where 0 is the a-file
     return sq & 7;
@@ -302,6 +306,335 @@ inline int board::square_file(int sq) {
 inline int board::square_rank(int sq) {
     //Gets the rank index of the square where 0 is the first rank."""
     return sq >> 3;
+}
+inline bool board::is_square_attacked(int sq, int cast_check) {
+    bool white = false;
+    U64 enemy;
+    U64 us;
+    if (cast_check > -1) {
+        if (cast_check == 1) {
+            white = true;
+            us = occupancies[0];
+            enemy = occupancies[1];
+        }
+        if (cast_check == 0) {
+            us = occupancies[1];
+            enemy = occupancies[0];
+        }
+    }
+    else {
+        if (piece_color(sq)) {
+            us = occupancies[0];
+            enemy = occupancies[1];
+            white = true;
+        }
+        else {
+            us = occupancies[1];
+            enemy = occupancies[0];
+        }
+    }
+
+    unsigned long index;
+
+    if (white) {
+        if (_rays[NORTH][sq] & enemy) {
+            index = _bitscanforward(enemy & _rays[NORTH][sq]);
+            if (_test_bit(bitboards[BROOK], index) or _test_bit(bitboards[BQUEEN], index)) {
+                // If this is true the ray is not hitting a piece from us
+                if (not(_rays[NORTH][sq] & us)) {
+                    return true;
+                }
+                else {
+                    // We hit a piece from us. If the distance to it is smaller than to the blocker we cannot block the check
+                    int blockedus = _bitscanforward(_rays[NORTH][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[SOUTH][sq] & enemy) {
+            index = _bitscanreverse(enemy & _rays[SOUTH][sq]);
+            if (_test_bit(bitboards[BROOK], index) or _test_bit(bitboards[BQUEEN], index)) {
+                if (not(_rays[SOUTH][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanreverse(_rays[SOUTH][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[EAST][sq] & enemy) {
+            index = _bitscanforward(enemy & _rays[EAST][sq]);
+            if (_test_bit(bitboards[BROOK], index) or _test_bit(bitboards[BQUEEN], index)) {
+                if (not(_rays[EAST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanforward(_rays[EAST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+
+        }
+        if (_rays[WEST][sq] & enemy) {
+            index = _bitscanreverse(enemy & _rays[WEST][sq]);
+            if (_test_bit(bitboards[BROOK], index) or _test_bit(bitboards[BQUEEN], index)) {
+                if (not(_rays[WEST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanreverse(_rays[WEST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[NORTH_WEST][sq] & enemy) {
+            index = _bitscanforward(enemy & _rays[NORTH_WEST][sq]);
+            if (_test_bit(bitboards[BPAWN], index) or _test_bit(bitboards[BKING], index)) {
+                if (square_distance(sq, index) == 1) {
+                    return true;
+                }
+            }
+            if (_test_bit(bitboards[BBISHOP], index) or _test_bit(bitboards[BQUEEN], index)) {
+                if (not(_rays[NORTH_WEST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanforward(_rays[NORTH_WEST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[NORTH_EAST][sq] & enemy) {
+            index = _bitscanforward(enemy & _rays[NORTH_EAST][sq]);
+            if (_test_bit(bitboards[BPAWN], index) or _test_bit(bitboards[BKING], index)) {
+                if (square_distance(sq, index) == 1) {
+                    return true;
+                }
+            }
+            if (_test_bit(bitboards[BBISHOP], index) or _test_bit(bitboards[BQUEEN], index)) {
+                if (not(_rays[NORTH_EAST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanforward(_rays[NORTH_EAST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[SOUTH_WEST][sq] & enemy) {
+            index = _bitscanreverse(enemy & _rays[SOUTH_WEST][sq]);
+            if (_test_bit(bitboards[BKING], index)) {
+                if (square_distance(sq, index) == 1) {
+                    return true;
+                }
+            }
+            if (_test_bit(bitboards[BBISHOP], index) or _test_bit(bitboards[BQUEEN], index)) {
+                if (not(_rays[SOUTH_WEST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanreverse(_rays[SOUTH_WEST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[SOUTH_EAST][sq] & enemy) {
+            index = _bitscanreverse(enemy & _rays[SOUTH_EAST][sq]);
+            if (_test_bit(bitboards[BKING], index)) {
+                if (square_distance(sq, index) == 1) {
+                    return true;
+                }
+            }
+            if (_test_bit(bitboards[BBISHOP], index) or _test_bit(bitboards[BQUEEN], index)) {
+                if (not(_rays[SOUTH_EAST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanreverse(_rays[SOUTH_EAST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        int deltas[4] = { 17,15,10,6 };
+        U64 knight_move = sliding_attacks(sq, deltas);
+        if (knight_move & (knights & enemy)) {
+            return true;
+        }
+    }
+    else {
+        //BLACK
+        if (_rays[NORTH][sq] & enemy) {
+            index = _bitscanforward(enemy & _rays[NORTH][sq]);
+            if (_test_bit(bitboards[WROOK], index) or _test_bit(bitboards[WQUEEN], index)) {
+                if (not(_rays[NORTH][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanforward(_rays[NORTH][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[SOUTH][sq] & enemy) {
+            index = _bitscanreverse(enemy & _rays[SOUTH][sq]);
+            if (_test_bit(bitboards[WROOK], index) or _test_bit(bitboards[WQUEEN], index)) {
+                if (not(_rays[SOUTH][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanreverse(_rays[SOUTH][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+
+        }
+
+        if (_rays[EAST][sq] & enemy) {
+            index = _bitscanforward(enemy & _rays[EAST][sq]);
+            if (_test_bit(bitboards[WROOK], index) or _test_bit(bitboards[WQUEEN], index)) {
+                if (not(_rays[EAST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanforward(_rays[EAST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+
+        }
+
+        if (_rays[WEST][sq] & enemy) {
+            index = _bitscanreverse(enemy & _rays[WEST][sq]);
+            if (_test_bit(bitboards[WROOK], index) or _test_bit(bitboards[WQUEEN], index)) {
+                if (not(_rays[WEST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanreverse(_rays[WEST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[NORTH_WEST][sq] & enemy) {
+            index = _bitscanforward(enemy & _rays[NORTH_WEST][sq]);
+            if (_test_bit(bitboards[WKING], index)) {
+                if (square_distance(sq, index) == 1) {
+                    return true;
+                }
+            }
+            if (_test_bit(bitboards[WBISHOP], index) or _test_bit(bitboards[WQUEEN], index)) {
+                if (not(_rays[NORTH_WEST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanforward(_rays[NORTH_WEST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[NORTH_EAST][sq] & enemy) {
+            index = _bitscanforward(enemy & _rays[NORTH_EAST][sq]);
+            if (_test_bit(bitboards[WKING], index)) {
+                if (square_distance(sq, index) == 1) {
+                    return true;
+                }
+            }
+            if (_test_bit(bitboards[WBISHOP], index) or _test_bit(bitboards[WQUEEN], index)) {
+                if (not(_rays[NORTH_EAST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanforward(_rays[NORTH_EAST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[SOUTH_WEST][sq] & enemy) {
+            index = _bitscanreverse(enemy & _rays[SOUTH_WEST][sq]);
+            if (_test_bit(bitboards[WPAWN], index) or _test_bit(bitboards[WKING], index)) {
+                if (square_distance(sq, index) == 1) {
+                    return true;
+                }
+            }
+            if (_test_bit(bitboards[WBISHOP], index) or _test_bit(bitboards[WQUEEN], index)) {
+                if (not(_rays[SOUTH_WEST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanreverse(_rays[SOUTH_WEST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_rays[SOUTH_EAST][sq] & enemy) {
+            index = _bitscanreverse(enemy & _rays[SOUTH_EAST][sq]);
+            if (_test_bit(bitboards[WPAWN], index) or _test_bit(bitboards[WKING], index)) {
+                if (square_distance(sq, index) == 1) {
+                    return true;
+                }
+            }
+            if (_test_bit(bitboards[WBISHOP], index) or _test_bit(bitboards[WQUEEN], index)) {
+                if (not(_rays[SOUTH_EAST][sq] & us)) {
+                    return true;
+                }
+                else {
+                    int blockedus = _bitscanreverse(_rays[SOUTH_EAST][sq] & us);
+                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        int deltas[4] = { 17,15,10,6 };
+        U64 knight_move = sliding_attacks(sq, deltas);
+        if (knight_move & (knights & enemy)) {
+            return true;
+        }
+    }
+    return false;
+
 }
 inline int board::square_distance(int a, int b) {
     /* 0 if a=b otherwise >0*/
@@ -315,7 +648,30 @@ inline int board::distance_to_edge_left(int sq) {
     /* 0 if a file*/
     return square_file(sq);
 }
-U64 board::sliding_attacks(int square, int deltas[4]) {
+
+inline BoardState board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
+                                            U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
+                                            int ep, int castle) 
+{
+BoardState board;
+board.wpawn = wpawn;
+board.wknight = wknight;
+board.wbishop = wbishop;
+board.wrook = wrook;
+board.wqueen = wqueen;
+board.wking = wking;
+board.bpawn = bpawn;
+board.bknight = bknight;
+board.bbishop = bbishop;
+board.brook = brook;
+board.bqueen = bqueen;
+board.bking = bking;
+board.en_passant = ep;
+board.castle_rights = castle;
+return board;
+}
+
+inline U64 board::sliding_attacks(int square, int deltas[4]) {
     // only used for knight attacks
     U64 attacks = 0ULL;
     for (unsigned int i = 0; i < 4; i++) {
@@ -325,13 +681,13 @@ U64 board::sliding_attacks(int square, int deltas[4]) {
         if ((0 <= sq and sq < 64) and (square_distance(sq, sq - deltas[i]) <= 2)) {
             attacks |= (1ULL << sq);
         }
-        if ((0 <= sq - (2 * deltas[i]) and sq - (2 * deltas[i]) < 64) and (square_distance(square, square - deltas[i])) <= 2) {
+        if ((square_distance(square, square - deltas[i])) <= 2  and (0 <= sq - (2 * deltas[i]) and sq - (2 * deltas[i]) < 64)) { 
             attacks |= 1ULL << (sq - (2 * deltas[i]));
         }
     }
     return attacks;
 }
-U64 board::pawn_attacks(int sq) {
+inline U64 board::pawn_attacks(int sq) {
     U64 attacks = 0;
     U64 bb = 0ULL;
     bb |= (1ULL << sq);
@@ -364,7 +720,7 @@ inline U64 board::Valid_Moves_Pawn(int sq) {
         pawn_move_attack_union = (pawn_move_left | pawn_move_right) & occupancies[1];
         // en passant
         if (en_passant_square != no_sq and square_rank(sq) == 4) {
-            pawn_move_attack_union |= (1ULL << en_passant_square) & (pawn_move_left | pawn_move_right);
+            pawn_move_attack_union = ((pawn_move_left | pawn_move_right) & occupancies[1]) | ((1ULL << en_passant_square) & (pawn_move_left | pawn_move_right));
         }
         // North pawn push
         pawn_move_forward = pawn_move << 8 & ~both;
@@ -381,7 +737,7 @@ inline U64 board::Valid_Moves_Pawn(int sq) {
             // Old implementation should be the same perft numbers are the same
             // just being here for my safety
             //pawn_move_attack_union = ((pawn_move_attack_union) | ((1ULL << en_passant_square) & (pawn_move_left | pawn_move_right))) & ~occupancies[1];
-            pawn_move_attack_union |= (1ULL << en_passant_square) & (pawn_move_left | pawn_move_right);
+            pawn_move_attack_union = ((pawn_move_left | pawn_move_right) & occupancies[0])| ((1ULL << en_passant_square) & (pawn_move_left | pawn_move_right));
         }
         //South pawn push
         pawn_move_forward = pawn_move >> 8 & ~both;
@@ -394,7 +750,6 @@ inline U64 board::Valid_Moves_Knight(int sq) {
     U64 knight_move = 0ULL;
     int deltas[4] = { 17,15,10,6 };
     knight_move = sliding_attacks(sq, deltas);
-    //if (std::bitset<64>(occupancies[0]).test(sq) == 1) {
     if(_test_bit(occupancies[0],sq)){
         knight_move = knight_move & (occupancies[1] | ~occupancies[0]);
     }
@@ -561,43 +916,43 @@ inline U64 board::Valid_Moves_King(int sq) {
     // Castling
     unsigned long rook_index;
     //King side White
-    if ((_rays[EAST][sq] & blockers) and castling_rights & wk and (piece_color(sq))) {
+    if (castling_rights & wk and (_rays[EAST][sq] & blockers) and (piece_color(sq))) {
         rook_index = _bitscanforward(blockers & _rays[EAST][sq]);
         if (rook_index == 7) {
-            if (not in_check(4, 1) and not in_check(5, 1) and not in_check(6, 1)) {
+            if (not is_square_attacked(4, 1) and not is_square_attacked(5, 1) and not is_square_attacked(6, 1)) {
                 U64 to_index = 0ULL;
                 to_index |= 1ULL << 6;
                 king_valid_move |= to_index;
             }
         }
     }
-    //King side Black
-    if ((_rays[EAST][sq] & blockers) and castling_rights & bk and not (piece_color(sq))) {
-        rook_index = _bitscanforward(blockers & _rays[EAST][sq]);
-        if (rook_index == 63) {
-            if (not in_check(62,0) and not in_check(61,0) and not in_check(60,0)) {
-                U64 to_index = 0ULL;
-                to_index |= 1ULL << 62;
-                king_valid_move |= to_index;
-            }
-        }
-    }
     //Queen side White
-    if ((_rays[WEST][sq] & blockers) and castling_rights & wq and (piece_color(sq))) { 
+    if (castling_rights & wq and (_rays[WEST][sq] & blockers) and (piece_color(sq))) {
         rook_index = _bitscanreverse(blockers & _rays[WEST][sq]);
         if (rook_index == 0) {
-            if (not in_check(4,1) and not in_check(3,1) and not in_check(2,1)) {
+            if (not is_square_attacked(4, 1) and not is_square_attacked(3, 1) and not is_square_attacked(2, 1)) {
                 U64 to_index = 0ULL;
                 to_index |= 1ULL << 2;
                 king_valid_move |= to_index;
             }
         }
     }
+    //King side Black
+    if (castling_rights & bk and (_rays[EAST][sq] & blockers) and not (piece_color(sq))) {
+        rook_index = _bitscanforward(blockers & _rays[EAST][sq]);
+        if (rook_index == 63) {
+            if (not is_square_attacked(62,0) and not is_square_attacked(61,0) and not is_square_attacked(60,0)) {
+                U64 to_index = 0ULL;
+                to_index |= 1ULL << 62;
+                king_valid_move |= to_index;
+            }
+        }
+    }
     //Queen side Black
-    if ((_rays[WEST][sq] & blockers) and castling_rights & bq and not (piece_color(sq))) {
+    if (castling_rights & bq and (_rays[WEST][sq] & blockers) and not (piece_color(sq))) {
         rook_index = _bitscanreverse(blockers & _rays[WEST][sq]);
         if (rook_index == 56) {
-            if (not in_check(60,0) and not in_check(59,0) and not in_check(58,0)) {
+            if (not is_square_attacked(60,0) and not is_square_attacked(59,0) and not is_square_attacked(58,0)) {
                 U64 to_index = 0ULL;
                 to_index |= 1ULL << 58;
                 king_valid_move |= to_index;
@@ -606,351 +961,8 @@ inline U64 board::Valid_Moves_King(int sq) {
     }
     return king_valid_move;
 };
-inline bool board::in_check(int sq, int cast_check) {
-    bool white = false;
-    U64 enemy;
-    U64 us;
 
-    
-    if (cast_check > -1) {
-        if (cast_check == 1) {
-            white = true;
-            us = occupancies[0];
-            enemy = occupancies[1];
-        }
-        if (cast_check == 0) {
-            us = occupancies[1];
-            enemy = occupancies[0];
-        }
-    }
-    else {
-        if (piece_color(sq)) {
-            us = occupancies[0];
-            enemy = occupancies[1];
-            white = true;
-        }
-        else {
-            us = occupancies[1];
-            enemy = occupancies[0];
-        }
-    }
-        
-    unsigned long index;
 
-    if (white) {
-        if (_rays[NORTH][sq] & enemy) {
-            index = _bitscanforward(enemy & _rays[NORTH][sq]);
-            if (piece_at(index, 0) == BROOK or piece_at(index, 0) == BQUEEN) {
-                // If this is true the ray is not hitting a piece from us
-                if (not(_rays[NORTH][sq] & us)) {
-                    return true;
-                }
-                else {
-                    // We hit a piece from us. If the distance to it is smaller than to the blocker we cannot block the check
-                    int blockedus = _bitscanforward(_rays[NORTH][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[SOUTH][sq] & enemy) {
-            index = _bitscanreverse(enemy & _rays[SOUTH][sq]);
-            if (piece_at(index, 0) == BROOK or piece_at(index, 0) == BQUEEN) {
-                if (not(_rays[SOUTH][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanreverse(_rays[SOUTH][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[EAST][sq] & enemy) {
-            index = _bitscanforward(enemy & _rays[EAST][sq]);
-            if (piece_at(index, 0) == BROOK or piece_at(index, 0) == BQUEEN) {
-                if (not(_rays[EAST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanforward(_rays[EAST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-
-        }
-        if (_rays[WEST][sq] & enemy) {
-            index = _bitscanreverse(enemy & _rays[WEST][sq]);
-            if (piece_at(index, 0) == BROOK or piece_at(index, 0) == BQUEEN) {
-                if (not(_rays[WEST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanreverse(_rays[WEST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[NORTH_WEST][sq] & enemy) {
-            index = _bitscanforward(enemy & _rays[NORTH_WEST][sq]);
-            if (piece_at(index, 0) == BPAWN or piece_at(index, 0) == BKING) {
-                if (square_distance(sq, index) == 1) {
-                    return true;
-                }
-            }
-            if (piece_at(index, 0) == BBISHOP or piece_at(index, 0) == BQUEEN) {
-                if (not(_rays[NORTH_WEST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanforward(_rays[NORTH_WEST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[NORTH_EAST][sq] & enemy) {
-            index = _bitscanforward(enemy & _rays[NORTH_EAST][sq]);
-            if (piece_at(index, 0) == BPAWN or piece_at(index, 0) == BKING) {
-                if (square_distance(sq, index) == 1) {
-                    return true;
-                }
-            }
-            if (piece_at(index, 0) == BBISHOP or piece_at(index, 0) == BQUEEN) {
-                if (not(_rays[NORTH_EAST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanforward(_rays[NORTH_EAST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[SOUTH_WEST][sq] & enemy) {
-            index = _bitscanreverse(enemy & _rays[SOUTH_WEST][sq]);
-            if (piece_at(index, 0) == BKING) {
-                if (square_distance(sq, index) == 1) {
-                    return true;
-                }
-            }
-            if (piece_at(index, 0) == BBISHOP or piece_at(index, 0) == BQUEEN) {
-                if (not(_rays[SOUTH_WEST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanreverse(_rays[SOUTH_WEST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[SOUTH_EAST][sq] & enemy) {
-            index = _bitscanreverse(enemy & _rays[SOUTH_EAST][sq]);
-            if (piece_at(index, 0) == BKING) {
-                if (square_distance(sq, index) == 1) {
-                    return true;
-                }
-            }
-            if (piece_at(index, 0) == BBISHOP or piece_at(index, 0) == BQUEEN) {
-                if (not(_rays[SOUTH_EAST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanreverse(_rays[SOUTH_EAST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        if (Valid_Moves_Knight(sq) & knights & enemy) {
-            return true;
-        }
-    }
-    else { 
-        //BLACK
-        if (_rays[NORTH][sq] & enemy) {
-            index = _bitscanforward(enemy & _rays[NORTH][sq]);
-            if (piece_at(index, 1) == WROOK or piece_at(index, 1) == WQUEEN) {
-                if (not(_rays[NORTH][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanforward(_rays[NORTH][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[SOUTH][sq] & enemy) {
-            index = _bitscanreverse(enemy & _rays[SOUTH][sq]);
-            if (piece_at(index, 1) == WROOK or piece_at(index, 1) == WQUEEN) {
-                if (not(_rays[SOUTH][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanreverse(_rays[SOUTH][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-                
-        }
-
-        if (_rays[EAST][sq] & enemy) {
-            index = _bitscanforward(enemy & _rays[EAST][sq]);
-            if (piece_at(index, 1) == WROOK or piece_at(index, 1) == WQUEEN) {
-                if (not(_rays[EAST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanforward(_rays[EAST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-
-        }
-
-        if (_rays[WEST][sq] & enemy) {
-            index = _bitscanreverse(enemy & _rays[WEST][sq]);
-            if (piece_at(index, 1) == WROOK or piece_at(index, 1) == WQUEEN) {
-                if (not(_rays[WEST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanreverse(_rays[WEST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[NORTH_WEST][sq] & enemy) {
-            index = _bitscanforward(enemy & _rays[NORTH_WEST][sq]);
-            if (piece_at(index, 1) == WKING) {
-                if (square_distance(sq, index) == 1) {
-                    return true;
-                }
-            }
-            if (piece_at(index, 1) == WBISHOP or piece_at(index, 1) == WQUEEN) {
-                if (not(_rays[NORTH_WEST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanforward(_rays[NORTH_WEST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[NORTH_EAST][sq] & enemy) {
-            index = _bitscanforward(enemy & _rays[NORTH_EAST][sq]);
-            if (piece_at(index, 1) == WKING) {
-                if (square_distance(sq, index) == 1) {
-                    return true;
-                }
-            }
-            if (piece_at(index, 1) == 2 or piece_at(index, 1) == 4) {
-                if (not(_rays[NORTH_EAST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanforward(_rays[NORTH_EAST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[SOUTH_WEST][sq] & enemy) {
-            index = _bitscanreverse(enemy & _rays[SOUTH_WEST][sq]);
-            if (piece_at(index, 1) == WPAWN or piece_at(index, 1) == WKING) {
-                if (square_distance(sq, index) == 1) {
-                    return true;
-                }
-            }
-            if (piece_at(index, 1) == WBISHOP or piece_at(index, 1) == WQUEEN) {
-                if (not(_rays[SOUTH_WEST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanreverse(_rays[SOUTH_WEST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (_rays[SOUTH_EAST][sq] & enemy) {
-            index = _bitscanreverse(enemy & _rays[SOUTH_EAST][sq]);
-            if (piece_at(index, 1) == WPAWN or piece_at(index, 1) == WKING) {
-                if (square_distance(sq, index) == 1) {
-                    return true;
-                }
-            }
-            if (piece_at(index, 1) == WBISHOP or piece_at(index, 1) == WQUEEN) {
-                if (not(_rays[SOUTH_EAST][sq] & us)) {
-                    return true;
-                }
-                else {
-                    int blockedus = _bitscanreverse(_rays[SOUTH_EAST][sq] & us);
-                    if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        if (Valid_Moves_Knight(sq) & knights & enemy) {
-            return true;
-        }
-    }
-    return false;
-
-}
-BoardState board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking, U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking, int ep, int castle) {
-    BoardState board;
-    board.wpawn = wpawn;
-    board.wknight = wknight;
-    board.wbishop = wbishop;
-    board.wrook = wrook;
-    board.wqueen = wqueen;
-    board.wking = wking;
-    board.bpawn = bpawn;
-    board.bknight = bknight;
-    board.bbishop = bbishop;
-    board.brook = brook;
-    board.bqueen = bqueen;
-    board.bking = bking;
-    board.en_passant = ep;
-    board.castle_rights = castle;
-    return board;
-}
 
 inline void board::make_move(Move move) {
 
@@ -959,10 +971,10 @@ inline void board::make_move(Move move) {
     int promotion_piece = move.promotion;
     int piece = move.piece;
     piece = piece + (side_to_move * 6);
-
+    int captured_piece = -1;
     // piece needs to be set at its bitboard
     if (not _test_bit(bitboards[piece], to_square)) {
-        BoardState boardstate = encode_board_state(bitboards[0], bitboards[1], bitboards[2], bitboards[3], bitboards[4], bitboards[5], bitboards[6], bitboards[7], bitboards[8], bitboards[9], bitboards[10], bitboards[11], en_passant_square | 0ULL, castling_rights | 0ULL);
+        BoardState boardstate = encode_board_state(bitboards[0], bitboards[1], bitboards[2], bitboards[3], bitboards[4], bitboards[5], bitboards[6], bitboards[7], bitboards[8], bitboards[9], bitboards[10], bitboards[11], en_passant_square, castling_rights);
         move_stack[move_stack_index] = boardstate;
         move_stack_index++;
         int test = side_to_move ^ 1;
@@ -971,7 +983,7 @@ inline void board::make_move(Move move) {
             for (int i = 0; i < 6; i++) {
                 if (_test_bit(bitboards[i + (test * 6)], to_square)) {
                     //Capturing rook loses others side castle rights
-                    int captured_piece = i + (test * 6);
+                    captured_piece = i + (test * 6);
                     if (captured_piece == WROOK) {
                         if (to_square == 7) {
                             if (castling_rights & wk) {
@@ -997,15 +1009,10 @@ inline void board::make_move(Move move) {
                             }
                         }
                     }
-                    // Remove captured piece
-                    bitboards[captured_piece] &= ~(1ULL << to_square);
                     break;
                 }
             }
         }
-        // Remove and set piece
-        bitboards[piece] &= ~(1ULL << from_square);
-        bitboards[piece] |= (1ULL << to_square);
 
         // King move loses castle rights
         if (piece == WKING) {
@@ -1078,17 +1085,16 @@ inline void board::make_move(Move move) {
             }
         }
         // Remove enemy piece if en passant capture
-        if ((abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9) and en_passant_square != no_sq) {
-            if (piece == WPAWN and square_rank(to_square) == 5) { //
+        if ((abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9)) {
+            if (piece == WPAWN and square_rank(to_square) == 5 and piece_at(to_square - 8) == BPAWN and piece_at(to_square) == -1) { //
                 en_passant_square = no_sq;
                 bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
             }
-            if (piece == BPAWN and square_rank(to_square) == 2) {
+            if (piece == BPAWN and square_rank(to_square) == 2 and piece_at(to_square + 8) == WPAWN and piece_at(to_square) == -1) {
                 en_passant_square = no_sq;
                 bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
             }
         }
-
         // remove en passant if it wasnt played immediately
         if (en_passant_square != no_sq) {
             en_passant_square = no_sq;
@@ -1100,6 +1106,15 @@ inline void board::make_move(Move move) {
         if (piece == BPAWN and abs(from_square - to_square) == 16) {
             en_passant_square = from_square - 8;
         }
+
+        // Remove and set piece
+        bitboards[piece] &= ~(1ULL << from_square);
+        bitboards[piece] |= (1ULL << to_square);
+        // Remove captured piece
+        if (captured_piece != -1) {
+            bitboards[captured_piece] &= ~(1ULL << to_square);
+        }
+
         // Promotion
         if (promotion_piece > 0 and promotion_piece < 7) {
             bitboards[piece] &= ~(1ULL << to_square);
@@ -1115,7 +1130,7 @@ inline void board::make_move(Move move) {
     }
 
 };
-inline void board::unmake_move(int piece, int from_square, int to_square) {
+inline void board::unmake_move(Move move) {
     if (move_stack_index >= 0) {
         move_stack_index--;
         BoardState board;
@@ -1124,7 +1139,7 @@ inline void board::unmake_move(int piece, int from_square, int to_square) {
         bitboards[1] = board.wknight;
         bitboards[2] = board.wbishop;
         bitboards[3] = board.wrook;
-        bitboards[4] = board.wqueen ;
+        bitboards[4] = board.wqueen;
         bitboards[5] = board.wking;
         bitboards[6] = board.bpawn;
         bitboards[7] = board.bknight;
@@ -1136,35 +1151,34 @@ inline void board::unmake_move(int piece, int from_square, int to_square) {
         castling_rights = board.castle_rights;
         side_to_move ^= 1;
         update_occupancies();
-        //No need to remove the entry because it will be overwritten
     }
+    //No need to remove the entry because it will be overwritten 
 }
+
 MoveList board::generate_moves() {
     int pawn_moves = 0;
     int knight_moves = 0;
     int bishop_moves = 0;
     int rook_moves = 0;
     int queen_moves = 0;
-    MoveList possible_moves;
-    
+    MoveList possible_moves{};
+    int index = 0;
     U64 we;
+    Move move;
+    int enemy = side_to_move ^ 1;
     if (side_to_move == 0) {
         we = occupancies[0];
     }
     else {
         we = occupancies[1];
     }
-    int index = 0;
     U64 pawn_mask = pawns & we;
     U64 knight_mask = knights & we;
     U64 bishop_mask = bishops & we;
     U64 rook_mask = rooks & we;
     U64 queen_mask = queens & we;
     U64 king_mask = kings & we;
-    
-    Move move;
     unsigned long king_sq = _bitscanforward(king_mask);
-    int enemy = side_to_move ^ 1;
     count = 0;
     while (king_mask) {
         king_sq = _bitscanforward(king_mask);
@@ -1180,15 +1194,13 @@ MoveList board::generate_moves() {
             move.piece = KING;
             move.from_square = king_sq;
             move.to_square = to_index;
-            move.en_passent = no_sq;
             move.promotion = -1;
             make_move(move);
-            if (not(in_check(to_index))) {
+            if (not(is_square_attacked(to_index, side_to_move))) {
                 possible_moves.movelist[count] = move;
                 count++;
-
             }
-            unmake_move(KING, king_sq, to_index);
+            unmake_move(move);
             move_mask = _blsr_u64(move_mask);
         }
         king_mask = _blsr_u64(king_mask);
@@ -1210,10 +1222,9 @@ MoveList board::generate_moves() {
             move.piece = PAWN;
             move.from_square = pawn_index;
             move.to_square = to_index;
-            move.en_passent = no_sq;
             make_move(move);
-            if (not(in_check(king_sq))) {
-                // Promotion
+            if (not(is_square_attacked(king_sq, side_to_move))) {
+                //Promotion
                 if (square_rank(to_index) == 7 or square_rank(to_index) == 0) {
                     move.promotion = QUEEN;
                     //possible_moves.movelist.push_back(move);
@@ -1236,7 +1247,7 @@ MoveList board::generate_moves() {
                     move.piece = PAWN;
                     move.from_square = pawn_index;
                     move.to_square = to_index;
-                    move.en_passent = no_sq;
+                    //move.en_passent = no_sq;
                     move.promotion = -1;
                     //possible_moves.movelist.push_back(move);
                     possible_moves.movelist[count] = move;
@@ -1245,7 +1256,7 @@ MoveList board::generate_moves() {
                 pawn_moves++;
                 index++;
             }
-            unmake_move(PAWN, pawn_index, to_index);
+            unmake_move(move);
             move_mask = _blsr_u64(move_mask);
         }
         pawn_mask = _blsr_u64(pawn_mask);
@@ -1265,17 +1276,16 @@ MoveList board::generate_moves() {
             move.piece = KNIGHT;
             move.from_square = knight_index;
             move.to_square = to_index;
-            move.en_passent = no_sq;
             move.promotion = -1;
             make_move(move);
-            if (not(in_check(king_sq))) {
+            if (not(is_square_attacked(king_sq, side_to_move))) {
                 //possible_moves.movelist.push_back(move);
                 possible_moves.movelist[count] = move;
                 count++;
                 knight_moves++;
                 index++;
             }
-            unmake_move(KNIGHT, knight_index, to_index);
+            unmake_move(move);
             move_mask = _blsr_u64(move_mask);
         }
         knight_mask = _blsr_u64(knight_mask);
@@ -1296,17 +1306,16 @@ MoveList board::generate_moves() {
             move.piece = BISHOP;
             move.from_square = bishop_index;
             move.to_square = to_index;
-            move.en_passent = no_sq;
             move.promotion = -1;
             make_move(move);
-            if (not(in_check(king_sq))) {
+            if (not(is_square_attacked(king_sq, side_to_move))) {
                 //possible_moves.movelist.push_back(move);
                 possible_moves.movelist[count] = move;
                 count++;
                 bishop_moves++;
                 index++;
             }
-            unmake_move(BISHOP, bishop_index, to_index);
+            unmake_move(move);
             move_mask = _blsr_u64(move_mask);
         }
         bishop_mask = _blsr_u64(bishop_mask);
@@ -1329,17 +1338,16 @@ MoveList board::generate_moves() {
             move.piece = ROOK;
             move.from_square = rook_index;
             move.to_square = to_index;
-            move.en_passent = no_sq;
             move.promotion = -1;
             make_move(move);
-            if (not(in_check(king_sq))) {
+            if (not(is_square_attacked(king_sq, side_to_move))) {
                 //possible_moves.movelist.push_back(move);
                 possible_moves.movelist[count] = move;
                 count++;
                 rook_moves++;
                 index++;
             }
-            unmake_move(ROOK, rook_index, to_index);
+            unmake_move(move);
             move_mask = _blsr_u64(move_mask);
         }
         rook_mask = _blsr_u64(rook_mask);
@@ -1359,17 +1367,16 @@ MoveList board::generate_moves() {
             move.piece = QUEEN;
             move.from_square = queen_index;
             move.to_square = to_index;
-            move.en_passent = no_sq;
             move.promotion = -1;
             make_move(move);
-            if (not(in_check(king_sq))) {
+            if (not(is_square_attacked(king_sq, side_to_move))) {
                 //possible_moves.movelist.push_back(move);
                 possible_moves.movelist[count] = move;
                 count++;
                 queen_moves++;
                 index++;
             }
-            unmake_move(QUEEN, queen_index, to_index);
+            unmake_move(move);
             move_mask = _blsr_u64(move_mask);
         }
         queen_mask = _blsr_u64(queen_mask);
@@ -1378,7 +1385,6 @@ MoveList board::generate_moves() {
 }
 void board::print_bitboard(std::bitset<64> bitset) {
     std::string str_bitset = bitset.to_string();
-    // reverse(str_bitset.begin(), str_bitset.end());
     int n = 0;
     for (int i = 0; i < 64; i += 8)
     {
@@ -1390,84 +1396,63 @@ void board::print_bitboard(std::bitset<64> bitset) {
     std::cout << '\n' << std::endl;
 }
 
-std::string square_to_coordinates_perft[64] = {
-"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-"a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-"a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-"a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-"a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-"a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-};
-std::string piece_type(int piece) {
-    if (piece == -1) {
-        return "None";
-    }
-    if (piece == 0) {
-        return "Pawn";
-    }
-    if (piece == 1) {
-        return "Knight";
-    }
-    if (piece == 2) {
-        return "Bishop";
-    }
-    if (piece == 3) {
-        return "Rook";
-    }
-    if (piece == 4) {
-        return "Queen";
-    }
-    if (piece == 5) {
-        return "King";
+U64 Perft::speed_test_perft(int depth) {
+    U64 nodes = 0;
+    MoveList n_moves = this_board.generate_moves();
+    if (depth == 0) {
+        return 1;
     }
     else {
-        return "??";
-    }
-}
-long long perft(board board, int depth, int max) {
-    long long nodes = 0;
-    MoveList n_moves = board.generate_moves();
-    MA myarray;
-    int side_to_move = board.side_to_move;
-    int piece = -1;
-    unsigned long promotion_piece = 0;
-    if (depth == 1) {
-        return board.count;
-    }
-    else {
-        for (int i = 0; i < board.count; i++) {
+        int count = this_board.count;
+        for (int i = 0; i < count; i++) {
             Move move = n_moves.movelist[i];
-            board.make_move(move);
-            nodes += perft(board, depth - 1, max);
-            long long from_square = move.from_square;
-            long long to_square = move.to_square;
-            long promotion_piece = move.promotion;
-            board.unmake_move(piece, from_square, to_square);
+            this_board.make_move(move);
+            nodes += speed_test_perft(depth - 1);
+            this_board.unmake_move(move);
+        }
+    }
+    return nodes;
+}
+U64 Perft::bulk_perft(int depth, int max) {
+    U64 nodes = 0;
+    MoveList n_moves = this_board.generate_moves();
+    MA myarray;
+    Pertft_Info pf;
+    if (depth == 1) {
+        return this_board.count;
+    }
+    else {
+        int count = this_board.count;
+        for (int i = 0; i < count; i++) {
+            Move move = n_moves.movelist[i];
+            this_board.make_move(move);
+            nodes += bulk_perft(depth - 1, max);
+            this_board.unmake_move(move);
             if (depth == max) {
-                myarray.myarray.push_back({ from_square, to_square, promotion_piece, nodes });
+                pf.from_square = move.from_square;
+                pf.to_square = move.to_square;
+                pf.promotion_piece = move.promotion;
+                pf.nodes = nodes;
+                myarray.myarray.push_back(pf);
                 nodes = 0;
             }
         }
-
     }
-    long long  c = 0;
+    U64 c = 0;
     for (int i = 0; i < myarray.myarray.size(); i++)
     {
-        for (int j = 0; j < myarray.myarray[i].size(); j++)
-        {
-            if (j == 0 or j == 1) {
-                std::cout << square_to_coordinates_perft[myarray.myarray[i][j]];
-                
-            }
-            if (j == 2) {
-                std::cout << " " << piece_type(myarray.myarray[i][j]) << " " << myarray.myarray[i][3];
-            }
-            
+        std::cout << square_to_coordinates_perft[myarray.myarray[i].from_square];
+        std::cout << square_to_coordinates_perft[myarray.myarray[i].to_square];
+        if (myarray.myarray[i].promotion_piece != -1) {
+            std::cout << " " << piece_type(myarray.myarray[i].promotion_piece) << " ";
         }
-        c += myarray.myarray[i][3];
+        else {
+            std::cout << " ";
+        }
+        std::cout << myarray.myarray[i].nodes;
         std::cout << std::endl;
+        c += myarray.myarray[i].nodes;
+        
     }
     if (depth != max) {
         return nodes;
@@ -1475,43 +1460,18 @@ long long perft(board board, int depth, int max) {
     else {
         return c;
     }
-    
-}
-
-U64 speed_test_perft(board board, int depth, int max) {
-    U64 nodes = 0;
-    MoveList n_moves = board.generate_moves();
-    MA myarray;
-    int side_to_move = board.side_to_move;
-    int piece = -1;
-    unsigned long promotion_piece = 0;
-    if (depth == 0) {
-        return 1;
-    }
-    else {
-        for (int i = 0; i < board.count; i++) {
-            Move move = n_moves.movelist[i];
-            board.make_move(move);
-            nodes += speed_test_perft(board, depth - 1, max);
-            long long from_square = move.from_square;
-            long long to_square = move.to_square;
-            long promotion_piece = move.promotion;
-            board.unmake_move(piece, from_square, to_square);
-        }
-
-    }
-    return nodes;
 }
 
 int perft_test(std::string fen, int depth) {
     board board;
     board.apply_fen(fen);
+    Perft perft(board);
     auto begin = std::chrono::high_resolution_clock::now();
-    U64 x = perft(board, depth, depth);
+    U64 x = perft.bulk_perft(depth, depth);
     auto end = std::chrono::high_resolution_clock::now();
     auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-    std::cout <<"fen " << fen << " nodes " << x << " nps " << x / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
-    return x& 18446744073709551615;
+    std::cout << "fen " << fen << " nodes " << x << " nps " << x / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
+    return x & 18446744073709551615ULL;
 }
 
 int test() {
@@ -1522,14 +1482,15 @@ int test() {
     std::string fen5 = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
     std::string fen6 = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ";
     auto begin = std::chrono::high_resolution_clock::now();
-    if (perft_test(fen1, 5) == 4865609) { // 4 == 197281     5 == 4865609
+
+    if (perft_test(fen1, 6) == 119060324) { // 4 == 197281     5 == 4865609    6 == 119060324	
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
         std::cout << "False" << std::endl;
     };
 
-    if (perft_test(fen2, 4) == 4085603) { // 4 == 4085603      3 == 97862
+    if (perft_test(fen2, 5) == 193690690) { // 4 == 4085603      3 == 97862       5 == 193690690
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
@@ -1541,13 +1502,13 @@ int test() {
     else {
         std::cout << "False" << std::endl;
     };
-    if (perft_test(fen4, 4) == 422333) {    //
+    if (perft_test(fen4, 5) == 15833292) {    // 5 == 15833292        4 == 422333
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
         std::cout << "False" << std::endl;
     };
-    if (perft_test(fen5, 4) == 2103487) {
+    if (perft_test(fen5, 5) == 89941194) {   //5 == 89941194    4 ==2103487
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
     else {
