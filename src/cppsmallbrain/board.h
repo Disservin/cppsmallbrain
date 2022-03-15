@@ -12,6 +12,8 @@
 #define set_bit(bitboard, index) (bitboard |= (1ULL << index))
 #define pop_bit(bitboard, index) (get_bit(bitboard, index) ? bitboard ^= (1ULL << index):0)
 
+std::vector<std::string> split_input(std::string fen);
+
 struct Pertft_Info {
     int from_square;
     int to_square;
@@ -22,15 +24,7 @@ struct MA {
     //std::vector<std::vector<long long>> myarray;
     std::vector<Pertft_Info> myarray;
 };
-struct Move {
-    int piece;
-    int from_square;
-    int to_square;
-    int promotion;
-    int capture;
-    int en_passant;
-    int castle;
-};
+
 struct MoveList {
     //std::vector<Move> movelist;
     Move movelist[256];
@@ -54,6 +48,7 @@ struct BoardState {
 class Board
 {
 public:
+    // Move directions
     enum Dir {
         NORTH,
         SOUTH,
@@ -64,6 +59,7 @@ public:
         SOUTH_EAST,
         SOUTH_WEST
     };
+    // Piece
     enum {
         WPAWN,
         WKNIGHT,
@@ -78,6 +74,7 @@ public:
         BQUEEN,
         BKING
     };
+    // Piece Types
     enum {
         PAWN,
         KNIGHT,
@@ -86,7 +83,18 @@ public:
         QUEEN,
         KING
     };
-    /* The white piece positions */
+    // Squares to str
+    std::string square_to_coordinates[64] = {
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+    };
+
     enum {
         a8, b8, c8, d8, e8, f8, g8, h8,
         a7, b7, c7, d7, e7, f7, g7, h7,
@@ -97,24 +105,14 @@ public:
         a2, b2, c2, d2, e2, f2, g2, h2,
         a1, b1, c1, d1, e1, f1, g1, h1, no_sq
     };
-    std::string square_to_coordinates[64] = {
-        "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-        "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-        "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-        "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-        "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-        "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-        "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-        "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-    };
-    //std::vector<std::vector<U64> >  move_stack;
     int move_stack_index = 0;
+
     int count = 0;
-    /*WhitePawns, WhiteKnights, WhiteBishops, WhiteRooks, WhiteQueens, WhiteKing,
-      BlackPawns, BlackKnights, BlackBishops, BlackRooks, BlackQueens, BlackKing*/
+    //WhitePawns, WhiteKnights, WhiteBishops, WhiteRooks, WhiteQueens, WhiteKing,
+    //BlackPawns, BlackKnights, BlackBishops, BlackRooks, BlackQueens, BlackKing
     U64 bitboards[12] = { 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL };
 
-    // U64 0 = AllWhitePieces 1 = AllBlackPieces
+    
 
     U64 WPawn = bitboards[WPAWN];
     U64 WKnight = bitboards[WKNIGHT];
@@ -132,11 +130,16 @@ public:
     U64 White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
     U64 Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
 
+    // U64 0 = AllWhitePieces 1 = AllBlackPieces
     U64 occupancies[2] = { White, Black };
+
+    // All pieces
     U64 Occ = White | Black;
+
     // 0 White 
     // 1 Black
     int side_to_move = 0;
+    int stm = 1;
 
     /*
     1  white king can castle to the king side
@@ -182,6 +185,7 @@ public:
     static constexpr  uint64_t RankMid = 0x0000FFFFFFFF0000;
     static constexpr  uint64_t Rank_18 = 0xFF000000000000FF;
 
+    // All bits set to 1 if theres no check / on startup
     uint64_t checkmask = 18446744073709551615ULL;
     uint64_t attacked_squares = 0ULL;
     uint64_t pin_hv = 0ULL;
@@ -191,9 +195,24 @@ public:
     BoardState move_stack[256] = {};
 
     int get_en_passant_square();
+
     void apply_fen(std::string fen);
-    inline void update_occupancies();
-    inline int piece_at(int sq, int given=-1) {
+    
+    BoardState encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
+        U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
+        int ep, int castle);
+
+    void update_occupancies();
+
+    void make_move(Move& move);
+
+    void unmake_move();
+
+    void print_bitboard(std::bitset<64> bitset);
+
+    void print_board();
+
+    int piece_at(int sq, int given = -1) {
         /* returns color specific int for piece*/
         bool white = false;
         if (given > -1) {
@@ -247,51 +266,30 @@ public:
         }
         return -1;
     }
-    std::vector<std::string> split_fen(std::string fen);
-    BoardState encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
-        U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
-        int ep, int castle);
-    inline void make_move(Move& move);
-    inline void unmake_move();
-    void print_bitboard(std::bitset<64> bitset);
+
+    std::string piece_type(int piece);
 
     U64 Pawns_NotLeft();
 
     U64 Pawns_NotRight();
 
-
     U64 Pawn_Forward(bool IsWhite, U64 mask);
-
 
     U64 Pawn_Forward2(bool IsWhite, U64 mask);
 
-
     U64 Pawn_Backward(bool IsWhite, U64 mask);
-
 
     U64 Pawn_Backward2(bool IsWhite, U64 mask);
 
-
     U64 Pawn_AttackLeft(bool IsWhite, U64 mask);
-
 
     U64 Pawn_AttackRight(bool IsWhite, U64 mask);
 
-
-    U64 Pawn_InvertLeft(bool IsWhite, U64 mask);
-
-
-    U64 Pawn_InvertRight(bool IsWhite, U64 mask);
-
-
     U64 Pawns_FirstRank(bool IsWhite);
-
 
     U64 Pawns_LastRank(bool IsWhite);
 
-
     U64 King(bool IsWhite);
-
 
     U64 EnemyKing(bool IsWhite);
 
@@ -299,43 +297,33 @@ public:
 
     U64 Pawns(bool IsWhite);
 
-
     U64 OwnColor(bool IsWhite);
 
     U64 Enemy(bool IsWhite);
 
-
     U64 EnemyRookQueen(bool IsWhite);
-
 
     U64 RookQueen(bool IsWhite);
 
-
     U64 EnemyBishopQueen(bool IsWhite);
-
 
     U64 BishopQueen(bool IsWhite);
 
-
     U64 KingPawn(bool IsWhite);
+
     U64 EnemyKingPawn(bool IsWhite);
 
     U64 EnemyOrEmpty(bool IsWhite);
 
-    U64 Empty(bool IsWhite);
-
+    U64 Empty();
 
     U64 Knights(bool IsWhite);
 
-
     U64 Rooks(bool IsWhite);
-
 
     U64 Bishops(bool IsWhite);
 
-
     U64 Queens(bool IsWhite);
-
 
     U64 do_checkmask(bool IsWhite, int sq);
 
@@ -343,83 +331,54 @@ public:
 
     U64 is_pinned_hv(bool IsWhite, int sq);
 
-
     U64 is_pinned_dg(bool IsWhite, int sq);
-
 
     U64 seen_by_pawn(bool IsWhite, int sq, int ep);
 
     U64 seen_by_bishop(bool IsWhite, int sq);
 
-
     U64 seen_by_knight(int sq);
-
 
     U64 seen_by_rook(bool IsWhite, int sq);
 
-
-    U64 seen_by_queen(bool IsWhite, int sq);
-
-
     U64 seen_by_king(int sq);
-
 
     U64 valid_pawn_moves(bool IsWhite, int sq, int ep = 64);
 
+    U64 valid_knight_moves(bool IsWhite, int sq);
 
-    U64 valid_knight_moves_pin(int sq);
+    U64 valid_bishop_moves(bool IsWhite, int sq);
 
-    U64 valid_knight_moves_unpin(bool IsWhite, int sq);
+    U64 valid_rook_moves(bool IsWhite, int sq);
 
-    U64 valid_bishop_moves_pin(bool IsWhite, int sq);
-
-    U64 valid_bishop_moves_unpin(bool IsWhite, int sq);
-
-    U64 valid_rook_moves_pin(bool IsWhite, int sq);
-
-    U64 valid_rook_moves_unpin(bool IsWhite, int sq);
-
-    U64 valid_queen_moves_pin(bool IsWhite, int sq);
-
-    U64 valid_queen_moves_unpin(bool IsWhite, int sq);
+    U64 valid_queen_moves(bool IsWhite, int sq);
 
     U64 valid_king_moves(bool IsWhite, int sq);
 
-
-    U64 valid_king_castle_ks(bool IsWhite, int sq);
-
-
-    U64 valid_king_castle_qs(bool IsWhite, int sq);
-
     bool is_square_attacked(bool IsWhite, int sq);
 
-
     void gen_attacked_squares(bool IsWhite);
+
+    bool is_checkmate(bool IsWhite);
+
+    bool is_stalemate(bool IsWhite);
+
+    int is_game_over(bool IsWhite);
 
     void init(bool IsWhite);
 
     MoveList generate_legal_moves();
-    void print_board();
-    std::string piece_type(int piece);
 };
 
 class Perft {
 public:
-    Board this_board;
-    Perft(const Board& x) {
+    Board* this_board;
+    Perft(Board* x) {
         this_board = x;
     }
-    std::string square_to_coordinates_perft[64] = {
-    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-    };
     U64 speed_test_perft(int depth, int max);
+
+    U64 bulk_test_perft(int depth, int max);
 };
 int test();
 

@@ -15,7 +15,8 @@
 #include "board.h"
 #include <chrono>
 
-std::vector<std::string> Board::split_fen(std::string fen)
+
+std::vector<std::string> split_input(std::string fen)
 {
     std::stringstream fen_stream(fen);
     std::string segment;
@@ -34,12 +35,12 @@ void Board::apply_fen(std::string fen)
     {
         bitboards[i] = 0ULL;
     }
-    std::string position = split_fen(fen)[0];
-    std::string move_right = split_fen(fen)[1];
-    std::string castling = split_fen(fen)[2];
-    std::string en_passant = split_fen(fen)[3];
-    std::string half_move_clock = split_fen(fen)[4];
-    std::string full_move_counter = split_fen(fen)[5];
+    std::string position = split_input(fen)[0];
+    std::string move_right = split_input(fen)[1];
+    std::string castling = split_input(fen)[2];
+    std::string en_passant = split_input(fen)[3];
+    std::string half_move_clock = split_input(fen)[4];
+    std::string full_move_counter = split_input(fen)[5];
     //Side to move
     if (move_right == "w")
     {
@@ -196,9 +197,11 @@ void Board::apply_fen(std::string fen)
     //Udates Bitboards
     update_occupancies();
 }
+
 int Board::get_en_passant_square() {
     return en_passant_square;
 }
+
 inline void Board::update_occupancies() {
     WPawn = bitboards[WPAWN];
     WKnight = bitboards[WKNIGHT];
@@ -218,6 +221,7 @@ inline void Board::update_occupancies() {
     occupancies[0] = White;
     occupancies[1] = Black;
 }
+
 inline BoardState Board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
     U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
     int ep, int castle)
@@ -239,14 +243,27 @@ inline BoardState Board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop,
     board.castle_rights = castle;
     return board;
 }
-inline void Board::make_move(Move& move) {
+
+void Board::make_move(Move& move) {
 
     int from_square = move.from_square;
     int to_square = move.to_square;
     int promotion_piece = move.promotion;
     int piece = move.piece;
-    piece = piece + (side_to_move * 6);
+    if (move.null == 1) {
+        side_to_move ^= 1;
+        return;
+    }
+
+    if (move.piece == -1) {
+        piece = piece_at(from_square);
+    }
+    else {
+        piece = piece + (side_to_move * 6);
+    }
+    
     int captured_piece = -1;
+
     // piece needs to be set at its bitboard remove this for performance if you are 100% theres a piece at that square
     if (not _test_bit(bitboards[piece], to_square)) {
         BoardState boardstate = encode_board_state(bitboards[WPAWN], bitboards[WKNIGHT], bitboards[WBISHOP], bitboards[WROOK], bitboards[WQUEEN], bitboards[WKING], bitboards[BPAWN], bitboards[BKNIGHT], bitboards[BBISHOP], bitboards[BROOK], bitboards[BQUEEN], bitboards[BKING], en_passant_square, castling_rights);
@@ -399,7 +416,7 @@ inline void Board::make_move(Move& move) {
         }
         side_to_move ^= 1;
         update_occupancies();
-    }
+        }
     else {
         print_board();
         //from_index = _bitscanforward(King);
@@ -407,7 +424,8 @@ inline void Board::make_move(Move& move) {
         std::cout << "Not valid move"<< castling_rights << std::endl;
     }
 };
-inline void Board::unmake_move() {
+
+void Board::unmake_move() {
     if (move_stack_index >= 0) {
         move_stack_index--;
         BoardState board;
@@ -434,6 +452,7 @@ inline void Board::unmake_move() {
     }
     //No need to remove the entry because it will be overwritten 
 }
+
 void Board::print_bitboard(std::bitset<64> bitset) {
     std::string str_bitset = bitset.to_string();
     int n = 0;
@@ -455,68 +474,48 @@ U64 Board::Pawns_NotRight() {
     return ~File8;
 }
 
-
-U64 Board::Pawn_Forward(bool IsWhite, U64 mask) {
+inline U64 Board::Pawn_Forward(bool IsWhite, U64 mask) {
     if (IsWhite) return mask << 8;
     else return mask >> 8;
 }
 
-
-U64 Board::Pawn_Forward2(bool IsWhite, U64 mask) {
+inline U64 Board::Pawn_Forward2(bool IsWhite, U64 mask) {
     if (IsWhite) return (Pawn_Forward(IsWhite, mask) & ~Occ) << 8;
     else return (Pawn_Forward(IsWhite, mask) & ~Occ) >> 8;
 }
 
-
-U64 Board::Pawn_Backward(bool IsWhite, U64 mask) {
+inline U64 Board::Pawn_Backward(bool IsWhite, U64 mask) {
     return Pawn_Forward(IsWhite, mask);
 }
 
-
-U64 Board::Pawn_Backward2(bool IsWhite, U64 mask) {
+inline U64 Board::Pawn_Backward2(bool IsWhite, U64 mask) {
     return Pawn_Forward2(IsWhite, mask);
 }
-
 
 U64 Board::Pawn_AttackRight(bool IsWhite, U64 mask) {
     if (IsWhite) return mask << 9;
     else return mask >> 7;
 }
 
-
-U64 Board::Pawn_AttackLeft(bool IsWhite, U64 mask) {
+inline U64 Board::Pawn_AttackLeft(bool IsWhite, U64 mask) {
     if (IsWhite) return mask << 7;
     else return mask >> 9;
 }
-
-
-U64 Board::Pawn_InvertLeft(bool IsWhite, U64 mask) {
-    return Pawn_AttackRight(IsWhite, mask);
-}
-
-
-U64 Board::Pawn_InvertRight(bool IsWhite, U64 mask) {
-    return Pawn_AttackLeft(IsWhite, mask);
-}
-
 
 U64 Board::Pawns_FirstRank(bool IsWhite) {
     if (IsWhite) return Rank2;
     else return Rank7;
 }
 
-
 U64 Board::Pawns_LastRank(bool IsWhite) {
     if (IsWhite) return Rank7;
     else return Rank2;
 }
 
-
 U64 Board::King(bool IsWhite) {
     if (IsWhite) return WKing;
     else return BKing;
 }
-
 
 U64 Board::EnemyKing(bool IsWhite)
 {
@@ -534,7 +533,6 @@ U64 Board::Pawns(bool IsWhite) {
     else return BPawn;
 }
 
-
 U64 Board::OwnColor(bool IsWhite)
 {
     if (IsWhite) return White;
@@ -547,13 +545,11 @@ U64 Board::Enemy(bool IsWhite)
     return White;
 }
 
-
 U64 Board::EnemyRookQueen(bool IsWhite)
 {
     if (IsWhite) return BRook | BQueen;
     return WRook | WQueen;
 }
-
 
 U64 Board::RookQueen(bool IsWhite)
 {
@@ -561,20 +557,17 @@ U64 Board::RookQueen(bool IsWhite)
     return BRook | BQueen;
 }
 
-
 U64 Board::EnemyBishopQueen(bool IsWhite)
 {
     if (IsWhite) return bitboards[BBISHOP] | bitboards[BQUEEN];
     return bitboards[WBISHOP] | bitboards[WQUEEN];
 }
 
-
 U64 Board::BishopQueen(bool IsWhite)
 {
     if (IsWhite) return WBishop | WQueen;
     return BBishop | BQueen;
 }
-
 
 U64 Board::KingPawn(bool IsWhite)
 {
@@ -588,17 +581,16 @@ U64 Board::EnemyKingPawn(bool IsWhite)
     return WPawn | WKing;
 }
 
-U64 Board::EnemyOrEmpty(bool IsWhite)
+inline U64 Board::EnemyOrEmpty(bool IsWhite)
 {
     if (IsWhite) return ~White;
     return ~Black;
 }
 
-U64 Board::Empty(bool IsWhite)
+U64 Board::Empty()
 {
     return ~Occ;
 }
-
 
 U64 Board::Knights(bool IsWhite)
 {
@@ -606,13 +598,11 @@ U64 Board::Knights(bool IsWhite)
     return BKnight;
 }
 
-
 U64 Board::Rooks(bool IsWhite)
 {
     if (IsWhite) return WRook;
     return BRook;
 }
-
 
 U64 Board::Bishops(bool IsWhite)
 {
@@ -620,13 +610,11 @@ U64 Board::Bishops(bool IsWhite)
     return BBishop;
 }
 
-
 U64 Board::Queens(bool IsWhite)
 {
     if (IsWhite) return WQueen;
     return BQueen;
 }
-
 
 U64 Board::do_checkmask(bool IsWhite, int sq) {
     U64 enemy;
@@ -966,7 +954,6 @@ U64 Board::is_pinned_hv(bool IsWhite, int sq) {
     return checks;
 }
 
-
 U64 Board::is_pinned_dg(bool IsWhite, int sq) {
     U64 enemy;
     U64 us;
@@ -1071,7 +1058,6 @@ U64 Board::is_pinned_dg(bool IsWhite, int sq) {
     return checks;
 }
 
-
 U64 Board::seen_by_pawn(bool IsWhite, int sq, int ep) {
     U64 ep_m = (1ULL << ep);
     U64 new_mask = 0ULL;
@@ -1140,7 +1126,6 @@ U64 Board::seen_by_pawn(bool IsWhite, int sq, int ep) {
     return new_mask;
 }
 
-
 inline U64 Board::seen_by_bishop(bool IsWhite, int sq) {
     U64 bishop_move = 0ULL;
     U64 victims;
@@ -1200,12 +1185,10 @@ inline U64 Board::seen_by_bishop(bool IsWhite, int sq) {
     return bishop_move;
 }
 
-
 inline U64 Board::seen_by_knight( int sq)
 {
     return knightattacks[sq];
 }
-
 
 inline U64 Board::seen_by_rook(bool IsWhite, int sq) {
     U64 rook_move = 0ULL;
@@ -1269,17 +1252,6 @@ inline U64 Board::seen_by_rook(bool IsWhite, int sq) {
     return rook_move;
 }
 
-
-inline U64 Board::seen_by_queen(bool IsWhite, int sq) {
-    U64 queen_move = 0ULL;
-    queen_move |= (1ULL << sq);
-    queen_move |= seen_by_bishop(IsWhite, sq);
-    queen_move |= seen_by_rook(IsWhite, sq);
-    queen_move &= ~(1ULL << sq);
-    return queen_move;
-}
-
-
 inline U64 Board::seen_by_king( int sq) {
     U64 king_move = 0ULL;
     king_move |= (1ULL << sq);
@@ -1296,10 +1268,8 @@ inline U64 Board::seen_by_king( int sq) {
     return (king_up | king_down | king_right | king_left | king_up_right | king_up_left | king_down_right | king_down_left);
 }
 
-
-inline U64 Board::valid_pawn_moves(bool IsWhite, int sq, int ep) {
+U64 Board::valid_pawn_moves(bool IsWhite, int sq, int ep) {
     U64 mask = 1ULL << sq;
-    U64 pawn_attacks = 0ULL;
     U64 attack_l = 0ULL;
     U64 attack_r = 0ULL;
     U64 pawn_push = 0ULL;
@@ -1405,10 +1375,9 @@ inline U64 Board::valid_pawn_moves(bool IsWhite, int sq, int ep) {
         attack_r = Pawn_AttackRight(IsWhite, mask) & White & not_a_file;
         pawn_push = Pawn_Backward(IsWhite, mask) & ~Occ | Pawn_Backward2(IsWhite, mask) & ~Occ & ~rank_7_mask;
     }
-    U64 not_pinned_r = (mask & not_h_file) << 7 & (~pin_hv | Enemy(IsWhite) >> 9);
-    U64 not_pinned_l = (mask & not_a_file) >> 7 & (~pin_hv | Enemy(IsWhite) << 9);
 
-    if (not(is_pinned_dg(IsWhite, sq))) {
+    //if (not(is_pinned_dg(IsWhite, sq))) { Keep this for safety reason the version below should work
+    if (not _test_bit(pin_dg, sq)) {
         valid_attacks |= attack_r;
         valid_attacks |= attack_l;
     }
@@ -1423,31 +1392,26 @@ inline U64 Board::valid_pawn_moves(bool IsWhite, int sq, int ep) {
     // 8/8/3p4/1Pp3kr/1K3R2/8/4P1P1/8 w - c6 0 3
     int king_sq = _bitscanforward(King(IsWhite));
     if (IsWhite and ep != 64 and square_distance(king_sq, ep - 8) == 1 and square_distance(sq, ep - 8) == 1) {
-        if (square_distance(king_sq, ep-8) == 1 and doublecheck == 1 and not is_pinned_hv(IsWhite, sq)) {
+        if (square_distance(king_sq, ep-8) == 1 and doublecheck == 1 and not _test_bit(pin_hv, sq)){// not is_pinned_hv(IsWhite, sq)) {
             return (ep_take);
         }
     }
     if (!IsWhite and ep != 64 and square_distance(king_sq, ep + 8) == 1 and square_distance(sq, ep + 8) == 1) {
-        if (square_distance(king_sq, ep+8) == 1 and doublecheck == 1 and not is_pinned_hv(IsWhite, sq)) {
+        if (square_distance(king_sq, ep+8) == 1 and doublecheck == 1 and not _test_bit(pin_hv, sq)){ //not is_pinned_hv(IsWhite, sq)) {
             return (ep_take);
         }
     }
     return (pawn_push | valid_attacks | ep_take) & checkmask;
 }
 
-
-inline U64 Board::valid_knight_moves_pin( int sq) {
-    return 0ULL;
-}
-
-inline U64 Board::valid_knight_moves_unpin(bool IsWhite, int sq) {
+inline U64 Board::valid_knight_moves(bool IsWhite, int sq) {
     if (_test_bit(pin_dg, sq) or _test_bit(pin_hv, sq)) {
         return 0ULL;
     }
     return seen_by_knight(sq) & EnemyOrEmpty(IsWhite) & checkmask;
 }
 
-inline U64 Board::valid_bishop_moves_pin(bool IsWhite, int sq) {
+U64 Board::valid_bishop_moves(bool IsWhite, int sq) {
     if (_test_bit(pin_dg, sq)) {
         
         return seen_by_bishop(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_dg;
@@ -1459,11 +1423,7 @@ inline U64 Board::valid_bishop_moves_pin(bool IsWhite, int sq) {
     return seen_by_bishop(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask;
 }
 
-inline U64 Board::valid_bishop_moves_unpin(bool IsWhite, int sq) {
-    return seen_by_bishop(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask;
-}
-
-inline U64 Board::valid_rook_moves_pin(bool IsWhite, int sq) {
+inline U64 Board::valid_rook_moves(bool IsWhite, int sq) {
     if (_test_bit(pin_hv, sq)) {
         return seen_by_rook(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_hv;
     }
@@ -1473,19 +1433,11 @@ inline U64 Board::valid_rook_moves_pin(bool IsWhite, int sq) {
     return seen_by_rook(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask;
 }
 
-inline U64 Board::valid_rook_moves_unpin(bool IsWhite, int sq) {
-    return seen_by_rook(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask;
+inline U64 Board::valid_queen_moves(bool IsWhite, int sq) {
+    return valid_rook_moves(IsWhite, sq) | valid_bishop_moves(IsWhite, sq);
 }
 
-inline U64 Board::valid_queen_moves_pin(bool IsWhite, int sq) {
-    return valid_rook_moves_pin(IsWhite, sq) | valid_bishop_moves_pin(IsWhite, sq);
-}
-
-inline U64 Board::valid_queen_moves_unpin(bool IsWhite, int sq) {
-    return valid_rook_moves_unpin(IsWhite, sq) | valid_bishop_moves_unpin(IsWhite, sq);
-}
-
-inline U64 Board::valid_king_moves(bool IsWhite, int sq) {
+U64 Board::valid_king_moves(bool IsWhite, int sq) {
     U64 moves = seen_by_king(sq) & EnemyOrEmpty(IsWhite);
     U64 final_moves = 0ULL;
     int to_index;
@@ -1514,14 +1466,14 @@ inline U64 Board::valid_king_moves(bool IsWhite, int sq) {
     // Castling
     unsigned long rook_index;
     U64 blockers = Occ;
+    U64 castling_index = 0ULL;
     //King side White
     if (castling_rights & wk and (_rays[EAST][sq] & blockers) and IsWhite) {
         rook_index = _bitscanforward(blockers & _rays[EAST][sq]);
         if (rook_index == 7) {
             if (not is_square_attacked(IsWhite, 4) and not is_square_attacked(IsWhite, 5) and not is_square_attacked(IsWhite, 6)) {
-                U64 to_index = 0ULL;
-                to_index |= 1ULL << 6;
-                final_moves |= to_index;
+                castling_index |= 1ULL << 6;
+                final_moves |= castling_index;
             }
         }
     }
@@ -1530,9 +1482,8 @@ inline U64 Board::valid_king_moves(bool IsWhite, int sq) {
         rook_index = _bitscanreverse(blockers & _rays[WEST][sq]);
         if (rook_index == 0) {
             if (not is_square_attacked(IsWhite, 4) and not is_square_attacked(IsWhite, 3) and not is_square_attacked(IsWhite, 2)) {
-                U64 to_index = 0ULL;
-                to_index |= 1ULL << 2;
-                final_moves |= to_index;
+                castling_index |= 1ULL << 2;
+                final_moves |= castling_index;
             }
         }
     }
@@ -1541,9 +1492,8 @@ inline U64 Board::valid_king_moves(bool IsWhite, int sq) {
         rook_index = _bitscanforward(blockers & _rays[EAST][sq]);
         if (rook_index == 63) {
             if (not is_square_attacked(IsWhite, 62) and not is_square_attacked(IsWhite, 61) and not is_square_attacked(IsWhite, 60)) {
-                U64 to_index = 0ULL;
-                to_index |= 1ULL << 62;
-                final_moves |= to_index;
+                castling_index |= 1ULL << 62;
+                final_moves |= castling_index;
             }
         }
     }
@@ -1552,46 +1502,16 @@ inline U64 Board::valid_king_moves(bool IsWhite, int sq) {
         rook_index = _bitscanreverse(blockers & _rays[WEST][sq]);
         if (rook_index == 56) {
             if (not is_square_attacked(IsWhite,  60) and not is_square_attacked(IsWhite, 59) and not is_square_attacked(IsWhite, 58)) {
-                U64 to_index = 0ULL;
-                to_index |= 1ULL << 58;
-                final_moves |= to_index;
+                
+                castling_index |= 1ULL << 58;
+                final_moves |= castling_index;
             }
         }
     }
     return final_moves;
 }
 
-
-inline U64 Board::valid_king_castle_ks(bool IsWhite, int sq) {
-    U64 castle = 0ULL;
-    if (IsWhite) {
-        castle = 1ULL << 4 | 1ULL << 5 | 1ULL << 6;
-    }
-    else {
-        castle = 1ULL << 60 | 1ULL << 61 | 1ULL << 62;
-    }
-    if (castle & attacked_squares) {
-        return 0ULL;
-    }
-    return castle;
-}
-
-
-inline U64 Board::valid_king_castle_qs(bool IsWhite, int sq) {
-    U64 castle = 0ULL;
-    if (IsWhite) {
-        castle = 1ULL << 4 | 1ULL << 3 | 1ULL << 2;
-    }
-    else {
-        castle = 1ULL << 60 | 1ULL << 59 | 1ULL << 58;
-    }
-    if (castle & attacked_squares) {
-        return 0ULL;
-    }
-    return castle;
-}
-
-inline bool Board::is_square_attacked(bool IsWhite, int sq) {
+bool Board::is_square_attacked(bool IsWhite, int sq) {
     U64 enemy;
     U64 us;
     if (IsWhite) {
@@ -1795,8 +1715,8 @@ inline bool Board::is_square_attacked(bool IsWhite, int sq) {
     return false;
 }
 
-
-void Board::gen_attacked_squares(bool IsWhite) {
+inline void Board::gen_attacked_squares(bool IsWhite) {
+    // Creates the pins
     U64 us = IsWhite ? occupancies[0] : occupancies[1];
     int index = -1;
     while (us) {
@@ -1821,6 +1741,102 @@ void Board::init(bool IsWhite) {
     pin_dg = 0ULL;
     pin_hv = 0ULL;
     gen_attacked_squares(IsWhite);
+}
+
+bool Board::is_checkmate(bool IsWhite) {
+    int king_sq = _bitscanforward(King(IsWhite));
+    init(IsWhite);
+    if (is_square_attacked(IsWhite, king_sq)) {
+        init(IsWhite);
+        if (doublecheck == 2) {
+            valid_king_moves(IsWhite, king_sq);
+            if (count == 0) {
+                return true;
+            }
+        }
+        if (doublecheck == 1) {
+            generate_legal_moves();
+            if (count == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool Board::is_stalemate(bool IsWhite) {
+    int king_sq = _bitscanforward(King(IsWhite));
+    init(IsWhite);
+    if (valid_king_moves(IsWhite, king_sq)) {
+        return false;
+    }
+    int from_index;
+    U64 we;
+    if (IsWhite) {
+        we = White;
+    }
+    else {
+        we = Black;
+    }
+    U64 pawn_mask = (BPawn | WPawn) & we;
+    U64 knight_mask = (BKnight | WKnight) & we;
+    U64 bishop_mask = (BBishop | WBishop) & we;
+    U64 rook_mask = (BRook | WRook) & we;
+    U64 queen_mask = (BQueen | WQueen) & we;
+    U64 move_mask = 0ULL;
+    //Easiest to look up
+    while (knight_mask) {
+        from_index = _bitscanforward(knight_mask);
+        move_mask = valid_knight_moves(IsWhite, from_index);
+        if (move_mask) {
+            return false;
+        }
+        knight_mask = _blsr_u64(knight_mask);
+    }
+    //Highest probabilty that any of these can move
+    while (pawn_mask) {
+        from_index = _bitscanforward(pawn_mask);
+        move_mask = valid_pawn_moves(IsWhite, from_index, en_passant_square);
+        if (move_mask) {
+            return false;
+        }
+        pawn_mask = _blsr_u64(pawn_mask);
+    }
+    while (bishop_mask) {
+        from_index = _bitscanforward(bishop_mask);
+        move_mask = valid_bishop_moves(IsWhite, from_index);
+        if (move_mask) {
+            return false;
+        }
+        bishop_mask = _blsr_u64(bishop_mask);
+    }
+    while (rook_mask) {
+        from_index = _bitscanforward(rook_mask);
+        move_mask = valid_rook_moves(IsWhite, from_index);
+        if (move_mask) {
+            return false;
+        }
+        rook_mask = _blsr_u64(rook_mask);
+    }
+    while (queen_mask) {
+        from_index = _bitscanforward(queen_mask);
+        move_mask = valid_queen_moves(IsWhite, from_index);
+        if (move_mask) {
+            return false;
+        }
+        queen_mask = _blsr_u64(queen_mask);
+    }
+    return true;
+}
+
+int Board::is_game_over(bool IsWhite) {
+    if (is_checkmate(IsWhite)) {
+        return 1;
+    }
+    if (is_stalemate(IsWhite)) {
+        return 0;
+    }
+    return -1;
 }
 
 MoveList Board::generate_legal_moves() {
@@ -1886,15 +1902,9 @@ MoveList Board::generate_legal_moves() {
             }
             pawn_mask = _blsr_u64(pawn_mask);
         }
-
         while (knight_mask) {
             from_index = _bitscanforward(knight_mask);
-            if (valid_knight_moves_pin(from_index)) {
-                move_mask = valid_knight_moves_pin(from_index);
-            }
-            else {
-                move_mask = valid_knight_moves_unpin(IsWhite, from_index);
-            }
+            move_mask = valid_knight_moves(IsWhite, from_index);
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
                 if (occupancies[enemy]) {
@@ -1915,7 +1925,7 @@ MoveList Board::generate_legal_moves() {
         }
         while (bishop_mask) {
             from_index = _bitscanforward(bishop_mask);
-            move_mask = valid_bishop_moves_pin(IsWhite, from_index);
+            move_mask = valid_bishop_moves(IsWhite, from_index);
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
                 if (occupancies[enemy]) {
@@ -1936,7 +1946,7 @@ MoveList Board::generate_legal_moves() {
         }
         while (rook_mask) {
             from_index = _bitscanforward(rook_mask);
-            move_mask = valid_rook_moves_pin(IsWhite, from_index);
+            move_mask = valid_rook_moves(IsWhite, from_index);
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
                 if (occupancies[enemy]) {
@@ -1957,7 +1967,7 @@ MoveList Board::generate_legal_moves() {
         }
         while (queen_mask) {
             from_index = _bitscanforward(queen_mask);
-            move_mask = valid_queen_moves_pin(IsWhite, from_index);
+            move_mask = valid_queen_moves(IsWhite, from_index);
 
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
@@ -1979,8 +1989,7 @@ MoveList Board::generate_legal_moves() {
         }
     }
 
-    from_index = _bitscanforward(king_mask);
-    move_mask = valid_king_moves(IsWhite, from_index);    
+    move_mask = valid_king_moves(IsWhite, king_sq);    
     while (move_mask) {
         int to_index = _bitscanforward(move_mask);
         if (occupancies[enemy]) {
@@ -1990,7 +1999,7 @@ MoveList Board::generate_legal_moves() {
             move.capture = -1;
         }
         move.piece = KING;
-        move.from_square = from_index;
+        move.from_square = king_sq;
         move.to_square = to_index;
         move.promotion = -1;
         possible_moves.movelist[count] = move;
@@ -2001,23 +2010,21 @@ MoveList Board::generate_legal_moves() {
     return possible_moves;
 }
 
-
 U64 Perft::speed_test_perft(int depth, int max) {
     U64 nodes = 0;
-    bool IsWhite = this_board.side_to_move;
     MA myarray;
     Pertft_Info pf;
     if (depth == 0) {
         return 1;
     }
     else {
-        MoveList n_moves = this_board.generate_legal_moves();
-        int count = this_board.count;
+        MoveList n_moves = this_board->generate_legal_moves();
+        int count = this_board->count;
         for (int i = 0; i < count; i++) { 
             Move move = n_moves.movelist[i];
-            this_board.make_move(move);
+            this_board->make_move(move);
             nodes += speed_test_perft(depth - 1, depth);
-            this_board.unmake_move();
+            this_board->unmake_move();
             if (depth == max) {
                 pf.from_square = move.from_square;
                 pf.to_square = move.to_square;
@@ -2029,10 +2036,20 @@ U64 Perft::speed_test_perft(int depth, int max) {
         }
     }
     U64 c = 0;
+    std::string square_to_coordinates[64] = {
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+        };
     for (int i = 0; i < myarray.myarray.size(); i++)
     {
-        std::cout << square_to_coordinates_perft[myarray.myarray[i].from_square];
-        std::cout << square_to_coordinates_perft[myarray.myarray[i].to_square];
+        std::cout << square_to_coordinates[myarray.myarray[i].from_square];
+        std::cout << square_to_coordinates[myarray.myarray[i].to_square];
         std::cout << " ";
 
         std::cout << myarray.myarray[i].nodes;
@@ -2047,6 +2064,62 @@ U64 Perft::speed_test_perft(int depth, int max) {
         return c;
     }
 };
+
+U64 Perft::bulk_test_perft(int depth, int max) {
+    U64 nodes = 0;
+    MA myarray;
+    Pertft_Info pf;
+    MoveList n_moves = this_board->generate_legal_moves();
+    int count = this_board->count;
+    if (depth == 1) {
+        return count;
+    }
+    else {
+        for (int i = 0; i < count; i++) {
+            Move move = n_moves.movelist[i];
+            this_board->make_move(move);
+            nodes += bulk_test_perft(depth - 1, depth);
+            this_board->unmake_move();
+            if (depth == max) {
+                pf.from_square = move.from_square;
+                pf.to_square = move.to_square;
+                pf.promotion_piece = move.promotion;
+                pf.nodes = nodes;
+                myarray.myarray.push_back(pf);
+                nodes = 0;
+            }
+        }
+    }
+    U64 c = 0;
+    std::string square_to_coordinates[64] = {
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+    };
+    for (int i = 0; i < myarray.myarray.size(); i++)
+    {
+        std::cout << square_to_coordinates[myarray.myarray[i].from_square];
+        std::cout << square_to_coordinates[myarray.myarray[i].to_square];
+        std::cout << " ";
+
+        std::cout << myarray.myarray[i].nodes;
+        std::cout << std::endl;
+        c += myarray.myarray[i].nodes;
+
+    }
+    if (depth != max) {
+        return nodes;
+    }
+    else {
+        return c;
+    }
+};
+
 std::string Board::piece_type(int piece) {
     if (piece == -1) {
         return "-";
@@ -2091,6 +2164,7 @@ std::string Board::piece_type(int piece) {
         return "??";
     }
 }
+
 void Board::print_board() {
     for (int i = 63; i >= 0; i -= 8)
     {
@@ -2098,6 +2172,7 @@ void Board::print_board() {
     }
     std::cout << '\n' << std::endl;
 }
+
 int test() {
     std::string fen1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     std::string fen2 = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
@@ -2107,13 +2182,13 @@ int test() {
     std::string fen6 = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ";
     auto begin = std::chrono::high_resolution_clock::now();
     
-    Board board;
-    board.apply_fen(fen1);
+    Board* board = nullptr;
+    board->apply_fen(fen1);
     Perft perft(board);
     int count = 0;
 
     auto begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.speed_test_perft(6, 6) == 119060324) { // 4 == 197281     5 == 4865609    6 == 119060324	
+    if (perft.bulk_test_perft(6, 6) == 119060324) { // 4 == 197281     5 == 4865609    6 == 119060324	
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2124,10 +2199,10 @@ int test() {
     auto time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds"<< "\n" << std::endl;
 
-    board.apply_fen(fen2);
+    board->apply_fen(fen2);
     perft.this_board = board;
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.speed_test_perft(5, 5) == 193690690) { // 4 == 4085603      3 == 97862       5 == 193690690
+    if (perft.bulk_test_perft(5, 5) == 193690690) { // 4 == 4085603      3 == 97862       5 == 193690690
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2138,10 +2213,10 @@ int test() {
     time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board.apply_fen(fen3);
+    board->apply_fen(fen3);
     perft.this_board = board;
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.speed_test_perft(7, 7) == 178633661) {    // 6 == 11030083        5 == 674624
+    if (perft.bulk_test_perft(7, 7) == 178633661) {    // 6 == 11030083        5 == 674624
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2152,10 +2227,10 @@ int test() {
     time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board.apply_fen(fen4);
+    board->apply_fen(fen4);
     perft.this_board = board;
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.speed_test_perft(5, 5) == 15833292) {    // 5 == 15833292        4 == 422333
+    if (perft.bulk_test_perft(6, 6) == 706045033) {    // 5 == 15833292        4 == 422333
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2166,10 +2241,10 @@ int test() {
     time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board.apply_fen(fen5);
+    board->apply_fen(fen5);
     perft.this_board = board;
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.speed_test_perft(5, 5) == 89941194) {   //5 == 89941194    4 ==2103487
+    if (perft.bulk_test_perft(5, 5) == 89941194) {   //5 == 89941194    4 ==2103487     6 == 3048196529
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2180,10 +2255,10 @@ int test() {
     time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board.apply_fen(fen6);
+    board->apply_fen(fen6);
     perft.this_board = board;
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.speed_test_perft(5, 5) == 164075551) {     // 4 == 3894594     3 == 89890
+    if (perft.bulk_test_perft(5, 5) == 164075551) {     // 4 == 3894594     3 == 89890     5 == 164075551
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }

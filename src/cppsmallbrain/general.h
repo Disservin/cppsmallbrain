@@ -2,12 +2,35 @@
 #include <intrin.h>
 #include <iostream>  
 #include <cmath>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <list>
+#include <bitset>
+#include <sstream>
+#include <algorithm>
+#include <stdlib.h>
+#include <iterator>
+#include <vector>
+#include <chrono>
+#include <cmath>
+#include <intrin.h>
+#include <assert.h>
 
 #pragma intrinsic(_BitScanForward)
 #pragma intrinsic(_BitScanReverse)
 
 #define _Compiletime __forceinline static constexpr
 #define U64 unsigned __int64
+
+struct Move {
+    int piece;
+    int from_square;
+    int to_square;
+    int promotion;
+    int capture;
+    int null;   // 1 == True 0 == False
+};
 
 inline int square_file(int sq) {
     //Gets the file index of the square where 0 is the a-file
@@ -31,19 +54,42 @@ inline int _test_bit(U64 bit, int sq) {
         return false;
     }
 }
+
+#if defined(__GNUC__)  // GCC, Clang, ICC
+inline int _bitscanreverse(U64 b) {
+    return 63 ^ __builtin_clzll(b);
+}
+
+
+inline int _bitscanforward(U64 b) {
+    return __builtin_ctzll(b);
+}
+
+#elif defined(_MSC_VER)  // MSVC
+#ifdef _WIN64  // MSVC, WIN64
 inline int _bitscanforward(U64 mask) {
-    //if (mask == 0) {
-    //    return -1;
-    //}
     unsigned long index;
     _BitScanForward64(&index, mask);
-    return index & 4294967295;
+    return index;
 }
+
 inline int _bitscanreverse(U64 mask) {
-    //if (mask == 0) {
-    //    return -1;
-    //}
     unsigned long index;
     _BitScanReverse64(&index, mask);
-    return index & 4294967295;
+    return index;
+}
+#endif
+#endif
+
+inline int popcount(U64 mask) {
+
+#ifndef defined(_MSC_VER) || defined(__INTEL_COMPILER)
+
+    return (int)_mm_popcnt_u64(mask);
+
+#else // Assumed gcc or compatible compiler
+
+    return __builtin_popcountll(mask);
+
+#endif
 }
