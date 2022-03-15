@@ -379,6 +379,7 @@ public:
     U64 speed_test_perft(int depth, int max);
 
     U64 bulk_test_perft(int depth, int max);
+
+    void test();
 };
-int test();
 

@@ -14,19 +14,16 @@ public:
 		}
 		stopped = false;
 		threads = std::thread(searcher, depth);
-		threads.detach();
 	}
 	void stop() {
 		stopped = true;
 		if (threads.joinable()) {
-			threads.detach();
+			threads.join();
 		}
-		std::cout << "successful stop\n"<< std::endl;
 	}
 	bool is_searching() {
 		return threads.joinable();
 	}
 private:
 	std::thread threads;
-
 };

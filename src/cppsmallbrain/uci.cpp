@@ -52,7 +52,6 @@ int main() {
 			break;
 		}
 		if (input.find("position fen") != std::string::npos) {
-
 			std::size_t start_index = input.find("fen");
 			fen = input.substr(start_index + 4);
 			board->apply_fen(fen);
@@ -64,23 +63,22 @@ int main() {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);
 				}
+				memset(board->move_stack, 0, sizeof(board->move_stack));
+				board->move_stack_index = 0;
 			}
-			input = "";
 		}
 		if (input.find("position startpos") != std::string::npos) {
-			//Closing any open threads
-
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index++;
-				std::cout << "loading position" << std::endl;
 				for (index; index < param.size(); index++) {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);
 				}
-				std::cout << "finished loading position" << std::endl;
+				memset(board->move_stack, 0, sizeof(board->move_stack));
+				board->move_stack_index = 0;
 			}
 		}
 		if (input.find("go perft") != std::string::npos) {
@@ -96,7 +94,8 @@ int main() {
 		}
 		if (input.find("test perft") != std::string::npos) {
 			std::cout << "\nTest started" << std::endl;
-			test();
+			Perft perft(board);
+			perft.test();
 		}
 		if (input.find("speed test") != std::string::npos) {
 			std::cout << "\nTest started" << std::endl;
@@ -109,16 +108,12 @@ int main() {
 			std::cout << "startpos " << " nodes " << x << " nps " << x / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
 		}
 		if (input.find("go depth") != std::string::npos and not thread_started) {
-
 			std::size_t start_index = input.find("depth");
 			std::string depth_str = input.substr(start_index + 6);
 			int depth = std::stoi(depth_str);
 			threads.begin(depth);
-			//searchThread = std::thread(searcher, depth);
 		}
 		if (input == "go" or input == "go infinite" and not thread_started) {
-			std::cout << "starting thread" << std::endl;
-			//searchThread = std::thread(searcher, 256);
 			threads.begin(256);
 		}
 		if (input.find("go movetime") != std::string::npos) {
@@ -126,7 +121,6 @@ int main() {
 			std::string movetime_str = input.substr(start_index + 6);
 			int movetime = std::stoi(movetime_str);
 			time_given = time_left(movetime);
-			//searchThread = std::thread(searcher, 256);
 			threads.begin(256);
 		}
 		if (input == "b") {

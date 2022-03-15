@@ -27,31 +27,20 @@ void iterative_search(int search_depth) {
 		search_to_depth = i;
 		ply = 0;
 		nodes = 0;
-		//auto begin = std::chrono::high_resolution_clock::now();
+		auto begin = std::chrono::high_resolution_clock::now();
 		result = alpha_beta(lowerbounds, upperbounds, player, i, ply);
-		//auto end = std::chrono::high_resolution_clock::now();
-		//auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
+		auto end = std::chrono::high_resolution_clock::now();
+		auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
 		if (stopped) {
 			std::string bm = print_move(bestmove);
 			std::cout << "bestmove " << bm << std::endl;
 			break;
 		}
 		else {
-			//last_pv = get_pv_line();
-			std::string bm = print_move(bestmove);
-			std::cout << "info depth " << i << " score cp " << 0 << " pv " << bm << std::endl;
-			//std::cout << "here" << std::endl;
-			//std::cout << std::fixed << "info depth " << i << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / 1000000000) + 0.01)) << " time " << (time_diff / 1000000000) * 1000 << " pv " << last_pv << std::endl;*/
+			last_pv = get_pv_line();
+			std::cout << std::fixed << "info depth " << i << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / 1000000000) + 0.01)) << " time " << (time_diff / 1000000000) * 1000 << " pv " << last_pv << std::endl;
 		}
 	}
-	
-	//if (last_pv != "") {
-	//	std::cout << "bestmove " << last_pv[0] << last_pv[1]<<last_pv[2]<<last_pv[3] << std::endl;
-	//}
-	//else {
-	//	std::string param = get_pv_line();
-	//	std::cout << "bestmove " << param[0] << param[1] << param[2] << param[3] << std::endl;
-	//}
 }
 //"position fen 1k6/6R1/7P/5K2/8/8/8/8 b - - 0 2";
 int alpha_beta(int alpha, int beta, int player, int depth, int ply) {
@@ -71,7 +60,7 @@ int alpha_beta(int alpha, int beta, int player, int depth, int ply) {
 
 	
 	if (stopped) {
-		return 1;
+		return 0;
 	}
 	if ( game_result == 1 or game_result == 0) {
 		nodes++;
@@ -85,13 +74,9 @@ int alpha_beta(int alpha, int beta, int player, int depth, int ply) {
 		nodes++;
 		return evaluation() * player;
 	}
-	//if (depth == 4 and ply == 0) {
-	//	std::cout << "part1" << alpha << " " << beta << " " << player << " " << depth << " " << ply << " " << std::endl;
-	//}
 	MoveList n_moves = board->generate_legal_moves();
 	int count = board->count;
     for (int i = 0; i < count; i++) {
-        //alpha = std::max(bestvalue, alpha);
 		if (stopped) {
 			break;
 		}
@@ -104,14 +89,11 @@ int alpha_beta(int alpha, int beta, int player, int depth, int ply) {
 		}
 		if (score > bestvalue) {
 			bestvalue = score;
-			if (depth == search_to_depth) {
-				bestmove = move;
+			pv_table[ply][ply] = move;
+			for (int next_ply = 0; next_ply < pv_length[ply + 1]; next_ply++) {
+				pv_table[ply][ply + 1 + next_ply] = pv_table[ply + 1][ply + 1 + next_ply];
 			}
-			//pv_table[ply][ply] = move;
-			//for (int next_ply = 0; next_ply < pv_length[ply + 1]; next_ply++) {
-			//	pv_table[ply][ply + 1 + next_ply] = pv_table[ply + 1][ply + 1 + next_ply];
-			//}
-			//pv_length[ply] = 1 + pv_length[ply + 1];
+			pv_length[ply] = 1 + pv_length[ply + 1];
 			if (score > alpha) {
 				alpha = score;
 			}

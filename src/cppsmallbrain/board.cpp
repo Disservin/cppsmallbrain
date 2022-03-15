@@ -2173,7 +2173,7 @@ void Board::print_board() {
     std::cout << '\n' << std::endl;
 }
 
-int test() {
+void Perft::test() {
     std::string fen1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     std::string fen2 = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
     std::string fen3 = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1";
@@ -2181,14 +2181,12 @@ int test() {
     std::string fen5 = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
     std::string fen6 = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ";
     auto begin = std::chrono::high_resolution_clock::now();
-    
-    Board* board = nullptr;
-    board->apply_fen(fen1);
-    Perft perft(board);
+
+    this_board->apply_fen(fen1);
     int count = 0;
 
     auto begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.bulk_test_perft(6, 6) == 119060324) { // 4 == 197281     5 == 4865609    6 == 119060324	
+    if (bulk_test_perft(6, 6) == 119060324) { // 4 == 197281     5 == 4865609    6 == 119060324	
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2197,12 +2195,11 @@ int test() {
     };
     auto end2 = std::chrono::high_resolution_clock::now();
     auto time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
-    std::cout << time_diff2 / 1000000000.0f << " seconds"<< "\n" << std::endl;
+    std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board->apply_fen(fen2);
-    perft.this_board = board;
+    this_board->apply_fen(fen2);
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.bulk_test_perft(5, 5) == 193690690) { // 4 == 4085603      3 == 97862       5 == 193690690
+    if (bulk_test_perft(5, 5) == 193690690) { // 4 == 4085603      3 == 97862       5 == 193690690
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2213,10 +2210,9 @@ int test() {
     time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board->apply_fen(fen3);
-    perft.this_board = board;
+    this_board->apply_fen(fen3);
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.bulk_test_perft(7, 7) == 178633661) {    // 6 == 11030083        5 == 674624
+    if (bulk_test_perft(7, 7) == 178633661) {    // 6 == 11030083        5 == 674624
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2227,10 +2223,9 @@ int test() {
     time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board->apply_fen(fen4);
-    perft.this_board = board;
+    this_board->apply_fen(fen4);
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.bulk_test_perft(6, 6) == 706045033) {    // 5 == 15833292        4 == 422333
+    if (bulk_test_perft(6, 6) == 706045033) {    // 5 == 15833292        4 == 422333
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2241,10 +2236,9 @@ int test() {
     time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board->apply_fen(fen5);
-    perft.this_board = board;
+    this_board->apply_fen(fen5);
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.bulk_test_perft(5, 5) == 89941194) {   //5 == 89941194    4 ==2103487     6 == 3048196529
+    if (bulk_test_perft(5, 5) == 89941194) {   //5 == 89941194    4 ==2103487     6 == 3048196529
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2255,10 +2249,9 @@ int test() {
     time_diff2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end2 - begin2).count();
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
-    board->apply_fen(fen6);
-    perft.this_board = board;
+    this_board->apply_fen(fen6);
     begin2 = std::chrono::high_resolution_clock::now();
-    if (perft.bulk_test_perft(5, 5) == 164075551) {     // 4 == 3894594     3 == 89890     5 == 164075551
+    if (bulk_test_perft(5, 5) == 164075551) {     // 4 == 3894594     3 == 89890     5 == 164075551
         count++;
         std::cout << "\n" << "Correct" << "\n" << std::endl;
     }
@@ -2270,9 +2263,8 @@ int test() {
     std::cout << time_diff2 / 1000000000.0f << " seconds" << "\n" << std::endl;
 
     std::cout << "Finished perft positions" << std::endl;
-    std::cout << "\n" << count<<"/"<<"6"<< " Correct" << std::endl;
+    std::cout << "\n" << count << "/" << "6" << " Correct" << std::endl;
     auto end = std::chrono::high_resolution_clock::now();
     auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
     std::cout << time_diff / 1000000000.0f << " seconds" << std::endl;
-    return 0;
 }
