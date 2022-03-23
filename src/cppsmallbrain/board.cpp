@@ -10,10 +10,11 @@
 #include <cmath>
 #include <intrin.h>
 #include <assert.h>
-
+#include <chrono>
+#include <map>
 #include "general.h"
 #include "board.h"
-#include <chrono>
+
 
 
 std::vector<std::string> split_input(std::string fen)
@@ -56,6 +57,21 @@ void Board::apply_fen(std::string fen)
     int pos = 0;
     int sq;
     char letter;
+    std::map<char, int> piece_to_int =
+    {
+    { 'P', 0 },
+    { 'N', 1 },
+    { 'B', 2 },
+    { 'R', 3 },
+    { 'Q', 4 },
+    { 'K', 5 },
+    { 'p', 6 },
+    { 'n', 7 },
+    { 'b', 8 },
+    { 'r', 9 },
+    { 'q', 10 },
+    { 'k', 11 },
+    };
     for (int rank = 7; rank >= 0; rank--) {
         for (int file = 0; file < 8; file++) {
             sq = rank * 8 + file;
@@ -64,94 +80,26 @@ void Board::apply_fen(std::string fen)
             {
                 break;
             }
-            switch (letter)
-            {
-            case 'p':
-                bitboards[6] |= (1ULL << sq);
+            if (piece_to_int.count(letter)) {
+                int piece = piece_to_int[letter];
+                bitboards[piece] |= (1ULL << sq);
                 pos++;
-                break;
-            case 'r':
-                bitboards[9] |= (1ULL << sq);
+            }
+            if (letter - '0' >= 2 and letter - '0' <= 7) {
+                file += letter - '0' - 1;
                 pos++;
-                break;
-            case 'n':
-                bitboards[7] |= (1ULL << sq);
+            }
+            if (letter == '1') {
                 pos++;
-                break;
-            case 'b':
-                bitboards[8] |= (1ULL << sq);
-                pos++;
-                break;
-            case 'q':
-                bitboards[10] |= (1ULL << sq);
-                pos++;
-                break;
-            case 'k':
-                bitboards[11] |= (1ULL << sq);
-                pos++;
-                break;
-            case 'P':
-                bitboards[0] |= (1ULL << sq);
-                pos++;
-                break;
-            case 'R':
-                bitboards[3] |= (1ULL << sq);
-                pos++;
-                break;
-            case 'N':
-                bitboards[1] |= (1ULL << sq);
-                pos++;
-                break;
-            case 'B':
-                bitboards[2] |= (1ULL << sq);
-                pos++;
-                break;
-            case 'Q':
-                bitboards[4] |= (1ULL << sq);
-                pos++;
-                break;
-            case 'K':
-                bitboards[5] |= (1ULL << sq);
-                pos++;
-                break;
-            case '/':
+            }
+            if (letter == '8') {
+                rank--;
                 file--;
                 pos++;
-                break;
-            case '1':
-                pos += 1;
-                break;
-            case '2':
-                file += 1;
-                pos++;
-                break;
-            case '3':
-                file += 2;
-                pos++;
-                break;
-            case '4':
-                file += 3;
-                pos++;
-                break;
-            case '5':
-                file += 4;
-                pos++;
-                break;
-            case '6':
-                file += 5;
-                pos++;
-                break;
-            case '7':
-                file += 6;
-                pos++;
-                break;
-            case '8':
-                rank -= 1;
+            }
+            if (letter == '/') {
                 file--;
                 pos++;
-                break;
-            default:
-                break;
             }
         }
     }
