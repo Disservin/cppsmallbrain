@@ -5,3 +5,4 @@
 
 extern Board* board;
 int evaluation();
+

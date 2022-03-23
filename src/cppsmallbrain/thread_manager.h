@@ -8,12 +8,13 @@ std::atomic<bool> stopped;
 
 class ThreadManager {
 public:
-	void begin(int depth) {
+	void begin(int depth, int tg = -1) {
 		if (is_searching()) {
 			stop();
 		}
 		stopped = false;
-		threads = std::thread(searcher, depth);
+		Searcher searcher_class = Searcher(board, depth, tg);
+		threads = std::thread(&Searcher::iterative_search, searcher_class, depth);
 	}
 	void stop() {
 		stopped = true;

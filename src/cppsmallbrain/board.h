@@ -4,6 +4,7 @@
 #include <vector>
 #include <bitset>
 #include <iostream>
+#include <stack>
 #include "general.h"
 //#include "rays.h"
 
@@ -28,6 +29,7 @@ struct MA {
 struct MoveList {
     //std::vector<Move> movelist;
     Move movelist[256];
+    int e=0;
 };
 struct BoardState {
     U64 wpawn;
@@ -105,27 +107,10 @@ public:
         a2, b2, c2, d2, e2, f2, g2, h2,
         a1, b1, c1, d1, e1, f1, g1, h1, no_sq
     };
-    int move_stack_index = 0;
 
-    int count = 0;
     //WhitePawns, WhiteKnights, WhiteBishops, WhiteRooks, WhiteQueens, WhiteKing,
     //BlackPawns, BlackKnights, BlackBishops, BlackRooks, BlackQueens, BlackKing
     U64 bitboards[12] = { 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL };
-
-    
-
-    U64 WPawn = bitboards[WPAWN];
-    U64 WKnight = bitboards[WKNIGHT];
-    U64 WBishop = bitboards[WBISHOP];
-    U64 WRook = bitboards[WROOK];
-    U64 WQueen = bitboards[WQUEEN];
-    U64 WKing = bitboards[WKING];
-    U64 BPawn = bitboards[BPAWN];
-    U64 BKnight = bitboards[BKNIGHT];
-    U64 BBishop = bitboards[BBISHOP];
-    U64 BRook = bitboards[BROOK];
-    U64 BQueen = bitboards[BQUEEN];
-    U64 BKing = bitboards[BKING];
 
     U64 White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
     U64 Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
@@ -192,12 +177,12 @@ public:
     uint64_t pin_dg = 0ULL;
     int doublecheck = 0;
 
-    BoardState move_stack[256] = {};
+    std::stack<BoardState> move_stack = {};
 
     int get_en_passant_square();
 
     void apply_fen(std::string fen);
-    
+
     BoardState encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
         U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
         int ep, int castle);
@@ -219,7 +204,7 @@ public:
             white = given;
         }
         else {
-            if (_test_bit(occupancies[0], sq)) {
+            if (_test_bit(White, sq)) {
                 white = true;
             }
         }
@@ -325,7 +310,7 @@ public:
 
     U64 Queens(bool IsWhite);
 
-    U64 do_checkmask(bool IsWhite, int sq);
+    U64 create_checkmask(bool IsWhite, int sq);
 
     U64 would_be_attack(bool IsWhite, int sq);
 
@@ -357,7 +342,7 @@ public:
 
     bool is_square_attacked(bool IsWhite, int sq);
 
-    void gen_attacked_squares(bool IsWhite);
+    void create_pin_masks(bool IsWhite);
 
     bool is_checkmate(bool IsWhite);
 
@@ -368,6 +353,7 @@ public:
     void init(bool IsWhite);
 
     MoveList generate_legal_moves();
+    MoveList generate_capture_moves();
 };
 
 class Perft {
@@ -382,4 +368,3 @@ public:
 
     void test();
 };
-

@@ -12,23 +12,23 @@
 #include "timecontroller.h"
 #include "evaluation.h"
 #include "thread_manager.h"
+#include "zobrist.h"
+#include "tt.h"
 
 
-//  g++ -Ofast -march=native -mavx2 .\board.cpp .\uci.cpp .\search.cpp .\evaluation.cpp .\timecontroller.cpp -w
+//  g++ -flto -O3 -march=native -mavx2 .\board.cpp .\uci.cpp .\search.cpp .\evaluation.cpp .\timecontroller.cpp .\zobrist.cpp .\tt.cpp -std=c++17 -lpthread -w
 ThreadManager threads;
-unsigned int time_given;
-//Board board;
 Board* board = new Board();
+U64 tt_size = 4294967*2;
+TEntry* TTable = (TEntry*)malloc(tt_size * sizeof(TEntry));	//TEntry == 48 Bytes n = HASH_SIZE / (48/1000000) 
 
 void output(std::string str) {
 	std::cout << str;
 }
 int main() {
-	//std::cout << "Commands: " << std::endl;
-	//std::cout << "position fen ..." << std::endl;
-	//std::cout << "go perft ..." << std::endl;
-	//std::cout << "test perft" << std::endl;
-	//std::cout << "speed test" << std::endl;
+	// Commands
+	// test perft
+	// speedtest
 	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 	board->apply_fen(fen);
 	std::thread searchThread;
@@ -39,6 +39,7 @@ int main() {
 		if (input == "uci") {
 			output("\nid name Smallbrain\n");
 			output("id author Max, aka Disservin\n");
+			output("\noption name Hash type spin default 400 min 1 max 1000000\n");
 			output("uciok\n");
 		}
 		if (input == "isready") {
@@ -46,6 +47,16 @@ int main() {
 		}
 		if (input == "stop") {
 			threads.stop();
+		}
+		if (input.find("setoption name Hash value") != std::string::npos) {
+			std::size_t start_index = input.find("value");
+			std::string size_str = input.substr(start_index + 6);
+			U64 elements = (static_cast<unsigned long long>(std::stoi(size_str)) * 1000000)/48;
+			TTable = (TEntry*)realloc(TTable, elements*48);
+			tt_size = elements;
+		}
+		if (input == "ucinewgame") {
+			memset(TTable, 0, tt_size * 48);
 		}
 		if (input.find("quit") != std::string::npos) {
 			threads.stop();
@@ -59,12 +70,10 @@ int main() {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index ++;
-				for (index; index < param.size(); index++) {
+				for ( ; index < param.size(); index++) {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);
 				}
-				memset(board->move_stack, 0, sizeof(board->move_stack));
-				board->move_stack_index = 0;
 			}
 		}
 		if (input.find("position startpos") != std::string::npos) {
@@ -73,12 +82,10 @@ int main() {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index++;
-				for (index; index < param.size(); index++) {
+				for ( ; index < param.size(); index++) {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);
 				}
-				memset(board->move_stack, 0, sizeof(board->move_stack));
-				board->move_stack_index = 0;
 			}
 		}
 		if (input.find("go perft") != std::string::npos) {
@@ -97,38 +104,99 @@ int main() {
 			Perft perft(board);
 			perft.test();
 		}
-		if (input.find("speed test") != std::string::npos) {
+		if (input.find("speedtest") != std::string::npos) {
 			std::cout << "\nTest started" << std::endl;
 			int depth = 6;
 			auto begin = std::chrono::high_resolution_clock::now();
 			Perft perft(board);
-			U64 x = perft.speed_test_perft(depth, depth);
+			U64 x = perft.bulk_test_perft(depth, depth);
 			auto end = std::chrono::high_resolution_clock::now();
 			auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-			std::cout << "startpos " << " nodes " << x << " nps " << x / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
+			std::cout <<std::fixed<< "startpos " << " nodes " << x << " nps " << x / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
 		}
 		if (input.find("go depth") != std::string::npos and not thread_started) {
+			while (!board->move_stack.empty()) {
+				board->move_stack.pop();
+			}
 			std::size_t start_index = input.find("depth");
 			std::string depth_str = input.substr(start_index + 6);
 			int depth = std::stoi(depth_str);
 			threads.begin(depth);
 		}
 		if (input == "go" or input == "go infinite" and not thread_started) {
+			while (!board->move_stack.empty()) {
+				board->move_stack.pop();
+			}
 			threads.begin(256);
 		}
 		if (input.find("go movetime") != std::string::npos) {
+			while (!board->move_stack.empty()) {
+				board->move_stack.pop();
+			}
 			std::size_t start_index = input.find("movetime");
 			std::string movetime_str = input.substr(start_index + 6);
 			int movetime = std::stoi(movetime_str);
-			time_given = time_left(movetime);
-			threads.begin(256);
+			int time_given = time_left(movetime);
+			threads.begin(256, time_given);
+		}
+		if (input.find("go wtime") != std::string::npos) {
+			while (!board->move_stack.empty()) {
+				board->move_stack.pop();
+			}
+			std::vector<std::string> param = split_input(input);
+			int movetime = board->side_to_move ? std::stoi(param[4]) :std::stoi(param[2]);
+			int time_given = time_left(movetime);
+			threads.begin(256, time_given);
 		}
 		if (input == "b") {
 			board->print_board();
-			std::cout << "Turn: " << board->side_to_move << std::endl;
 		}
 		if (input == "eval") {
 			std::cout << evaluation()<<"\n";
 		}
+		if (input == "captures") {
+			MoveList n_moves = board->generate_capture_moves();
+			int count = n_moves.e;
+			for (int i = 0; i < count; i++) {
+				Move move = n_moves.movelist[i];
+				std::cout << print_move(move) << std::endl;
+			}
+			std::cout << "count " << n_moves.e << std::endl;
+		}
+		if (input == "moves") {
+			MoveList n_moves = board->generate_legal_moves();
+			int count = n_moves.e;
+			for (int i = 0; i < count; i++) {
+				Move move = n_moves.movelist[i];
+				std::cout << print_move(move) << std::endl;
+			}
+			std::cout << "count " << n_moves.e << std::endl;
+		}
+		if (input == "hash") {
+			std::cout << generate_zhash(board)<<std::endl;
+		}
 	}
+}
+
+std::string print_move(Move move) {
+	std::string str_move = "";
+	int from_index = move.from_square;
+	int to_index = move.to_square;
+	if (from_index >= 0 and to_index >= 0) {
+		std::string from = square_to_coordinates[from_index];
+		std::string to = square_to_coordinates[to_index];
+		str_move = from + to;
+	}
+	else {
+		std::cout << from_index << " " << to_index;
+	}
+
+	std::string pieces[5] = {
+		"","n", "b", "r", "q"
+	};
+	if (move.promotion != -1) {
+		std::string prom = pieces[move.promotion];
+		str_move += prom;
+	}
+	return str_move;
 }

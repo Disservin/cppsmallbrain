@@ -1,6 +1,7 @@
 #pragma once
-#include "general.h"
 #include <map>
+#include "general.h"
+#include "tt.h"
 
 Move convert_uci_to_Move(std::string input) {
     Move move;
@@ -21,6 +22,7 @@ Move convert_uci_to_Move(std::string input) {
         to_index = (rank - 1) * 8 + file - 1;
         move.to_square = to_index;
         move.piece = -1;
+        move.promotion = -1;
         return move;
     }
     if (input.length() == 5) {
@@ -43,10 +45,10 @@ Move convert_uci_to_Move(std::string input) {
         move.to_square = to_index;
         std::map<char, int> piece_to_int = 
         {
-        { 'N', 1 },
-        { 'B', 2 },
-        { 'R', 3 },
-        { 'Q', 4 }
+        { 'n', 1 },
+        { 'b', 2 },
+        { 'r', 3 },
+        { 'q', 4 }
         };
         move.promotion = piece_to_int[prom];
         move.piece = 0;
@@ -54,7 +56,6 @@ Move convert_uci_to_Move(std::string input) {
     }
     else {
         std::cout << "FALSE INPUT" << std::endl;
-        // False input
         move.to_square = -1;
         move.from_square = -1;
         move.piece = -1;
@@ -62,3 +63,4 @@ Move convert_uci_to_Move(std::string input) {
         return move;
     }
 }
+std::string print_move(Move move);

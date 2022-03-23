@@ -1,19 +1,43 @@
 #pragma once
 #include "board.h"
 #include <atomic>
-
+#include <iostream>
+using namespace std::literals::chrono_literals;
 extern Board* board;
-extern unsigned int time_given;
 extern std::atomic<bool> stopped;
 
-void searcher(int search_depth);
+class Searcher {
+public: 
+	static const int max_ply = 60;
+	int pv_length[max_ply] = { 0 };
+	Move pv_table[max_ply][max_ply] = { };
+	int search_to_depth = 256;
+	U64 nodes = 0;
+	Move bestmove;
+	int time_given = -1;
+	int limit_time = false;
 
-void iterative_search(int search_depth);
+	std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 
-int alpha_beta(int alpha, int beta, int player, int depth, int ply);
+	Board* board;
+	Searcher(Board* brd, int, int tg = -1) {
+		board = brd;
+		time_given = tg;
+		limit_time = time_given != -1 ? true : false;
+		begin = std::chrono::high_resolution_clock::now();
+	}
 
-std::string print_move(Move move);
+	bool can_exit_early();
 
-std::string get_pv_line();
+	void iterative_search(int search_depth);
 
-std::string get_bestmove();
+	int qsearch(int alpha, int beta, int player, int depth, int ply);
+
+	int alpha_beta(int alpha, int beta, int player, int depth, int ply);
+
+	std::string get_pv_line();
+
+	std::string get_bestmove();
+
+	std::string print_move(Move move);
+};
