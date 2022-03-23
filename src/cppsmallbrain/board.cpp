@@ -76,8 +76,7 @@ void Board::apply_fen(std::string fen)
         for (int file = 0; file < 8; file++) {
             sq = rank * 8 + file;
             letter = position[pos];
-            if (pos >= position.size())
-            {
+            if (pos >= position.size()){
                 break;
             }
             if (piece_to_int.count(letter)) {
@@ -1038,19 +1037,9 @@ U64 Board::seen_by_pawn(bool IsWhite, int sq, int ep) {
 // squares seen by a bishop
 inline U64 Board::seen_by_bishop(bool IsWhite, int sq) {
     U64 bishop_move = 0ULL;
-    U64 victims;
-    U64 blockers;
-    //bishop_move |= (1ULL << sq);
-
-    if (IsWhite) {
-        victims = Black;
-        blockers = White;
-    }
-    else {
-        victims = White;
-        blockers = Black;
-    }
-    int index;
+    U64 victims = IsWhite ? Black : White;
+    U64 blockers = IsWhite ? White : Black;
+    int index = 0;
     bishop_move |= _rays[NORTH_WEST][sq];
 
     if (_rays[NORTH_WEST][sq] & victims) {
@@ -1096,29 +1085,18 @@ inline U64 Board::seen_by_bishop(bool IsWhite, int sq) {
 }
 
 // squares seen by a knight
-inline U64 Board::seen_by_knight(int sq)
-{
+inline U64 Board::seen_by_knight(int sq) {
     return knightattacks[sq];
 }
 
 // squares seen by a rook
 inline U64 Board::seen_by_rook(bool IsWhite, int sq) {
     U64 rook_move = 0ULL;
-    U64 victims;
-    U64 blockers;
+    U64 victims = IsWhite ? Black : White;
+    U64 blockers = IsWhite ? White : Black;
+    int index = 0;
 
     rook_move |= (1ULL << sq);
-
-    if (IsWhite) {
-        victims = Black;
-        blockers = White;
-    }
-    else {
-        victims = White;
-        blockers = Black;
-    }
-
-    int index;
     rook_move |= _rays[NORTH][sq];
 
     if (_rays[NORTH][sq] & victims) {
@@ -1321,7 +1299,6 @@ inline U64 Board::valid_knight_moves(bool IsWhite, int sq) {
 // legal bishop moves
 U64 Board::valid_bishop_moves(bool IsWhite, int sq) {
     if (_test_bit(pin_dg, sq)) {
-
         return seen_by_bishop(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_dg;
     }
     if (_test_bit(pin_hv, sq)) {
@@ -1352,6 +1329,7 @@ U64 Board::valid_king_moves(bool IsWhite, int sq) {
     U64 moves = seen_by_king(sq) & EnemyOrEmpty(IsWhite);
     U64 final_moves = 0ULL;
     int to_index;
+    // Remove King 
     if (IsWhite) {
         White &= ~(1ULL << sq);
         Occ = Black | White;
@@ -1365,6 +1343,7 @@ U64 Board::valid_king_moves(bool IsWhite, int sq) {
         final_moves |= not(is_square_attacked(IsWhite, to_index)) ? (1ULL << to_index) : 0ULL;
         moves &= ~(1ULL << to_index);
     }
+    // Place King back
     if (IsWhite) {
         White |= (1ULL << sq);
         Occ = Black | White;
