@@ -12,7 +12,6 @@
 #include "timecontroller.h"
 #include "evaluation.h"
 #include "thread_manager.h"
-#include "zobrist.h"
 #include "tt.h"
 
 
@@ -66,10 +65,12 @@ int main() {
 			std::size_t start_index = input.find("fen");
 			fen = input.substr(start_index + 4);
 			board->apply_fen(fen);
+			board->repetition_table.clear();
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index ++;
+				
 				for ( ; index < param.size(); index++) {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);
@@ -78,7 +79,11 @@ int main() {
 		}
 		if (input.find("position startpos") != std::string::npos) {
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+			board->repetition_table.clear();
 			if (input.find("moves") != std::string::npos) {
+				auto begin = std::chrono::high_resolution_clock::now();
+				
+				
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index++;
@@ -86,6 +91,9 @@ int main() {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);
 				}
+				auto end = std::chrono::high_resolution_clock::now();
+				auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
+				std::cout << "time taken to read " << time_diff << std::endl;
 			}
 		}
 		if (input.find("go perft") != std::string::npos) {
@@ -127,7 +135,7 @@ int main() {
 			while (!board->move_stack.empty()) {
 				board->move_stack.pop();
 			}
-			threads.begin(256);
+			threads.begin(60);
 		}
 		if (input.find("go movetime") != std::string::npos) {
 			while (!board->move_stack.empty()) {
@@ -137,7 +145,7 @@ int main() {
 			std::string movetime_str = input.substr(start_index + 6);
 			int movetime = std::stoi(movetime_str);
 			int time_given = time_left(movetime);
-			threads.begin(256, time_given);
+			threads.begin(60, time_given);
 		}
 		if (input.find("go wtime") != std::string::npos) {
 			while (!board->move_stack.empty()) {
@@ -146,7 +154,7 @@ int main() {
 			std::vector<std::string> param = split_input(input);
 			int movetime = board->side_to_move ? std::stoi(param[4]) :std::stoi(param[2]);
 			int time_given = time_left(movetime);
-			threads.begin(256, time_given);
+			threads.begin(60, time_given);
 		}
 		if (input == "b") {
 			board->print_board();
@@ -173,7 +181,7 @@ int main() {
 			std::cout << "count " << n_moves.e << std::endl;
 		}
 		if (input == "hash") {
-			std::cout << generate_zhash(board)<<std::endl;
+			std::cout << board->generate_zhash()<<std::endl;
 		}
 	}
 }

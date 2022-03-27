@@ -5,15 +5,20 @@
 #include <bitset>
 #include <iostream>
 #include <stack>
-#include "general.h"
-//#include "rays.h"
+#include <unordered_map>
 
+#include "general.h"
 
 #define get_bit(bitboard, index) (bitboard & 1ULL << index))
 #define set_bit(bitboard, index) (bitboard |= (1ULL << index))
 #define pop_bit(bitboard, index) (get_bit(bitboard, index) ? bitboard ^= (1ULL << index):0)
 
 std::vector<std::string> split_input(std::string fen);
+
+
+
+extern int zpieces[12];
+extern U64 RANDOM_ARRAY[781];
 
 struct Pertft_Info {
     int from_square;
@@ -27,7 +32,6 @@ struct MA {
 };
 
 struct MoveList {
-    //std::vector<Move> movelist;
     Move movelist[256];
     int e=0;
 };
@@ -178,6 +182,10 @@ public:
     int doublecheck = 0;
 
     std::stack<BoardState> move_stack = {};
+    
+    std::unordered_map<U64, int> repetition_table;
+
+    U64 generate_zhash();
 
     int get_en_passant_square();
 
@@ -188,6 +196,14 @@ public:
         int ep, int castle);
 
     void update_occupancies();
+
+    void add_repetition(U64 hash);
+
+    void remove_repetition(U64 hash);
+
+    bool is_threefold_rep();
+
+    bool is_threefold_rep3();
 
     void make_move(Move& move);
 

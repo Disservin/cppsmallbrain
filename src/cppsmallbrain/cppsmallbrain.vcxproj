@@ -154,7 +154,6 @@
     <ClCompile Include="search.cpp" />
     <ClCompile Include="timecontroller.cpp" />
     <ClCompile Include="uci.cpp" />
-    <ClCompile Include="zobrist.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="board.h" />

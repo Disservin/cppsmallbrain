@@ -12,6 +12,8 @@
 #include <assert.h>
 #include <chrono>
 #include <map>
+
+#include "zobrist.h"
 #include "general.h"
 #include "board.h"
 
@@ -144,6 +146,68 @@ void Board::apply_fen(std::string fen)
 
     //Udates Bitboards
     update_occupancies();
+}
+
+U64 Board::generate_zhash() {
+    U64 hash = 0ULL;
+    U64 all_pieces = Occ;
+    while (all_pieces) {
+        int sq = _bitscanforward(all_pieces);
+        int piece = piece_at(sq);
+        if (piece != -1) {
+            hash ^= RANDOM_ARRAY[64 * zpieces[piece] + sq];
+        }
+        all_pieces = _blsr_u64(all_pieces);
+    }
+    if (get_en_passant_square() != 64) {
+        hash ^= RANDOM_ARRAY[772 + square_file(get_en_passant_square())];
+    }
+    hash ^= side_to_move ? RANDOM_ARRAY[780] : 0;
+    if (castling_rights & 1) {
+        hash ^= RANDOM_ARRAY[768];
+    }
+    if (castling_rights & 2) {
+        hash ^= RANDOM_ARRAY[768 + 1];
+    }
+    if (castling_rights & 4) {
+        hash ^= RANDOM_ARRAY[768 + 2];
+    }
+    if (castling_rights & 8) {
+        hash ^= RANDOM_ARRAY[768 + 3];
+    }
+    return hash;
+}
+
+void Board::add_repetition(U64 hash) {
+    if (repetition_table.count(hash)) {
+        repetition_table[hash]++;
+    }
+    else {
+        repetition_table[hash] = 1;
+    }
+};
+
+void Board::remove_repetition(U64 hash) {
+    if (repetition_table[hash] == 0) {
+        std::cout << "ERROR REMOVE REPETITION \n";
+    }
+    repetition_table[hash]--;
+};
+
+bool Board::is_threefold_rep() {
+    U64 hash = generate_zhash();
+    if (repetition_table[hash] >= 2) {
+        return true;
+    }
+    return false;
+}
+
+bool Board::is_threefold_rep3() {
+    U64 hash = generate_zhash();
+    if (repetition_table[hash] >= 3) {
+        return true;
+    }
+    return false;
 }
 
 //returns en passant square
@@ -358,6 +422,7 @@ void Board::make_move(Move& move) {
 
         //Update
         update_occupancies();
+        add_repetition(generate_zhash());
     }
     else {
         // Not valid move
@@ -369,6 +434,7 @@ void Board::make_move(Move& move) {
 
 void Board::unmake_move() {
     if (move_stack.size() > 0) {
+        remove_repetition(generate_zhash());
         BoardState board;
         board = move_stack.top();
         bitboards[WPAWN] = board.wpawn;
