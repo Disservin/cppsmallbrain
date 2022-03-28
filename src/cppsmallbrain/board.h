@@ -216,8 +216,6 @@ public:
 
     void print_board();
 
-    void print_board2();
-
     int piece_at_square(int sq) {
         return board_pieces[sq];
     }

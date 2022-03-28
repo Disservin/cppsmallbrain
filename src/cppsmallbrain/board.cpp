@@ -516,14 +516,6 @@ void Board::print_bitboard(std::bitset<64> bits) {
 void Board::print_board() {
     for (int i = 63; i >= 0; i -= 8)
     {
-        std::cout << " " << piece_type(piece_at(i - 7)) << " " << piece_type(piece_at(i - 6)) << " " << piece_type(piece_at(i - 5)) << " " << piece_type(piece_at(i - 4)) << " " << piece_type(piece_at(i - 3)) << " " << piece_type(piece_at(i - 2)) << " " << piece_type(piece_at(i - 1)) << " " << piece_type(piece_at(i)) << " " << std::endl;
-    }
-    std::cout << '\n' << std::endl;
-}
-
-void Board::print_board2() {
-    for (int i = 63; i >= 0; i -= 8)
-    {
         std::cout << " " << piece_type(board_pieces[i-7]) << " " << piece_type(board_pieces[i - 6]) << " " << piece_type(board_pieces[i - 5]) << " " << piece_type(board_pieces[i - 4]) << " " << piece_type(board_pieces[i - 3]) << " " << piece_type(board_pieces[i - 2]) << " " << piece_type(board_pieces[i - 1]) << " " << piece_type(board_pieces[i]) << " " << std::endl;
     }
     std::cout << '\n' << std::endl;
