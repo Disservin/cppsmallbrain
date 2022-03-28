@@ -158,6 +158,7 @@ int main() {
 		}
 		if (input == "b") {
 			board->print_board();
+			board->print_board2();
 		}
 		if (input == "eval") {
 			std::cout << evaluation()<<"\n";

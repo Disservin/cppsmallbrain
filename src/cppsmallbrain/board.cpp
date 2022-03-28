@@ -17,8 +17,6 @@
 #include "general.h"
 #include "board.h"
 
-
-
 std::vector<std::string> split_input(std::string fen)
 {
     std::stringstream fen_stream(fen);
@@ -146,6 +144,19 @@ void Board::apply_fen(std::string fen)
 
     //Udates Bitboards
     update_occupancies();
+    for (int sq = 0; sq < 64; sq++) {
+        if (piece_type_at(sq) != -1) {
+            board_pieces[sq] = piece_at(sq);
+        }
+        else {
+            board_pieces[sq] = -1;
+        }
+    }
+}
+
+//returns en passant square
+int Board::get_en_passant_square() {
+    return en_passant_square;
 }
 
 U64 Board::generate_zhash() {
@@ -207,6 +218,37 @@ U64 Board::generate_zhash() {
     return hash ^ cast_hash ^ turn_hash ^ ep_hash;
 }
 
+inline BoardState Board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
+    U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
+    int ep, int castle, int all_pieces[64])
+{
+    BoardState board;
+    board.wpawn = wpawn;
+    board.wknight = wknight;
+    board.wbishop = wbishop;
+    board.wrook = wrook;
+    board.wqueen = wqueen;
+    board.wking = wking;
+    board.bpawn = bpawn;
+    board.bknight = bknight;
+    board.bbishop = bbishop;
+    board.brook = brook;
+    board.bqueen = bqueen;
+    board.bking = bking;
+    board.en_passant = ep;
+    board.castle_rights = castle;
+    std::copy(all_pieces, all_pieces+64, board.piece_loc);
+    return board;
+}
+
+inline void Board::update_occupancies() {
+    White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
+    Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
+    Occ = White | Black;
+    White = White;
+    Black = Black;
+}
+
 void Board::add_repetition(U64 hash) {
     if (repetition_table.count(hash)) {
         repetition_table[hash]++;
@@ -239,42 +281,6 @@ bool Board::is_threefold_rep3() {
     return false;
 }
 
-//returns en passant square
-int Board::get_en_passant_square() {
-    return en_passant_square;
-}
-
-//updates 
-inline void Board::update_occupancies() {
-    White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
-    Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
-    Occ = White | Black;
-    White = White;
-    Black = Black;
-}
-
-inline BoardState Board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
-    U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
-    int ep, int castle)
-{
-    BoardState board;
-    board.wpawn = wpawn;
-    board.wknight = wknight;
-    board.wbishop = wbishop;
-    board.wrook = wrook;
-    board.wqueen = wqueen;
-    board.wking = wking;
-    board.bpawn = bpawn;
-    board.bknight = bknight;
-    board.bbishop = bbishop;
-    board.brook = brook;
-    board.bqueen = bqueen;
-    board.bking = bking;
-    board.en_passant = ep;
-    board.castle_rights = castle;
-    return board;
-}
-
 void Board::make_move(Move& move) {
 
     int from_square = move.from_square;
@@ -287,7 +293,7 @@ void Board::make_move(Move& move) {
     }
 
     if (move.piece == -1) {
-        piece = piece_at(from_square);
+        piece = piece_at_square(from_square);
     }
     else {
         piece = piece + (side_to_move * 6);
@@ -299,44 +305,34 @@ void Board::make_move(Move& move) {
 
     // piece needs to be set at its bitboard remove this for performance if you are 100% theres a piece at that square
     if (not _test_bit(bitboards[piece], to_square)) {
-        BoardState boardstate = encode_board_state(bitboards[WPAWN], bitboards[WKNIGHT], bitboards[WBISHOP], bitboards[WROOK], bitboards[WQUEEN], bitboards[WKING], bitboards[BPAWN], bitboards[BKNIGHT], bitboards[BBISHOP], bitboards[BROOK], bitboards[BQUEEN], bitboards[BKING], en_passant_square, castling_rights);
+        BoardState boardstate = encode_board_state(bitboards[WPAWN], bitboards[WKNIGHT], bitboards[WBISHOP], bitboards[WROOK], bitboards[WQUEEN], bitboards[WKING], bitboards[BPAWN], bitboards[BKNIGHT], bitboards[BBISHOP], bitboards[BROOK], bitboards[BQUEEN], bitboards[BKING], en_passant_square, castling_rights, board_pieces);
         move_stack.push(boardstate);
         //Capture
-        if (_test_bit(Enemy(IsWhite), to_square)) {
-            for (int i = 0; i < 6; i++) {
-                if (_test_bit(bitboards[i + (enemy * 6)], to_square)) {
-                    //Capturing rook loses others side castle rights
-                    captured_piece = i + (enemy * 6);
-                    if (captured_piece == WROOK) {
-                        if (to_square == 7) {
-                            if (castling_rights & wk) {
-                                castling_rights ^= wk;
-                            }
-                        }
-                        if (to_square == 0) {
-                            if (castling_rights & wq) {
-                                castling_rights ^= wq;
-                            }
-                        }
-                    }
-                    if (captured_piece == BROOK) {
-                        if (to_square == 63) {
-                            if (castling_rights & bk) {
-                                castling_rights ^= bk;
-                            }
-
-                        }
-                        if (to_square == 56) {
-                            if (castling_rights & bq) {
-                                castling_rights ^= bq;
-                            }
-                        }
-                    }
-                    break;
+        captured_piece = piece_at_square(to_square);
+        if (captured_piece == WROOK) {
+            if (to_square == 7) {
+                if (castling_rights & wk) {
+                    castling_rights ^= wk;
+                }
+            }
+            if (to_square == 0) {
+                if (castling_rights & wq) {
+                    castling_rights ^= wq;
                 }
             }
         }
-
+        if (captured_piece == BROOK) {
+            if (to_square == 63) {
+                if (castling_rights & bk) {
+                    castling_rights ^= bk;
+                }
+            }
+            if (to_square == 56) {
+                if (castling_rights & bq) {
+                    castling_rights ^= bq;
+                }
+            }
+        }
         // King move loses castle rights
         if (piece == WKING) {
             if (to_square != 6 and to_square != 2) {
@@ -377,8 +373,9 @@ void Board::make_move(Move& move) {
                     castling_rights &= ~(2);
                     bitboards[WROOK] &= ~(1ULL << 7);
                     bitboards[WROOK] |= (1ULL << 5);
+                    board_pieces[7] = -1;
+                    board_pieces[5] = WROOK;
                 }
-
             }
             if (to_square == 2 and _test_bit(bitboards[WROOK], 0)) {
                 if (castling_rights & wq) {
@@ -386,6 +383,8 @@ void Board::make_move(Move& move) {
                     castling_rights &= ~(2);
                     bitboards[WROOK] &= ~(1ULL << 0);
                     bitboards[WROOK] |= (1ULL << 3);
+                    board_pieces[0] = -1;
+                    board_pieces[3] = WROOK;
                 }
             }
         }
@@ -396,6 +395,8 @@ void Board::make_move(Move& move) {
                     castling_rights &= ~(8);
                     bitboards[BROOK] &= ~(1ULL << 63);
                     bitboards[BROOK] |= (1ULL << 61);
+                    board_pieces[63] = -1;
+                    board_pieces[61] = BROOK;
                 }
             }
             if (to_square == 58 and _test_bit(bitboards[BROOK], 56)) {
@@ -404,24 +405,30 @@ void Board::make_move(Move& move) {
                     castling_rights &= ~(8);
                     bitboards[BROOK] &= ~(1ULL << 56);
                     bitboards[BROOK] |= (1ULL << 59);
+                    board_pieces[56] = -1;
+                    board_pieces[59] = BROOK;
                 }
             }
         }
+
         // Remove enemy piece if en passant capture
         if ((abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9)) {
-            if (piece == WPAWN and square_rank(to_square) == 5 and piece_at(to_square - 8) == BPAWN and piece_at(to_square) == -1) { //
+            if (piece == WPAWN and square_rank(to_square) == 5 and piece_at_square(to_square - 8) == BPAWN and piece_at_square(to_square) == -1) { //
                 en_passant_square = no_sq;
                 bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
+                board_pieces[to_square - 8] = -1;
             }
-            if (piece == BPAWN and square_rank(to_square) == 2 and piece_at(to_square + 8) == WPAWN and piece_at(to_square) == -1) {
+            if (piece == BPAWN and square_rank(to_square) == 2 and piece_at_square(to_square + 8) == WPAWN and piece_at_square(to_square) == -1) {
                 en_passant_square = no_sq;
                 bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
+                board_pieces[to_square + 8] = -1;
             }
         }
         // remove en passant if it wasnt played immediately
         if (en_passant_square != no_sq) {
             en_passant_square = no_sq;
         }
+
         // set en passant square if pawns double move
         if (piece == WPAWN and (from_square - to_square) == -16) {
             en_passant_square = from_square + 8;
@@ -433,6 +440,9 @@ void Board::make_move(Move& move) {
         // Remove and set piece
         bitboards[piece] &= ~(1ULL << from_square);
         bitboards[piece] |= (1ULL << to_square);
+        board_pieces[from_square] = -1;
+        board_pieces[to_square] = piece;
+
         // Remove captured piece
         if (captured_piece != -1) {
             bitboards[captured_piece] &= ~(1ULL << to_square);
@@ -442,7 +452,7 @@ void Board::make_move(Move& move) {
         if (promotion_piece > 0 and promotion_piece < 7) {
             bitboards[piece] &= ~(1ULL << to_square);
             promotion_piece = promotion_piece + (side_to_move * 6);
-
+            board_pieces[to_square] = promotion_piece;
             bitboards[promotion_piece] |= (1ULL << to_square);
         }
 
@@ -451,7 +461,7 @@ void Board::make_move(Move& move) {
 
         //Update
         update_occupancies();
-        add_repetition(generate_zhash());
+        //add_repetition(generate_zhash());
     }
     else {
         // Not valid move
@@ -463,7 +473,7 @@ void Board::make_move(Move& move) {
 
 void Board::unmake_move() {
     if (move_stack.size() > 0) {
-        remove_repetition(generate_zhash());
+        //remove_repetition(generate_zhash());
         BoardState board;
         board = move_stack.top();
         bitboards[WPAWN] = board.wpawn;
@@ -480,6 +490,7 @@ void Board::unmake_move() {
         bitboards[BKING] = board.bking;
         en_passant_square = board.en_passant;
         castling_rights = board.castle_rights;
+        std::copy(board.piece_loc, board.piece_loc+64, board_pieces);
         side_to_move ^= 1;
         update_occupancies();
         move_stack.pop();
@@ -502,12 +513,12 @@ void Board::print_bitboard(std::bitset<64> bits) {
     std::cout << '\n' << std::endl;
 }
 
-U64 Board::Pawns_NotLeft() {
-    return ~File1;
-}
-
-U64 Board::Pawns_NotRight() {
-    return ~File8;
+void Board::print_board() {
+    for (int i = 63; i >= 0; i -= 8)
+    {
+        std::cout << " " << piece_type(board_pieces[i-7]) << " " << piece_type(board_pieces[i - 6]) << " " << piece_type(board_pieces[i - 5]) << " " << piece_type(board_pieces[i - 4]) << " " << piece_type(board_pieces[i - 3]) << " " << piece_type(board_pieces[i - 2]) << " " << piece_type(board_pieces[i - 1]) << " " << piece_type(board_pieces[i]) << " " << std::endl;
+    }
+    std::cout << '\n' << std::endl;
 }
 
 inline U64 Board::Pawn_Forward(bool IsWhite, U64 mask) {
@@ -536,16 +547,6 @@ U64 Board::Pawn_AttackRight(bool IsWhite, U64 mask) {
 inline U64 Board::Pawn_AttackLeft(bool IsWhite, U64 mask) {
     if (IsWhite) return mask << 7;
     else return mask >> 9;
-}
-
-U64 Board::Pawns_FirstRank(bool IsWhite) {
-    if (IsWhite) return Rank2;
-    else return Rank7;
-}
-
-U64 Board::Pawns_LastRank(bool IsWhite) {
-    if (IsWhite) return Rank7;
-    else return Rank2;
 }
 
 U64 Board::King(bool IsWhite) {
@@ -652,6 +653,7 @@ U64 Board::Queens(bool IsWhite)
     return bitboards[BQUEEN];
 }
 
+// creates the checkmask
 U64 Board::create_checkmask(bool IsWhite, int sq) {
     U64 us = IsWhite ? White : Black;
     U64 enemy = IsWhite ? Black : White;
@@ -1744,6 +1746,7 @@ bool Board::is_checkmate(bool IsWhite) {
     return false;
 }
 
+// detects stalemate
 bool Board::is_stalemate(bool IsWhite) {
     int king_sq = _bitscanforward(King(IsWhite));
     init(IsWhite);
@@ -1975,7 +1978,7 @@ MoveList Board::generate_capture_moves() {
             move.piece = PAWN;
             move.from_square = from_square;
             move.to_square = to_square;
-            if (piece_at(to_square, enemy) != -1 or square_rank(to_square) == 7 or square_rank(to_square) == 0 or in_check) {
+            if (piece_at_square(to_square) != -1 or square_rank(to_square) == 7 or square_rank(to_square) == 0 or in_check) {
                 if (square_rank(to_square) == 7 or square_rank(to_square) == 0) {
                     move.promotion = QUEEN;
                     possible_moves.movelist[possible_moves.e] = move;
@@ -2008,7 +2011,7 @@ MoveList Board::generate_capture_moves() {
             move.piece = KNIGHT;
             move.from_square = from_square;
             move.to_square = to_square;
-            if (piece_at(to_square, enemy) != -1 or in_check) {
+            if (piece_at_square(to_square) != -1 or in_check) {
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.e] = move;
                 possible_moves.e++;
@@ -2025,7 +2028,7 @@ MoveList Board::generate_capture_moves() {
             move.piece = BISHOP;
             move.from_square = from_square;
             move.to_square = to_square;
-            if (piece_at(to_square, enemy) != -1 or in_check) {
+            if (piece_at_square(to_square) != -1 or in_check) {
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.e] = move;
                 possible_moves.e++;
@@ -2042,7 +2045,7 @@ MoveList Board::generate_capture_moves() {
             move.piece = ROOK;
             move.from_square = from_square;
             move.to_square = to_square;
-            if (piece_at(to_square, enemy) != -1 or in_check) {
+            if (piece_at_square(to_square) != -1 or in_check) {
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.e] = move;
                 possible_moves.e++;
@@ -2059,7 +2062,7 @@ MoveList Board::generate_capture_moves() {
             move.piece = QUEEN;
             move.from_square = from_square;
             move.to_square = to_square;
-            if (piece_at(to_square, enemy) != -1 or in_check) {
+            if (piece_at_square(to_square) != -1 or in_check) {
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.e] = move;
                 possible_moves.e++;
@@ -2076,7 +2079,7 @@ MoveList Board::generate_capture_moves() {
             move.piece = KING;
             move.from_square = from_square;
             move.to_square = to_square;
-            if (piece_at(to_square, enemy) != -1 or in_check) {
+            if (piece_at_square(to_square) != -1 or in_check) {
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.e] = move;
                 possible_moves.e++;
@@ -2241,14 +2244,6 @@ std::string Board::piece_type(int piece) {
     else {
         return "??";
     }
-}
-
-void Board::print_board() {
-    for (int i = 63; i >= 0; i -= 8)
-    {
-        std::cout << " " << piece_type(piece_at(i - 7)) << " " << piece_type(piece_at(i - 6)) << " " << piece_type(piece_at(i - 5)) << " " << piece_type(piece_at(i - 4)) << " " << piece_type(piece_at(i - 3)) << " " << piece_type(piece_at(i - 2)) << " " << piece_type(piece_at(i - 1)) << " " << piece_type(piece_at(i)) << " " << std::endl;
-    }
-    std::cout << '\n' << std::endl;
 }
 
 void Perft::test() {
