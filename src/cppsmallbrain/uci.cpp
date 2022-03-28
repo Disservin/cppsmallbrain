@@ -56,6 +56,7 @@ int main() {
 		}
 		if (input == "ucinewgame") {
 			memset(TTable, 0, tt_size * 48);
+			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 		}
 		if (input.find("quit") != std::string::npos) {
 			threads.stop();
@@ -158,7 +159,6 @@ int main() {
 		}
 		if (input == "b") {
 			board->print_board();
-			board->print_board2();
 		}
 		if (input == "eval") {
 			std::cout << evaluation()<<"\n";
