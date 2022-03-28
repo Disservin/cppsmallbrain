@@ -150,32 +150,61 @@ void Board::apply_fen(std::string fen)
 
 U64 Board::generate_zhash() {
     U64 hash = 0ULL;
-    U64 all_pieces = Occ;
-    while (all_pieces) {
-        int sq = _bitscanforward(all_pieces);
-        int piece = piece_at(sq);
+    U64 white = White;
+    U64 black = Black;
+    bool IsWhite = side_to_move ? 0 : 1;
+
+    while (white) {
+        int sq = _bitscanforward(white);
+        int piece = piece_type_at(sq);
         if (piece != -1) {
-            hash ^= RANDOM_ARRAY[64 * zpieces[piece] + sq];
+            piece = piece * 2 + 1;
+            hash ^= RANDOM_ARRAY[64 * piece + sq];
         }
-        all_pieces = _blsr_u64(all_pieces);
+        white = _blsr_u64(white);
     }
+    while (black) {
+        int sq = _bitscanforward(black);
+        int piece = piece_type_at(sq);
+        if (piece != -1) {
+            piece = piece * 2;
+            hash ^= RANDOM_ARRAY[64 * piece + sq];
+        }
+        black = _blsr_u64(black);
+    }
+
+    U64 ep_hash = 0ULL;
     if (get_en_passant_square() != 64) {
-        hash ^= RANDOM_ARRAY[772 + square_file(get_en_passant_square())];
+        U64 ep_mask = 0ULL;
+        if (IsWhite) {
+            U64 ep_square = 1ULL << get_en_passant_square();
+            ep_mask = Pawn_AttackLeft(!IsWhite, ep_square) | Pawn_AttackRight(!IsWhite, ep_square);
+        }
+        else {
+            U64 ep_square = 1ULL << get_en_passant_square();
+            ep_mask = Pawn_AttackLeft(IsWhite, ep_square) | Pawn_AttackRight(IsWhite, ep_square);
+        }
+        U64 color_p = IsWhite ? White : Black;
+        if (ep_mask & (bitboards[WPAWN] | bitboards[BPAWN]) & color_p) {
+            ep_hash = RANDOM_ARRAY[772 + square_file(get_en_passant_square())];
+        }
     }
-    hash ^= side_to_move ? RANDOM_ARRAY[780] : 0;
+    U64 turn_hash = IsWhite ? RANDOM_ARRAY[780] : 0;
+    U64 cast_hash = 0ULL;
     if (castling_rights & 1) {
-        hash ^= RANDOM_ARRAY[768];
+        cast_hash ^= RANDOM_ARRAY[768];
     }
     if (castling_rights & 2) {
-        hash ^= RANDOM_ARRAY[768 + 1];
+        cast_hash ^= RANDOM_ARRAY[768 + 1];
     }
     if (castling_rights & 4) {
-        hash ^= RANDOM_ARRAY[768 + 2];
+        cast_hash ^= RANDOM_ARRAY[768 + 2];
     }
     if (castling_rights & 8) {
-        hash ^= RANDOM_ARRAY[768 + 3];
+        cast_hash ^= RANDOM_ARRAY[768 + 3];
     }
-    return hash;
+
+    return hash ^ cast_hash ^ turn_hash ^ ep_hash;
 }
 
 void Board::add_repetition(U64 hash) {

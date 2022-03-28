@@ -31,8 +31,8 @@ struct Move {
     int null = 0;   // 1 == True 0 == False
 };
 
+//Gets the file index of the square where 0 is the a-file
 inline int square_file(int sq) {
-    //Gets the file index of the square where 0 is the a-file
     return sq & 7;
 }
 inline int square_rank(int sq) {

@@ -268,6 +268,37 @@ public:
         return -1;
     }
 
+    int piece_type_at(int sq) {
+        /* returns color specific int for piece*/
+        U64 pawns = bitboards[WPAWN] | bitboards[BPAWN];
+        U64 knights = bitboards[WKNIGHT] | bitboards[BKNIGHT];
+        U64 bishops = bitboards[WBISHOP] | bitboards[BBISHOP];
+        U64 rooks = bitboards[WROOK] | bitboards[BROOK];
+        U64 queens = bitboards[WQUEEN] | bitboards[BQUEEN];
+        U64 kings = bitboards[WKING] | bitboards[BKING];
+        
+        if (_test_bit(pawns, sq)) {
+            return 0;
+        }
+        if (_test_bit(knights, sq)) {
+            return 1;
+        }
+        if (_test_bit(bishops, sq)) {
+            return 2;
+        }
+        if (_test_bit(rooks, sq)) {
+            return 3;
+        }
+        if (_test_bit(queens, sq)) {
+            return 4;
+        }
+        if (_test_bit(kings, sq)) {
+            return 5;
+        }
+
+        return -1;
+    }
+
     std::string piece_type(int piece);
 
     U64 Pawns_NotLeft();
@@ -369,6 +400,7 @@ public:
     void init(bool IsWhite);
 
     MoveList generate_legal_moves();
+
     MoveList generate_capture_moves();
 };
 

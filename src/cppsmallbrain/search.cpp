@@ -144,31 +144,36 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 
 	int king_sq = _bitscanforward(board->King(is_white));
 
+
 	if (depth == 0) {
 		if ((board->is_square_attacked(is_white, king_sq))) {
 			depth++;
 		}
 		else {
-			return qsearch(alpha, beta, player, 10, ply);//evaluation() * player;// //  //
+			int value = qsearch(alpha, beta, player, 10, ply);//evaluation() * player;// //  //
+			return value;
 		}
 	}
 
-	//U64 key = board->generate_zhash();
-	//U64 index = key % tt_size;
-	//TEntry ttentry = TTable[index];
-	//if (ttentry.key = key) {
-	//	if (ttentry.depth >= depth) {
-	//		if (ttentry.flag == 0) {
-	//			alpha = ttentry.score;
-	//		}
-	//		else if(ttentry.flag == -1) {
-	//			alpha = std::max(alpha, ttentry.score);
-	//		}
-	//		else {
-	//			beta = std::min(beta, ttentry.score);
-	//		}
-	//	}
-	//}
+	U64 key = board->generate_zhash();
+	U64 index = key % tt_size;
+	TEntry ttentry = TTable[index];
+	if (ttentry.key = key) {
+		if (ttentry.depth >= depth) {
+			if (ttentry.flag == 0) {
+				alpha = ttentry.score;
+			}
+			else if(ttentry.flag == -1) {
+				alpha = std::max(alpha, ttentry.score);
+			}
+			else {
+				beta = std::min(beta, ttentry.score);
+			}
+			if (alpha >= beta) {
+				return ttentry.score;
+			}
+		}
+	}
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.e;
 
@@ -211,25 +216,25 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 		}
 	}
-	//if (!can_exit_early() and bestvalue != 0 and ttentry.depth <= depth) {
-	//	//Upperbound
-	//	if (bestvalue <= old_alpha) {
-	//		ttentry.flag = 1;
-	//	}
-	//	//lowerbound
-	//	else if (bestvalue >= beta) {
-	//		ttentry.flag = -1;
-	//	}
-	//	//exact
-	//	else {
-	//		ttentry.flag = 0;
-	//	}
-	//	ttentry.depth = depth;
-	//	ttentry.score = bestvalue;
-	//	ttentry.age = ply;
-	//	ttentry.key = key;
-	//	TTable[index] = ttentry;
-	//}
+	if (!can_exit_early() and bestvalue != 0) {
+		//Upperbound
+		if (bestvalue <= old_alpha) {
+			ttentry.flag = 1;
+		}
+		//lowerbound
+		else if (bestvalue >= beta) {
+			ttentry.flag = -1;
+		}
+		//exact
+		else {
+			ttentry.flag = 0;
+		}
+		ttentry.depth = depth;
+		ttentry.score = bestvalue;
+		ttentry.age = ply;
+		ttentry.key = key;
+		TTable[index] = ttentry;
+	}
 	return bestvalue;
 }
 
