@@ -15,8 +15,6 @@
 
 std::vector<std::string> split_input(std::string fen);
 
-
-
 extern int zpieces[12];
 extern U64 RANDOM_ARRAY[781];
 
@@ -26,6 +24,7 @@ struct Pertft_Info {
     int promotion_piece;
     U64 nodes;
 };
+
 struct MA {
     //std::vector<std::vector<long long>> myarray;
     std::vector<Pertft_Info> myarray;
@@ -35,6 +34,7 @@ struct MoveList {
     Move movelist[256];
     int e=0;
 };
+
 struct BoardState {
     U64 wpawn;
     U64 wknight;
@@ -50,7 +50,9 @@ struct BoardState {
     U64 bking;
     int en_passant;
     int castle_rights;
+    int piece_loc[64];
 };
+
 class Board
 {
 public:
@@ -89,17 +91,6 @@ public:
         QUEEN,
         KING
     };
-    // Squares to str
-    std::string square_to_coordinates[64] = {
-    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-    };
 
     enum {
         a8, b8, c8, d8, e8, f8, g8, h8,
@@ -110,6 +101,18 @@ public:
         a3, b3, c3, d3, e3, f3, g3, h3,
         a2, b2, c2, d2, e2, f2, g2, h2,
         a1, b1, c1, d1, e1, f1, g1, h1, no_sq
+    };
+
+    // Squares to str
+    std::string square_to_coordinates[64] = {
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
     };
 
     //WhitePawns, WhiteKnights, WhiteBishops, WhiteRooks, WhiteQueens, WhiteKing,
@@ -125,10 +128,8 @@ public:
     // All pieces
     U64 Occ = White | Black;
 
-    // 0 White 
-    // 1 Black
+    // 0 White 1 Black
     int side_to_move = 0;
-    int stm = 1;
 
     /*
     1  white king can castle to the king side
@@ -185,15 +186,17 @@ public:
     
     std::unordered_map<U64, int> repetition_table;
 
-    U64 generate_zhash();
-
-    int get_en_passant_square();
+    int board_pieces[64] = {-1};
 
     void apply_fen(std::string fen);
 
+    int get_en_passant_square();
+
+    U64 generate_zhash();
+
     BoardState encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
         U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
-        int ep, int castle);
+        int ep, int castle, int all_pieces[64]);
 
     void update_occupancies();
 
@@ -213,8 +216,13 @@ public:
 
     void print_board();
 
+    void print_board2();
+
+    int piece_at_square(int sq) {
+        return board_pieces[sq];
+    }
+    // returns color specific int for piece
     int piece_at(int sq, int given = -1) {
-        /* returns color specific int for piece*/
         bool white = false;
         if (given > -1) {
             white = given;
@@ -268,8 +276,8 @@ public:
         return -1;
     }
 
+    // returns int for piece
     int piece_type_at(int sq) {
-        /* returns color specific int for piece*/
         U64 pawns = bitboards[WPAWN] | bitboards[BPAWN];
         U64 knights = bitboards[WKNIGHT] | bitboards[BKNIGHT];
         U64 bishops = bitboards[WBISHOP] | bitboards[BBISHOP];
@@ -301,10 +309,6 @@ public:
 
     std::string piece_type(int piece);
 
-    U64 Pawns_NotLeft();
-
-    U64 Pawns_NotRight();
-
     U64 Pawn_Forward(bool IsWhite, U64 mask);
 
     U64 Pawn_Forward2(bool IsWhite, U64 mask);
@@ -316,10 +320,6 @@ public:
     U64 Pawn_AttackLeft(bool IsWhite, U64 mask);
 
     U64 Pawn_AttackRight(bool IsWhite, U64 mask);
-
-    U64 Pawns_FirstRank(bool IsWhite);
-
-    U64 Pawns_LastRank(bool IsWhite);
 
     U64 King(bool IsWhite);
 
