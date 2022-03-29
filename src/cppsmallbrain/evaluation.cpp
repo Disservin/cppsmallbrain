@@ -36,12 +36,26 @@ const int knightValue = 320;
 const int bishopValue = 330;
 const int rookValue = 500;
 const int queenValue = 900;
+static std::map<int, int*> piece_to_array =
+	{
+	{ 0,   w_pawn_mg},
+	{ 1,   w_knight_mg},
+	{ 2,   w_bishop_mg},
+	{ 3,   w_rook_mg },
+	{ 4,   w_queen_mg },
+	{ 5,   w_king_mg },
+	{ 6,   b_pawn_mg},
+	{ 7,   b_knight_mg},
+	{ 8,   b_bishop_mg },
+	{ 9,   b_rook_mg },
+	{ 10,  b_queen_mg },
+	{ 11,  b_king_mg },
+	};
 
 int evaluation() {
 	int eval = 0;
 	int material = 0;
-	U64 pieces_white = board->White;
-	U64 pieces_black = board->Black;
+
 	material += popcount(board->bitboards[0]) * pawnValue;
 	material += popcount(board->bitboards[1]) * knightValue;
 	material += popcount(board->bitboards[2]) * bishopValue;
@@ -55,5 +69,19 @@ int evaluation() {
 	material -= popcount(board->bitboards[10]) * queenValue;
 	
 	eval += material;
+
+	//U64 pieces_white = board->White;
+	//U64 pieces_black = board->Black;
+
+	//while (pieces_white) {
+	//	int square = _bitscanforward(pieces_white);
+	//	eval += piece_to_array[board->piece_at_square(square)][square];
+	//	pieces_white = _blsr_u64(pieces_white);
+	//}
+	//while (pieces_black) {
+	//	int square = _bitscanforward(pieces_black);
+	//	eval -= piece_to_array[board->piece_at_square(square)][square];
+	//	pieces_black = _blsr_u64(pieces_black);
+	//}
 	return eval;
 }

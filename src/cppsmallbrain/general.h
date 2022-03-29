@@ -29,6 +29,7 @@ struct Move {
     int to_square = -1;
     int promotion = -1;
     int null = 0;   // 1 == True 0 == False
+    int capture = -1;    
 };
 
 //Gets the file index of the square where 0 is the a-file

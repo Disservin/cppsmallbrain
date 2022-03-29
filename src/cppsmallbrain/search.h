@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <iostream>
+#include <functional>
 
 #include "board.h"
 
@@ -13,6 +14,7 @@ public:
 	static const int max_ply = 60;
 	int pv_length[max_ply] = { 0 };
 	Move pv_table[max_ply][max_ply] = { };
+	int current_ply = 0;
 	int search_to_depth = 60;
 	U64 nodes = 0;
 	Move bestmove;
@@ -43,4 +45,11 @@ public:
 
 	std::string print_move(Move move);
 
+	bool compare_moves(Move& m1, Move& m2);
+
+	int score_move(Move move);
+
+	int mmlva(Move move);
+
+	int is_pv_move(Move move, int ply);
 };

@@ -1905,6 +1905,9 @@ MoveList Board::generate_legal_moves() {
             move_mask = valid_pawn_moves(IsWhite, from_index, en_passant_square);
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
+                //if (piece_at_square(to_index) != -1) {
+                //    move.capture = piece_at_square(to_index);
+                //}
                 move.piece = PAWN;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -1937,6 +1940,9 @@ MoveList Board::generate_legal_moves() {
             move_mask = valid_knight_moves(IsWhite, from_index);
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
+                //if (piece_at_square(to_index) != -1) {
+                //    move.capture = piece_at_square(to_index);
+                //}
                 move.piece = KNIGHT;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -1952,6 +1958,9 @@ MoveList Board::generate_legal_moves() {
             move_mask = valid_bishop_moves(IsWhite, from_index);
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
+                //if (piece_at_square(to_index) != -1) {
+                //    move.capture = piece_at_square(to_index);
+                //}
                 move.piece = BISHOP;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -1967,6 +1976,9 @@ MoveList Board::generate_legal_moves() {
             move_mask = valid_rook_moves(IsWhite, from_index);
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
+                //if (piece_at_square(to_index) != -1) {
+                //    move.capture = piece_at_square(to_index);
+                //}
                 move.piece = ROOK;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -1983,6 +1995,9 @@ MoveList Board::generate_legal_moves() {
 
             while (move_mask) {
                 int to_index = _bitscanforward(move_mask);
+                //if (piece_at_square(to_index) != -1) {
+                //    move.capture = piece_at_square(to_index);
+                //}
                 move.piece = QUEEN;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -1998,6 +2013,9 @@ MoveList Board::generate_legal_moves() {
     move_mask = valid_king_moves(IsWhite, king_sq);
     while (move_mask) {
         int to_index = _bitscanforward(move_mask);
+        //if (piece_at_square(to_index) != -1) {
+        //    move.capture = piece_at_square(to_index);
+        //}
         move.piece = KING;
         move.from_square = king_sq;
         move.to_square = to_index;
