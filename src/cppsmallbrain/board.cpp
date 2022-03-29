@@ -123,7 +123,7 @@ void Board::apply_fen(std::string fen)
         }
     }
 
-    //Changing en passant from FEN into en passant square
+    // Changing en passant from FEN into en passant square
     if (en_passant == "-")
     {
         en_passant_square = no_sq;
@@ -136,14 +136,16 @@ void Board::apply_fen(std::string fen)
         en_passant_square = (rank - 1) * 8 + file - 1;
     }
 
-    //half_move_clock
+    // half_move_clock
     half_moves = std::stoi(half_move_clock);
 
-    //full_move_counter
+    // full_move_counter
     full_moves = std::stoi(full_move_counter);
 
-    //Udates Bitboards
+    // Udates Bitboards
     update_occupancies();
+
+    // Updates board pieces
     for (int sq = 0; sq < 64; sq++) {
         if (piece_type_at(sq) != -1) {
             board_pieces[sq] = piece_at(sq);
@@ -152,6 +154,8 @@ void Board::apply_fen(std::string fen)
             board_pieces[sq] = -1;
         }
     }
+    // Updates board hash
+    board_hash = generate_zhash();
 }
 
 //returns en passant square
@@ -185,19 +189,12 @@ U64 Board::generate_zhash() {
     }
 
     U64 ep_hash = 0ULL;
-    if (get_en_passant_square() != 64) {
-        U64 ep_mask = 0ULL;
-        if (IsWhite) {
-            U64 ep_square = 1ULL << get_en_passant_square();
-            ep_mask = Pawn_AttackLeft(!IsWhite, ep_square) | Pawn_AttackRight(!IsWhite, ep_square);
-        }
-        else {
-            U64 ep_square = 1ULL << get_en_passant_square();
-            ep_mask = Pawn_AttackLeft(IsWhite, ep_square) | Pawn_AttackRight(IsWhite, ep_square);
-        }
+    if (en_passant_square != 64) {
+        U64 ep_square = 1ULL << en_passant_square;
+        U64 ep_mask = (Pawn_AttackLeft(!IsWhite, ep_square) & not_h_file) | (Pawn_AttackRight(!IsWhite, ep_square) & not_a_file);
         U64 color_p = IsWhite ? White : Black;
         if (ep_mask & (bitboards[WPAWN] | bitboards[BPAWN]) & color_p) {
-            ep_hash = RANDOM_ARRAY[772 + square_file(get_en_passant_square())];
+            ep_hash = RANDOM_ARRAY[772 + square_file(en_passant_square)];
         }
     }
     U64 turn_hash = IsWhite ? RANDOM_ARRAY[780] : 0;
@@ -218,35 +215,32 @@ U64 Board::generate_zhash() {
     return hash ^ cast_hash ^ turn_hash ^ ep_hash;
 }
 
-inline BoardState Board::encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
-    U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
-    int ep, int castle, int all_pieces[64])
+inline void Board::safe_board_state()
 {
     BoardState board;
-    board.wpawn = wpawn;
-    board.wknight = wknight;
-    board.wbishop = wbishop;
-    board.wrook = wrook;
-    board.wqueen = wqueen;
-    board.wking = wking;
-    board.bpawn = bpawn;
-    board.bknight = bknight;
-    board.bbishop = bbishop;
-    board.brook = brook;
-    board.bqueen = bqueen;
-    board.bking = bking;
-    board.en_passant = ep;
-    board.castle_rights = castle;
-    std::copy(all_pieces, all_pieces+64, board.piece_loc);
-    return board;
+    board.wpawn = bitboards[WPAWN];
+    board.wknight = bitboards[WKNIGHT];
+    board.wbishop = bitboards[WBISHOP];
+    board.wrook = bitboards[WROOK];
+    board.wqueen = bitboards[WQUEEN];
+    board.wking = bitboards[WKING];
+    board.bpawn = bitboards[BPAWN];
+    board.bknight = bitboards[BKNIGHT];
+    board.bbishop = bitboards[BBISHOP];
+    board.brook = bitboards[BROOK];
+    board.bqueen = bitboards[BQUEEN];
+    board.bking = bitboards[BKING];
+    board.en_passant = en_passant_square;
+    board.castle_rights = castling_rights;
+    board.board_hash = board_hash;
+    std::copy(board_pieces, board_pieces +64, board.piece_loc);
+    move_stack.push(board);
 }
 
 inline void Board::update_occupancies() {
     White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
     Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
     Occ = White | Black;
-    White = White;
-    Black = Black;
 }
 
 void Board::add_repetition(U64 hash) {
@@ -266,16 +260,14 @@ void Board::remove_repetition(U64 hash) {
 };
 
 bool Board::is_threefold_rep() {
-    U64 hash = generate_zhash();
-    if (repetition_table[hash] >= 2) {
+    if (repetition_table[board_hash] >= 2) {
         return true;
     }
     return false;
 }
 
 bool Board::is_threefold_rep3() {
-    U64 hash = generate_zhash();
-    if (repetition_table[hash] >= 3) {
+    if (repetition_table[board_hash] >= 3) {
         return true;
     }
     return false;
@@ -287,10 +279,6 @@ void Board::make_move(Move& move) {
     int to_square = move.to_square;
     int promotion_piece = move.promotion;
     int piece = move.piece;
-    if (move.null == 1) {
-        side_to_move ^= 1;
-        return;
-    }
 
     if (move.piece == -1) {
         piece = piece_at_square(from_square);
@@ -303,21 +291,28 @@ void Board::make_move(Move& move) {
     bool IsWhite = side_to_move ? 0 : 1;
     bool enemy = side_to_move ^ 1;
 
+    if (move.null == 1) {
+        side_to_move ^= 1;
+        board_hash ^= IsWhite ? RANDOM_ARRAY[780] : 0;
+        return;
+    }
+
     // piece needs to be set at its bitboard remove this for performance if you are 100% theres a piece at that square
     if (not _test_bit(bitboards[piece], to_square)) {
-        BoardState boardstate = encode_board_state(bitboards[WPAWN], bitboards[WKNIGHT], bitboards[WBISHOP], bitboards[WROOK], bitboards[WQUEEN], bitboards[WKING], bitboards[BPAWN], bitboards[BKNIGHT], bitboards[BBISHOP], bitboards[BROOK], bitboards[BQUEEN], bitboards[BKING], en_passant_square, castling_rights, board_pieces);
-        move_stack.push(boardstate);
-        //Capture
+        safe_board_state();
+        // Capture
         captured_piece = piece_at_square(to_square);
         if (captured_piece == WROOK) {
             if (to_square == 7) {
                 if (castling_rights & wk) {
                     castling_rights ^= wk;
+                    board_hash ^= RANDOM_ARRAY[768];
                 }
             }
             if (to_square == 0) {
                 if (castling_rights & wq) {
                     castling_rights ^= wq;
+                    board_hash ^= RANDOM_ARRAY[768 + 1];
                 }
             }
         }
@@ -325,25 +320,39 @@ void Board::make_move(Move& move) {
             if (to_square == 63) {
                 if (castling_rights & bk) {
                     castling_rights ^= bk;
+                    board_hash ^= RANDOM_ARRAY[768 + 2];
                 }
             }
             if (to_square == 56) {
                 if (castling_rights & bq) {
                     castling_rights ^= bq;
+                    board_hash ^= RANDOM_ARRAY[768 + 3];
                 }
             }
         }
         // King move loses castle rights
         if (piece == WKING) {
             if (to_square != 6 and to_square != 2) {
-                castling_rights &= ~(1);
-                castling_rights &= ~(2);
+                if (castling_rights & 1) {
+                    castling_rights &= ~(1);
+                    board_hash ^= RANDOM_ARRAY[768];
+                }
+                if (castling_rights & 2) {
+                    castling_rights &= ~(2);
+                    board_hash ^= RANDOM_ARRAY[768 + 1];
+                }
             }
         }
         if (piece == BKING) {
             if (to_square != 62 and to_square != 58) {
-                castling_rights &= ~(4);
-                castling_rights &= ~(8);
+                if (castling_rights & 4) {
+                    castling_rights &= ~(4);
+                    board_hash ^= RANDOM_ARRAY[768 + 2];
+                }
+                if (castling_rights & 8) {
+                    castling_rights &= ~(8);
+                    board_hash ^= RANDOM_ARRAY[768 + 3];
+                }
             }
 
         }
@@ -351,17 +360,21 @@ void Board::make_move(Move& move) {
         if (piece == WROOK) {
             if (from_square == 7 and castling_rights & wk) {
                 castling_rights ^= wk;
+                board_hash ^= RANDOM_ARRAY[768];
             }
             if (from_square == 0 and castling_rights & wq) {
                 castling_rights ^= wq;
+                board_hash ^= RANDOM_ARRAY[768 + 1];
             }
         }
         if (piece == BROOK) {
             if (from_square == 63 and castling_rights & bk) {
                 castling_rights ^= bk;
+                board_hash ^= RANDOM_ARRAY[768 + 2];
             }
             if (from_square == 56 and castling_rights & bq) {
                 castling_rights ^= bq;
+                board_hash ^= RANDOM_ARRAY[768 + 3];
             }
         }
 
@@ -369,44 +382,69 @@ void Board::make_move(Move& move) {
         if (piece == WKING and square_distance(from_square, to_square) == 2) {
             if (to_square == 6 and _test_bit(bitboards[WROOK], 7)) {
                 if (castling_rights & wk) {
+                    if (castling_rights & wq) {
+                        board_hash ^= RANDOM_ARRAY[768 + 1];
+                    }
                     castling_rights &= ~(1);
                     castling_rights &= ~(2);
                     bitboards[WROOK] &= ~(1ULL << 7);
                     bitboards[WROOK] |= (1ULL << 5);
                     board_pieces[7] = -1;
                     board_pieces[5] = WROOK;
+                    board_hash ^= RANDOM_ARRAY[768];
+                    board_hash ^= RANDOM_ARRAY[64 * (2 * 3 + 1) + 7];
+                    board_hash ^= RANDOM_ARRAY[64 * (2 * 3 + 1) + 5];
                 }
             }
             if (to_square == 2 and _test_bit(bitboards[WROOK], 0)) {
                 if (castling_rights & wq) {
+                    if (castling_rights & wk) {
+                        board_hash ^= RANDOM_ARRAY[768];
+                    }
                     castling_rights &= ~(1);
                     castling_rights &= ~(2);
                     bitboards[WROOK] &= ~(1ULL << 0);
                     bitboards[WROOK] |= (1ULL << 3);
                     board_pieces[0] = -1;
                     board_pieces[3] = WROOK;
+                    board_hash ^= RANDOM_ARRAY[768 + 1];
+
+                    board_hash ^= RANDOM_ARRAY[64 * (2 * 3 + 1) + 0];
+                    board_hash ^= RANDOM_ARRAY[64 * (2 * 3 + 1) + 3];
                 }
             }
         }
         if (piece == BKING and square_distance(from_square, to_square) == 2) {
             if (to_square == 62 and _test_bit(bitboards[BROOK], 63)) {
                 if (castling_rights & bk) {
+                    if (castling_rights & bq) {
+                        board_hash ^= RANDOM_ARRAY[768 + 3];
+                    }
                     castling_rights &= ~(4);
                     castling_rights &= ~(8);
                     bitboards[BROOK] &= ~(1ULL << 63);
                     bitboards[BROOK] |= (1ULL << 61);
                     board_pieces[63] = -1;
                     board_pieces[61] = BROOK;
+                    board_hash ^= RANDOM_ARRAY[768 + 2];
+                    board_hash ^= RANDOM_ARRAY[64 * (2 * 3) + 63];
+                    board_hash ^= RANDOM_ARRAY[64 * (2 * 3) + 61];
                 }
             }
             if (to_square == 58 and _test_bit(bitboards[BROOK], 56)) {
                 if (castling_rights & bq) {
+                    if (castling_rights & bk) {
+                        board_hash ^= RANDOM_ARRAY[768 + 2];
+                    }
                     castling_rights &= ~(4);
                     castling_rights &= ~(8);
                     bitboards[BROOK] &= ~(1ULL << 56);
                     bitboards[BROOK] |= (1ULL << 59);
                     board_pieces[56] = -1;
                     board_pieces[59] = BROOK;
+                    board_hash ^= RANDOM_ARRAY[768 + 3];
+                    board_hash ^= RANDOM_ARRAY[64 * (2 * 3) + 56];
+                    board_hash ^= RANDOM_ARRAY[64 * (2 * 3) + 59];
                 }
             }
         }
@@ -417,51 +455,77 @@ void Board::make_move(Move& move) {
                 en_passant_square = no_sq;
                 bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
                 board_pieces[to_square - 8] = -1;
+                board_hash ^= RANDOM_ARRAY[64 * (2 * 0) + to_square - 8];
+                board_hash ^= RANDOM_ARRAY[772 + square_file(to_square)];
+
             }
             if (piece == BPAWN and square_rank(to_square) == 2 and piece_at_square(to_square + 8) == WPAWN and piece_at_square(to_square) == -1) {
                 en_passant_square = no_sq;
                 bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
                 board_pieces[to_square + 8] = -1;
+                board_hash ^= RANDOM_ARRAY[64 * (2 * 0 + 1) + to_square + 8];
+                board_hash ^= RANDOM_ARRAY[772 + square_file(to_square)];
             }
         }
         // remove en passant if it wasnt played immediately
         if (en_passant_square != no_sq) {
+            board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
             en_passant_square = no_sq;
         }
 
         // set en passant square if pawns double move
         if (piece == WPAWN and (from_square - to_square) == -16) {
-            en_passant_square = from_square + 8;
+            U64 ep_square = 1ULL << (from_square + 8);
+            U64 ep_mask = ((Pawn_AttackLeft(IsWhite, ep_square)) & not_h_file) | ((Pawn_AttackRight(IsWhite, ep_square) & not_a_file));
+            if (ep_mask & bitboards[BPAWN]) {
+                en_passant_square = from_square + 8;
+                board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
+            }
         }
         if (piece == BPAWN and (from_square - to_square) == 16) {
-            en_passant_square = from_square - 8;
+            U64 ep_square = 1ULL << (from_square - 8);
+            U64 ep_mask = ((Pawn_AttackLeft(IsWhite, ep_square)) & not_h_file) | ((Pawn_AttackRight(IsWhite, ep_square) & not_a_file));
+            if (ep_mask & bitboards[WPAWN]) {
+                en_passant_square = from_square - 8;
+                board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
+            }
         }
 
-        // Remove and set piece
+        // Remove piece
         bitboards[piece] &= ~(1ULL << from_square);
+        // Set piece
         bitboards[piece] |= (1ULL << to_square);
+        // Remove
         board_pieces[from_square] = -1;
+        // Set
         board_pieces[to_square] = piece;
-
+        // Remove
+        board_hash ^= RANDOM_ARRAY[64 * (2 * move.piece + IsWhite) + from_square];
+        // Set
+        board_hash ^= RANDOM_ARRAY[64 * (2 * move.piece + IsWhite) + to_square];
         // Remove captured piece
         if (captured_piece != -1) {
             bitboards[captured_piece] &= ~(1ULL << to_square);
+            board_hash ^= RANDOM_ARRAY[64 * (2 * (captured_piece - (6 * enemy)) + !IsWhite) + to_square];
         }
 
         // Promotion
         if (promotion_piece > 0 and promotion_piece < 7) {
-            bitboards[piece] &= ~(1ULL << to_square);
+            board_hash ^= RANDOM_ARRAY[64 * (2 * promotion_piece + IsWhite) + to_square];
+            board_hash ^= RANDOM_ARRAY[64 * (2 * move.piece + IsWhite) + to_square];
+
             promotion_piece = promotion_piece + (side_to_move * 6);
-            board_pieces[to_square] = promotion_piece;
+            bitboards[piece] &= ~(1ULL << to_square);
             bitboards[promotion_piece] |= (1ULL << to_square);
+            board_pieces[to_square] = promotion_piece;
         }
 
         // Swap color
         side_to_move ^= 1;
-
+        board_hash ^= RANDOM_ARRAY[780];
         //Update
         update_occupancies();
-        //add_repetition(generate_zhash());
+        add_repetition(board_hash);
     }
     else {
         // Not valid move
@@ -473,7 +537,6 @@ void Board::make_move(Move& move) {
 
 void Board::unmake_move() {
     if (move_stack.size() > 0) {
-        //remove_repetition(generate_zhash());
         BoardState board;
         board = move_stack.top();
         bitboards[WPAWN] = board.wpawn;
@@ -490,6 +553,8 @@ void Board::unmake_move() {
         bitboards[BKING] = board.bking;
         en_passant_square = board.en_passant;
         castling_rights = board.castle_rights;
+        remove_repetition(board_hash);
+        board_hash = board.board_hash;
         std::copy(board.piece_loc, board.piece_loc+64, board_pieces);
         side_to_move ^= 1;
         update_occupancies();
