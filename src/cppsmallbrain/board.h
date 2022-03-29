@@ -51,6 +51,7 @@ struct BoardState {
     int en_passant;
     int castle_rights;
     int piece_loc[64];
+    U64 board_hash;
 };
 
 class Board
@@ -177,9 +178,13 @@ public:
 
     // All bits set to 1 if theres no check / on startup
     uint64_t checkmask = 18446744073709551615ULL;
+    
     uint64_t attacked_squares = 0ULL;
+    
     uint64_t pin_hv = 0ULL;
+    
     uint64_t pin_dg = 0ULL;
+
     int doublecheck = 0;
 
     std::stack<BoardState> move_stack = {};
@@ -188,15 +193,15 @@ public:
 
     int board_pieces[64] = {-1};
 
+    U64 board_hash = 0ULL;
+
     void apply_fen(std::string fen);
 
     int get_en_passant_square();
 
     U64 generate_zhash();
 
-    BoardState encode_board_state(U64 wpawn, U64 wknight, U64 wbishop, U64 wrook, U64 wqueen, U64 wking,
-        U64 bpawn, U64 bknight, U64 bbishop, U64 brook, U64 bqueen, U64 bking,
-        int ep, int castle, int all_pieces[64]);
+    void safe_board_state();
 
     void update_occupancies();
 

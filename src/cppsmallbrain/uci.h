@@ -21,7 +21,7 @@ Move convert_uci_to_Move(std::string input) {
         rank = to[1] - 48;
         to_index = (rank - 1) * 8 + file - 1;
         move.to_square = to_index;
-        move.piece = -1;
+        move.piece = board->piece_type_at(from_index);
         move.promotion = -1;
         return move;
     }

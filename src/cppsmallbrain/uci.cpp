@@ -24,6 +24,13 @@ TEntry* TTable = (TEntry*)malloc(tt_size * sizeof(TEntry));	//TEntry == 48 Bytes
 void output(std::string str) {
 	std::cout << str;
 }
+template<typename K, typename V>
+void print_map(std::unordered_map<K, V> const& m)
+{
+	for (auto const& pair : m) {
+		std::cout << "{" << pair.first << ": " << pair.second << "}\n";
+	}
+}
 int main() {
 	// Commands
 	// test perft
@@ -75,6 +82,7 @@ int main() {
 				for ( ; index < param.size(); index++) {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);
+
 				}
 			}
 		}
@@ -83,14 +91,12 @@ int main() {
 			board->repetition_table.clear();
 			if (input.find("moves") != std::string::npos) {
 				auto begin = std::chrono::high_resolution_clock::now();
-				
-				
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index++;
 				for ( ; index < param.size(); index++) {
 					Move move = convert_uci_to_Move(param[index]);
-					board->make_move(move);
+					board->make_move(move);				
 				}
 				auto end = std::chrono::high_resolution_clock::now();
 				auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
@@ -183,6 +189,7 @@ int main() {
 		}
 		if (input == "hash") {
 			std::cout << board->generate_zhash()<<std::endl;
+			std::cout << board->board_hash << std::endl;
 		}
 	}
 }

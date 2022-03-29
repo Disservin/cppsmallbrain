@@ -1,5 +1,6 @@
 #include <chrono>
 #include <algorithm> 
+#include <unordered_map>
 
 #include "board.h"
 #include "general.h"
@@ -23,6 +24,7 @@ bool Searcher::can_exit_early() {
 	}
 	return false;
 }
+
 int Searcher::iterative_search(int search_depth) {
 	int result = 0;
 	int lowerbounds = -99999;
@@ -36,7 +38,7 @@ int Searcher::iterative_search(int search_depth) {
 	begin = std::chrono::high_resolution_clock::now();
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
-	
+
 	for (int i = 1; i <= search_depth; i++) {
 		search_to_depth = i;
 		bestmove = {};
@@ -95,6 +97,9 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 			return (- 20000 - ply)* game_result;
 		}
 	}
+	if (board->is_threefold_rep3()) {
+		return 0;
+	}                  
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) {
 			return 0;
@@ -150,36 +155,37 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			depth++;
 		}
 		else {
-			int value = qsearch(alpha, beta, player, 10, ply);//evaluation() * player;// //  //
+			nodes++;
+			int value = qsearch(alpha, beta, player, 10, ply); //  //evaluation() * player;//
 			return value;
 		}
 	}
 
-	U64 key = board->generate_zhash();
-	U64 index = key % tt_size;
-	TEntry ttentry = TTable[index];
-	if (ttentry.key = key) {
-		if (ttentry.depth >= depth) {
-			if (ttentry.flag == 0) {
-				alpha = ttentry.score;
-			}
-			else if(ttentry.flag == -1) {
-				alpha = std::max(alpha, ttentry.score);
-			}
-			else {
-				beta = std::min(beta, ttentry.score);
-			}
-			if (alpha >= beta) {
-				return ttentry.score;
-			}
-		}
-	}
+	U64 key =  board->board_hash;
+
+	//U64 index = key % tt_size;
+	//TEntry ttentry = TTable[index];
+	//if (ttentry.key = key) {
+	//	if (ttentry.depth >= depth) {
+	//		if (ttentry.flag == 0) {
+	//			alpha = ttentry.score;
+	//		}
+	//		else if(ttentry.flag == -1) {
+	//			alpha = std::max(alpha, ttentry.score);
+	//		}
+	//		else {
+	//			beta = std::min(beta, ttentry.score);
+	//		}
+	//		if (alpha >= beta) {
+	//			return ttentry.score;
+	//		}
+	//	}
+	//}
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.e;
 
 	if (count == 0) {
 		if (board->is_square_attacked(is_white, king_sq)) {
-			
 			return -20000 - depth;
 		}
 		else {			
@@ -216,25 +222,25 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 		}
 	}
-	if (!can_exit_early() and bestvalue != 0) {
-		//Upperbound
-		if (bestvalue <= old_alpha) {
-			ttentry.flag = 1;
-		}
-		//lowerbound
-		else if (bestvalue >= beta) {
-			ttentry.flag = -1;
-		}
-		//exact
-		else {
-			ttentry.flag = 0;
-		}
-		ttentry.depth = depth;
-		ttentry.score = bestvalue;
-		ttentry.age = ply;
-		ttentry.key = key;
-		TTable[index] = ttentry;
-	}
+	//if (!can_exit_early() and bestvalue != 0) {
+	//	//Upperbound
+	//	if (bestvalue <= old_alpha) {
+	//		ttentry.flag = 1;
+	//	}
+	//	//lowerbound
+	//	else if (bestvalue >= beta) {
+	//		ttentry.flag = -1;
+	//	}
+	//	//exact
+	//	else {
+	//		ttentry.flag = 0;
+	//	}
+	//	ttentry.depth = depth;
+	//	ttentry.score = bestvalue;
+	//	ttentry.age = ply;
+	//	ttentry.key = key;
+	//	TTable[index] = ttentry;
+	//}
 	return bestvalue;
 }
 
