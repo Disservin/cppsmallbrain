@@ -23,6 +23,11 @@
 #define _Compiletime __forceinline static constexpr
 #define U64 unsigned __int64
 
+enum Score {
+    MATE = 20000,
+    INFINITE = MATE + 1,
+};
+
 struct Move {
     int piece = -1;
     int from_square = -1;

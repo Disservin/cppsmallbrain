@@ -67,6 +67,8 @@ int main() {
 		}
 		if (input.find("quit") != std::string::npos) {
 			threads.stop();
+			free(TTable);
+			delete[] board;
 			break;
 		}
 		if (input.find("position fen") != std::string::npos) {
@@ -78,11 +80,9 @@ int main() {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index ++;
-				
 				for ( ; index < param.size(); index++) {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);
-
 				}
 			}
 		}
@@ -90,7 +90,7 @@ int main() {
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 			board->repetition_table.clear();
 			if (input.find("moves") != std::string::npos) {
-				auto begin = std::chrono::high_resolution_clock::now();
+				//auto begin = std::chrono::high_resolution_clock::now();
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index++;
@@ -98,9 +98,9 @@ int main() {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);				
 				}
-				auto end = std::chrono::high_resolution_clock::now();
-				auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-				std::cout << "time taken to read " << time_diff << std::endl;
+				//auto end = std::chrono::high_resolution_clock::now();
+				//auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
+				//std::cout << "time taken to read " << time_diff << std::endl;
 			}
 		}
 		if (input.find("go perft") != std::string::npos) {

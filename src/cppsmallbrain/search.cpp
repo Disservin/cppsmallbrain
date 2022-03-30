@@ -28,14 +28,14 @@ bool Searcher::can_exit_early() {
 
 int Searcher::iterative_search(int search_depth) {
 	int result = 0;
-	int lowerbounds = -99999;
-	int upperbounds = 99999;
+	int lowerbounds = -INFINITE;
+	int upperbounds = INFINITE;
 	int player = board->side_to_move ? -1 : 1;
 	int ply = 0;
 
 	std::string last_pv = "";
 	nodes = 0;
-	
+
 	begin = std::chrono::high_resolution_clock::now();
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
@@ -72,13 +72,14 @@ int Searcher::iterative_search(int search_depth) {
 int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	bool IsWhite = board->side_to_move ? 0 : 1;
 	int king_sq = _bitscanforward(board->King(IsWhite));
-	bool in_check = board->is_square_attacked(IsWhite, king_sq); 
+	bool in_check = board->is_square_attacked(IsWhite, king_sq);
 	nodes++;
+	int stand_pat = 0;
 	if (in_check) {
-		int stand_pat = -20000;
+		 stand_pat = -MATE + ply;
 	}
 	else {
-		int stand_pat = evaluation() * player;
+		stand_pat = evaluation() * player;
 		if (stand_pat >= beta) {
 			return beta;
 		}
@@ -94,16 +95,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	int count = n_moves.e;
 	current_ply = ply;
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return mmlva(m1) > mmlva(m2); });
-	if (count == 0) {
-		if (board->is_square_attacked(IsWhite, king_sq)) {
-			return -20000 - ply;
-		}
-		return 0;
-	}
-	if (board->half_moves > 75 or board->is_threefold_rep3()) {
-		return 0;
-	}
-               
+
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) {
 			return 0;
@@ -113,26 +105,29 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 			board->make_move(move);
 			int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
 			board->unmake_move();
-			if (score >= beta) {
-				return score;
-			}
-			if (score > alpha) {
-				alpha = score;
+			if (score > stand_pat) {
+				stand_pat = score;
+				if (score > alpha) {
+					alpha = score;
+					if (score >= beta) {
+						break;
+					}
+				}
 			}
 		}
 	}
-	return alpha;
+	return stand_pat;
 }
 
 //"position fen 1k6/6R1/7P/5K2/8/8/8/8 b - - 0 2";
 int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply) {
 	Move null_move;
 	bool Is_White = board->side_to_move ? 0 : 1;
-	int bestvalue = -20000-ply;
+	int bestvalue = -INFINITE;
 	int old_alpha = alpha;
 
 	pv_length[ply] = ply;
-	
+
 	if (can_exit_early()) {
 		return 0;
 	}
@@ -157,10 +152,10 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	//U64 index = key % tt_size;
 	//TEntry ttentry = TTable[index];
 	//if (ttentry.key == key and ttentry.depth >= depth) {
-	//	if (ttentry.flag == EXACT) {
-	//		alpha = ttentry.score;
-	//	}
-	//	else if (ttentry.flag == LOWERBOUND) {
+	//	//if (ttentry.flag == EXACT) {
+	//	//	alpha = ttentry.score;
+	//	//}
+	//	if (ttentry.flag == LOWERBOUND) {
 	//		alpha = std::max(alpha, ttentry.score);
 	//	}
 	//	else if (ttentry.flag == UPPERBOUND) {
@@ -176,26 +171,23 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	if (count == 0) {
 		int king_sq = _bitscanforward(board->King(Is_White));
 		if (board->is_square_attacked(Is_White, king_sq)) {
-			return -20000 - depth;
+			return -MATE + ply;
 		}
 		return 0;
 	}
 	if (board->half_moves > 75) {
 		return 0;
 	}
-    for (int i = 0; i < count; i++) {
+	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) {
 			break;
 		}
-        Move move = n_moves.movelist[i];
-		
-        board->make_move(move);
-        int score = -alpha_beta(-beta, -alpha, -player, false, depth-1, ply + 1);
-        board->unmake_move();
-		if (score >= beta) {		
-			
-			return score;
-		}
+		Move move = n_moves.movelist[i];
+
+		board->make_move(move);
+		int score = -alpha_beta(-beta, -alpha, -player, false, depth - 1, ply + 1);
+		board->unmake_move();
+
 		if (score > bestvalue) {
 			bestvalue = score;
 			if (depth == search_to_depth) {
@@ -207,7 +199,10 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 			pv_length[ply] = pv_length[ply + 1];
 			if (score > alpha) {
-				alpha = score;
+				alpha = score;		
+				if (score >= beta) {
+					break;
+				}
 			}
 		}
 	}
@@ -305,11 +300,11 @@ int Searcher::mmlva(Move move) {
 	int victim = board->piece_type_at(move.to_square) + 1;
 	if (victim == -1) {
 		victim = 1;
-	} 
+	}
 	return mvvlva[victim][attacker];
 }
 int Searcher::is_pv_move(Move move, int ply) {
 	return pv_table[0][ply].from_square == move.from_square && pv_table[0][ply].to_square == move.to_square &&
-		   pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion &&
-		   pv_table[0][ply].null == move.null;
+		pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion &&
+		pv_table[0][ply].null == move.null;
 }
