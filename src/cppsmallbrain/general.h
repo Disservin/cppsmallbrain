@@ -94,6 +94,11 @@ inline int popcount(U64 mask) {
 #endif
 }
 
+inline int pop_lsb(U64* mask) {
+    const int s = _bitscanforward(*mask);
+    *mask = _blsr_u64(*mask);
+    return s;
+}
 
 static const std::string square_to_coordinates[64] = {
 "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",

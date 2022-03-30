@@ -70,18 +70,16 @@ int evaluation() {
 	
 	eval += material;
 
-	//U64 pieces_white = board->White;
-	//U64 pieces_black = board->Black;
+	U64 pieces_white = board->White;
+	U64 pieces_black = board->Black;
 
-	//while (pieces_white) {
-	//	int square = _bitscanforward(pieces_white);
-	//	eval += piece_to_array[board->piece_at_square(square)][square];
-	//	pieces_white = _blsr_u64(pieces_white);
-	//}
-	//while (pieces_black) {
-	//	int square = _bitscanforward(pieces_black);
-	//	eval -= piece_to_array[board->piece_at_square(square)][square];
-	//	pieces_black = _blsr_u64(pieces_black);
-	//}
+	while (pieces_white) {
+		int square = pop_lsb(&pieces_white);
+		eval += piece_to_array[board->piece_at_square(square)][square];
+	}
+	while (pieces_black) {
+		int square = pop_lsb(&pieces_black);
+		eval -= piece_to_array[board->piece_at_square(square)][square];
+	}
 	return eval;
 }

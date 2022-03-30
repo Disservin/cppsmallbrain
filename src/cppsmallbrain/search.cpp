@@ -95,14 +95,15 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	current_ply = ply;
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return mmlva(m1) > mmlva(m2); });
 	if (count == 0) {
-		int game_result = board->is_game_over(IsWhite);
-		if (game_result == 0 or game_result == 1) {
-			return (- 20000 - ply)* game_result;
+		if (board->is_square_attacked(IsWhite, king_sq)) {
+			return -20000 - ply;
 		}
-	}
-	if (board->is_threefold_rep3()) {
 		return 0;
-	}                  
+	}
+	if (board->half_moves > 75 or board->is_threefold_rep3()) {
+		return 0;
+	}
+               
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) {
 			return 0;
@@ -126,13 +127,11 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 //"position fen 1k6/6R1/7P/5K2/8/8/8/8 b - - 0 2";
 int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply) {
 	Move null_move;
-	bool is_white = board->side_to_move ? 0 : 1;
-	int bestvalue = -100000;
+	bool Is_White = board->side_to_move ? 0 : 1;
+	int bestvalue = -20000-ply;
 	int old_alpha = alpha;
 
 	pv_length[ply] = ply;
-
-	int game_result = board->is_game_over(is_white);
 	
 	if (can_exit_early()) {
 		return 0;
@@ -142,11 +141,9 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		return 0;
 	}
 
-	int king_sq = _bitscanforward(board->King(is_white));
-
-
 	if (depth == 0) {
-		if ((board->is_square_attacked(is_white, king_sq))) {
+		int king_sq = _bitscanforward(board->King(Is_White));
+		if ((board->is_square_attacked(Is_White, king_sq))) {
 			depth++;
 		}
 		else {
@@ -159,20 +156,15 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	//U64 key =  board->board_hash;
 	//U64 index = key % tt_size;
 	//TEntry ttentry = TTable[index];
-	//if (ttentry.key = key) {
-	//	if (ttentry.depth >= depth) {
-	//		if (ttentry.flag == 0) {
-	//			alpha = ttentry.score;
-	//		}
-	//		else if(ttentry.flag == -1) {
-	//			alpha = std::max(alpha, ttentry.score);
-	//		}
-	//		else {
-	//			beta = std::min(beta, ttentry.score);
-	//		}
-	//		if (alpha >= beta) {
-	//			return ttentry.score;
-	//		}
+	//if (ttentry.key == key and ttentry.depth >= depth) {
+	//	if (ttentry.flag == EXACT) {
+	//		alpha = ttentry.score;
+	//	}
+	//	else if (ttentry.flag == LOWERBOUND) {
+	//		alpha = std::max(alpha, ttentry.score);
+	//	}
+	//	else if (ttentry.flag == UPPERBOUND) {
+	//		beta = std::min(beta, ttentry.score);
 	//	}
 	//}
 
@@ -182,17 +174,17 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1) > score_move(m2); });
 
 	if (count == 0) {
-		if (board->is_square_attacked(is_white, king_sq)) {
+		int king_sq = _bitscanforward(board->King(Is_White));
+		if (board->is_square_attacked(Is_White, king_sq)) {
 			return -20000 - depth;
 		}
-		else {			
-			
-			return 0;
-		}
+		return 0;
+	}
+	if (board->half_moves > 75) {
+		return 0;
 	}
     for (int i = 0; i < count; i++) {
 		if (can_exit_early()) {
-			
 			break;
 		}
         Move move = n_moves.movelist[i];
@@ -219,24 +211,26 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 		}
 	}
-	//if (!can_exit_early() and bestvalue != 0) {
+	//if (!can_exit_early()) {
 	//	//Upperbound
 	//	if (bestvalue <= old_alpha) {
-	//		ttentry.flag = 1;
+	//		ttentry.flag = UPPERBOUND;
 	//	}
 	//	//lowerbound
 	//	else if (bestvalue >= beta) {
-	//		ttentry.flag = -1;
+	//		ttentry.flag = LOWERBOUND;
 	//	}
 	//	//exact
 	//	else {
-	//		ttentry.flag = 0;
+	//		ttentry.flag = EXACT;
 	//	}
-	//	ttentry.depth = depth;
-	//	ttentry.score = bestvalue;
-	//	ttentry.age = ply;
-	//	ttentry.key = key;
-	//	TTable[index] = ttentry;
+	//	if (ttentry.depth <= depth) {
+	//		ttentry.depth = depth;
+	//		ttentry.score = bestvalue;
+	//		ttentry.age = ply;
+	//		ttentry.key = key;
+	//		TTable[index] = ttentry;
+	//	}
 	//}
 	return bestvalue;
 }

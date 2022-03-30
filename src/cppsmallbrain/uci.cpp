@@ -165,9 +165,11 @@ int main() {
 		}
 		if (input == "b") {
 			board->print_board();
+			std::cout << board->half_moves << " " << board->full_moves << std::endl;
 		}
 		if (input == "eval") {
 			std::cout << evaluation()<<"\n";
+			
 		}
 		if (input == "captures") {
 			MoveList n_moves = board->generate_capture_moves();

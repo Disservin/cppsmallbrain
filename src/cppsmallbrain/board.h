@@ -11,7 +11,6 @@
 
 #define get_bit(bitboard, index) (bitboard & 1ULL << index))
 #define set_bit(bitboard, index) (bitboard |= (1ULL << index))
-#define pop_bit(bitboard, index) (get_bit(bitboard, index) ? bitboard ^= (1ULL << index):0)
 
 std::vector<std::string> split_input(std::string fen);
 
@@ -52,6 +51,7 @@ struct BoardState {
     int castle_rights;
     int piece_loc[64];
     U64 board_hash;
+    int half_move;
 };
 
 class Board
@@ -198,6 +198,8 @@ public:
     void apply_fen(std::string fen);
 
     int get_en_passant_square();
+
+    int get_full_moves();
 
     U64 generate_zhash();
 
@@ -398,7 +400,7 @@ public:
 
     bool is_stalemate(bool IsWhite);
 
-    int is_game_over(bool IsWhite);
+    int is_game_over();
 
     void init(bool IsWhite);
 
