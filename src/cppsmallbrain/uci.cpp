@@ -50,7 +50,6 @@ int main() {
 	std::thread searchThread;
 	bool thread_started = false;
 	signal(SIGINT, signal_callback_handler);
-
 	while (true) {
 		std::string input;
 		std::getline(std::cin, input);

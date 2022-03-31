@@ -224,6 +224,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		TTable[index].age = ply;
 		TTable[index].key = key;
 	}
+	
 	return bestvalue;
 }
 

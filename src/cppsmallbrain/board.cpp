@@ -261,6 +261,9 @@ void Board::remove_repetition(U64 hash) {
         std::cout << "ERROR REMOVE REPETITION \n";
     }
     repetition_table[hash]--;
+    if (repetition_table[hash] == 0) {
+        repetition_table.erase(hash);
+    }
 };
 
 bool Board::is_threefold_rep() {
