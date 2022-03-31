@@ -604,6 +604,94 @@ void Board::print_board() {
     std::cout << '\n' << std::endl;
 }
 
+int Board::piece_at_square(int sq) {
+    return board_pieces[sq];
+}
+
+int Board::piece_at(int sq, int given) {
+    bool white = false;
+    if (given > -1) {
+        white = given;
+    }
+    else {
+        if (_test_bit(White, sq)) {
+            white = true;
+        }
+    }
+
+    if (white) {
+        if (_test_bit(bitboards[WPAWN], sq)) {
+            return WPAWN;
+        }
+        if (_test_bit(bitboards[WKNIGHT], sq)) {
+            return WKNIGHT;
+        }
+        if (_test_bit(bitboards[WBISHOP], sq)) {
+            return WBISHOP;
+        }
+        if (_test_bit(bitboards[WROOK], sq)) {
+            return WROOK;
+        }
+        if (_test_bit(bitboards[WQUEEN], sq)) {
+            return WQUEEN;
+        }
+        if (_test_bit(bitboards[WKING], sq)) {
+            return WKING;
+        }
+    }
+    else {
+        if (_test_bit(bitboards[BPAWN], sq)) {
+            return BPAWN;
+        }
+        if (_test_bit(bitboards[BKNIGHT], sq)) {
+            return BKNIGHT;
+        }
+        if (_test_bit(bitboards[BBISHOP], sq)) {
+            return BBISHOP;
+        }
+        if (_test_bit(bitboards[BROOK], sq)) {
+            return BROOK;
+        }
+        if (_test_bit(bitboards[BQUEEN], sq)) {
+            return BQUEEN;
+        }
+        if (_test_bit(bitboards[BKING], sq)) {
+            return BKING;
+        }
+    }
+    return -1;
+}
+
+int Board::piece_type_at(int sq) {
+    U64 pawns = bitboards[WPAWN] | bitboards[BPAWN];
+    U64 knights = bitboards[WKNIGHT] | bitboards[BKNIGHT];
+    U64 bishops = bitboards[WBISHOP] | bitboards[BBISHOP];
+    U64 rooks = bitboards[WROOK] | bitboards[BROOK];
+    U64 queens = bitboards[WQUEEN] | bitboards[BQUEEN];
+    U64 kings = bitboards[WKING] | bitboards[BKING];
+
+    if (_test_bit(pawns, sq)) {
+        return 0;
+    }
+    if (_test_bit(knights, sq)) {
+        return 1;
+    }
+    if (_test_bit(bishops, sq)) {
+        return 2;
+    }
+    if (_test_bit(rooks, sq)) {
+        return 3;
+    }
+    if (_test_bit(queens, sq)) {
+        return 4;
+    }
+    if (_test_bit(kings, sq)) {
+        return 5;
+    }
+
+    return -1;
+}
+
 inline U64 Board::Pawn_Forward(bool IsWhite, U64 mask) {
     if (IsWhite) return mask << 8;
     else return mask >> 8;

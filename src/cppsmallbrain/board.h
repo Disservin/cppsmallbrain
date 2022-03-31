@@ -146,7 +146,7 @@ public:
     int half_moves = 0;
 
     //full_moves
-    int full_moves = 0;
+    int full_moves = 1;
 
     static constexpr  U64 not_a_file = 0xfefefefefefefefe;
 
@@ -222,94 +222,13 @@ public:
 
     void print_board();
 
-    int piece_at_square(int sq) {
-        return board_pieces[sq];
-    }
+    int piece_at_square(int sq);
+	
     // returns color specific int for piece
-    int piece_at(int sq, int given = -1) {
-        bool white = false;
-        if (given > -1) {
-            white = given;
-        }
-        else {
-            if (_test_bit(White, sq)) {
-                white = true;
-            }
-        }
-
-        if (white) {
-            if (_test_bit(bitboards[WPAWN], sq)) {
-                return WPAWN;
-            }
-            if (_test_bit(bitboards[WKNIGHT], sq)) {
-                return WKNIGHT;
-            }
-            if (_test_bit(bitboards[WBISHOP], sq)) {
-                return WBISHOP;
-            }
-            if (_test_bit(bitboards[WROOK], sq)) {
-                return WROOK;
-            }
-            if (_test_bit(bitboards[WQUEEN], sq)) {
-                return WQUEEN;
-            }
-            if (_test_bit(bitboards[WKING], sq)) {
-                return WKING;
-            }
-        }
-        else {
-            if (_test_bit(bitboards[BPAWN], sq)) {
-                return BPAWN;
-            }
-            if (_test_bit(bitboards[BKNIGHT], sq)) {
-                return BKNIGHT;
-            }
-            if (_test_bit(bitboards[BBISHOP], sq)) {
-                return BBISHOP;
-            }
-            if (_test_bit(bitboards[BROOK], sq)) {
-                return BROOK;
-            }
-            if (_test_bit(bitboards[BQUEEN], sq)) {
-                return BQUEEN;
-            }
-            if (_test_bit(bitboards[BKING], sq)) {
-                return BKING;
-            }
-        }
-        return -1;
-    }
+    int piece_at(int sq, int given = -1);
 
     // returns int for piece
-    int piece_type_at(int sq) {
-        U64 pawns = bitboards[WPAWN] | bitboards[BPAWN];
-        U64 knights = bitboards[WKNIGHT] | bitboards[BKNIGHT];
-        U64 bishops = bitboards[WBISHOP] | bitboards[BBISHOP];
-        U64 rooks = bitboards[WROOK] | bitboards[BROOK];
-        U64 queens = bitboards[WQUEEN] | bitboards[BQUEEN];
-        U64 kings = bitboards[WKING] | bitboards[BKING];
-        
-        if (_test_bit(pawns, sq)) {
-            return 0;
-        }
-        if (_test_bit(knights, sq)) {
-            return 1;
-        }
-        if (_test_bit(bishops, sq)) {
-            return 2;
-        }
-        if (_test_bit(rooks, sq)) {
-            return 3;
-        }
-        if (_test_bit(queens, sq)) {
-            return 4;
-        }
-        if (_test_bit(kings, sq)) {
-            return 5;
-        }
-
-        return -1;
-    }
+    int piece_type_at(int sq);
 
     std::string piece_type(int piece);
 

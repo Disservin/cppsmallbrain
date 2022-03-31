@@ -41,8 +41,9 @@ struct Move {
 inline int square_file(int sq) {
     return sq & 7;
 }
-inline int square_rank(int sq) {
-    //Gets the rank index of the square where 0 is the first rank."""
+
+//Gets the rank index of the square where 0 is the first rank."""
+inline int square_rank(int sq) {    
     return sq >> 3;
 }
 

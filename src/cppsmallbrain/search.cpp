@@ -2,6 +2,7 @@
 #include <algorithm> 
 #include <unordered_map>
 #include <functional>
+#include <thread>
 
 #include "board.h"
 #include "general.h"
@@ -39,12 +40,10 @@ int Searcher::iterative_search(int search_depth) {
 	begin = std::chrono::high_resolution_clock::now();
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
-	
 
 	for (int i = 1; i <= search_depth; i++) {
 		search_to_depth = i;
 		bestmove = {};
-
 		result = alpha_beta(lowerbounds, upperbounds, player, true, i, ply);
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
@@ -62,10 +61,11 @@ int Searcher::iterative_search(int search_depth) {
 			last_pv = get_pv_line();
 			std::cout << std::fixed << "info depth " << i << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01)) << " time " << time_diff << " pv " << get_pv_line() << std::endl;
 		}
-	}
+	}	
 	std::vector<std::string> param = split_input(last_pv);
 	std::string bm = param[0];
 	std::cout << "bestmove " << bm << std::endl;
+	return 0;
 }
 
 int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
@@ -134,6 +134,9 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	if (!root_node && board->is_threefold_rep()) {
 		return 0;
 	}
+	if (root_node && board->is_threefold_rep3()) {
+		return 0;
+	}
 
 	if (depth == 0) {
 		int king_sq = _bitscanforward(board->King(Is_White));
@@ -147,8 +150,9 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		}
 	}
 
-	U64 key =  board->board_hash;
+	U64 key = board->board_hash;
 	U64 index = key % tt_size;
+	bool u_move = false;
 	if (TTable[index].key == key and TTable[index].depth >= depth and !root_node) {
 		if (TTable[index].flag == EXACT) {
 			return TTable[index].score;
@@ -162,12 +166,13 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		if (alpha >= beta) {
 			return TTable[index].score;
 		}
+		u_move = true;
 	}
 
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.e;
 	current_ply = ply;
-	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1) > score_move(m2); });
+	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
 
 	if (count == 0) {
 		int king_sq = _bitscanforward(board->King(Is_White));
@@ -208,8 +213,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 		}
 	}
-	if (!can_exit_early() and !(bestvalue >= 19000) and !(bestvalue <= -19000) and bestvalue != 0 and 
-		TTable[index].depth <= depth or TTable[index].age + 3 <= ply) {
+	if (!can_exit_early() and !(bestvalue >= 19000) and !(bestvalue <= -19000) and 
+		(TTable[index].depth <= depth or TTable[index].age + 3 <= board->full_moves)) {
 		TTable[index].flag = EXACT;
 		// Upperbound
 		if (bestvalue <= old_alpha) {
@@ -221,10 +226,10 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		}
 		TTable[index].depth = depth;
 		TTable[index].score = bestvalue;
-		TTable[index].age = ply;
+		TTable[index].age = board->full_moves;
 		TTable[index].key = key;
+		TTable[index].move = pv_table[0][ply];
 	}
-	
 	return bestvalue;
 }
 
@@ -237,43 +242,15 @@ std::string Searcher::get_pv_line() {
 	return output;
 }
 
-std::string Searcher::get_bestmove() {
-	return print_move(pv_table[0][0]);
-}
-
-std::string Searcher::print_move(Move move) {
-	std::string str_move = "";
-	int from_index = move.from_square;
-	int to_index = move.to_square;
-	if (from_index >= 0 and to_index >= 0) {
-		std::string from = square_to_coordinates[from_index];
-		std::string to = square_to_coordinates[to_index];
-		str_move = from + to;
-	}
-	else {
-		std::cout << from_index << " " << to_index;
-	}
-
-	std::string pieces[5] = {
-		"","n", "b", "r", "q"
-	};
-	if (move.promotion != -1) {
-		std::string prom = pieces[move.promotion];
-		str_move += prom;
-	}
-	return str_move;
-}
-
-bool Searcher::compare_moves(Move& m1, Move& m2) {
-	if (score_move(m1) < score_move(m2)) {
-		return true;
-	}
-	return false;
-}
-
-int Searcher::score_move(Move move) {
+int Searcher::score_move(Move move, bool u_move) {
 	if (is_pv_move(move, current_ply)) {
 		return 10000;
+	}
+	else if (u_move && TTable[board->board_hash % tt_size].move.piece == move.piece &&
+		TTable[board->board_hash % tt_size].move.from_square == move.from_square &&
+		TTable[board->board_hash % tt_size].move.to_square == move.to_square &&
+		TTable[board->board_hash % tt_size].move.promotion == move.promotion) {
+		return 5000;
 	}
 	else if (board->piece_at(move.to_square) != -1 or (move.to_square == board->en_passant_square and move.piece == 0)) {
 		return mmlva(move);
@@ -305,4 +282,31 @@ int Searcher::is_pv_move(Move move, int ply) {
 	return pv_table[0][ply].from_square == move.from_square && pv_table[0][ply].to_square == move.to_square &&
 		pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion &&
 		pv_table[0][ply].null == move.null;
+}
+
+std::string Searcher::get_bestmove() {
+	return print_move(pv_table[0][0]);
+}
+
+std::string Searcher::print_move(Move move) {
+	std::string str_move = "";
+	int from_index = move.from_square;
+	int to_index = move.to_square;
+	if (from_index >= 0 and to_index >= 0) {
+		std::string from = square_to_coordinates[from_index];
+		std::string to = square_to_coordinates[to_index];
+		str_move = from + to;
+	}
+	else {
+		std::cout << from_index << " " << to_index;
+	}
+
+	std::string pieces[5] = {
+		"","n", "b", "r", "q"
+	};
+	if (move.promotion != -1) {
+		std::string prom = pieces[move.promotion];
+		str_move += prom;
+	}
+	return str_move;
 }

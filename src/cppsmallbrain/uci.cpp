@@ -16,7 +16,6 @@
 #include "thread_manager.h"
 #include "tt.h"
 
-
 ThreadManager threads;
 Board* board = new Board();
 U64 tt_size = 4294967*2;
@@ -42,9 +41,6 @@ void print_map(std::unordered_map<K, V> const& m)
 }
 
 int main() {
-	// Commands
-	// test perft
-	// speedtest
 	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 	board->apply_fen(fen);
 	std::thread searchThread;
@@ -131,6 +127,7 @@ int main() {
 			std::cout << "\nTest started" << std::endl;
 			Perft perft(board);
 			perft.test();
+			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 		}
 		if (input.find("speedtest") != std::string::npos) {
 			std::cout << "\nTest started" << std::endl;
