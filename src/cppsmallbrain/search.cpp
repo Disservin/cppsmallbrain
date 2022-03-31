@@ -39,12 +39,13 @@ int Searcher::iterative_search(int search_depth) {
 	begin = std::chrono::high_resolution_clock::now();
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
+	
 
 	for (int i = 1; i <= search_depth; i++) {
 		search_to_depth = i;
 		bestmove = {};
 
-		result = alpha_beta(lowerbounds, upperbounds, player, true, i, 0);
+		result = alpha_beta(lowerbounds, upperbounds, player, true, i, ply);
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 		if (can_exit_early()) {
@@ -62,8 +63,6 @@ int Searcher::iterative_search(int search_depth) {
 			std::cout << std::fixed << "info depth " << i << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01)) << " time " << time_diff << " pv " << get_pv_line() << std::endl;
 		}
 	}
-	auto end = std::chrono::high_resolution_clock::now();
-	auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 	std::vector<std::string> param = split_input(last_pv);
 	std::string bm = param[0];
 	std::cout << "bestmove " << bm << std::endl;
@@ -90,7 +89,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	if (depth == 0) {
 		return alpha;
 	}
-	//MoveList n_moves = board->generate_capture_moves();
+
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.e;
 	current_ply = ply;
@@ -98,7 +97,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) {
-			return 0;
+			break;
 		}
 		Move move = n_moves.movelist[i];
 		if (board->piece_at(move.to_square) != -1 or move.promotion != -1 or (move.piece == board->PAWN and (move.to_square == 7 or move.to_square == 0))) {
@@ -132,7 +131,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		return 0;
 	}
 
-	if (board->is_threefold_rep3()) {
+	if (!root_node && board->is_threefold_rep()) {
 		return 0;
 	}
 
@@ -148,20 +147,22 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		}
 	}
 
-	//U64 key =  board->board_hash;
-	//U64 index = key % tt_size;
-	//TEntry ttentry = TTable[index];
-	//if (ttentry.key == key and ttentry.depth >= depth) {
-	//	//if (ttentry.flag == EXACT) {
-	//	//	alpha = ttentry.score;
-	//	//}
-	//	if (ttentry.flag == LOWERBOUND) {
-	//		alpha = std::max(alpha, ttentry.score);
-	//	}
-	//	else if (ttentry.flag == UPPERBOUND) {
-	//		beta = std::min(beta, ttentry.score);
-	//	}
-	//}
+	U64 key =  board->board_hash;
+	U64 index = key % tt_size;
+	if (TTable[index].key == key and TTable[index].depth >= depth and !root_node) {
+		if (TTable[index].flag == EXACT) {
+			return TTable[index].score;
+		}
+		else if (TTable[index].flag == LOWERBOUND) {
+			alpha = std::max(alpha, TTable[index].score);
+		}
+		else if (TTable[index].flag == UPPERBOUND) {
+			beta = std::min(beta, TTable[index].score);
+		}
+		if (alpha >= beta) {
+			return TTable[index].score;
+		}
+	}
 
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.e;
@@ -175,9 +176,10 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		}
 		return 0;
 	}
-	if (board->half_moves > 75) {
-		return 0;
-	}
+	//if (!root_node and board->half_moves > 75) {
+	//	return 0;
+	//}
+
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) {
 			break;
@@ -206,27 +208,22 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 		}
 	}
-	//if (!can_exit_early()) {
-	//	//Upperbound
-	//	if (bestvalue <= old_alpha) {
-	//		ttentry.flag = UPPERBOUND;
-	//	}
-	//	//lowerbound
-	//	else if (bestvalue >= beta) {
-	//		ttentry.flag = LOWERBOUND;
-	//	}
-	//	//exact
-	//	else {
-	//		ttentry.flag = EXACT;
-	//	}
-	//	if (ttentry.depth <= depth) {
-	//		ttentry.depth = depth;
-	//		ttentry.score = bestvalue;
-	//		ttentry.age = ply;
-	//		ttentry.key = key;
-	//		TTable[index] = ttentry;
-	//	}
-	//}
+	if (!can_exit_early() and !(bestvalue >= 19000) and !(bestvalue <= -19000) and bestvalue != 0 and 
+		TTable[index].depth <= depth or TTable[index].age + 3 <= ply) {
+		TTable[index].flag = EXACT;
+		// Upperbound
+		if (bestvalue <= old_alpha) {
+			TTable[index].flag = UPPERBOUND;
+		}
+		// Lowerbound
+		else if (bestvalue >= beta) {
+			TTable[index].flag = LOWERBOUND;
+		}
+		TTable[index].depth = depth;
+		TTable[index].score = bestvalue;
+		TTable[index].age = ply;
+		TTable[index].key = key;
+	}
 	return bestvalue;
 }
 

@@ -5,6 +5,8 @@
 #include <optional>
 #include <algorithm>
 #include <atomic>
+#include <cstdlib>
+#include <signal.h>
 
 #include "board.h"
 #include "search.h"
@@ -15,15 +17,22 @@
 #include "tt.h"
 
 
-//  g++ -flto -O3 -march=native -mavx2 .\board.cpp .\uci.cpp .\search.cpp .\evaluation.cpp .\timecontroller.cpp .\zobrist.cpp .\tt.cpp -std=c++17 -lpthread -w
 ThreadManager threads;
 Board* board = new Board();
 U64 tt_size = 4294967*2;
 TEntry* TTable = (TEntry*)malloc(tt_size * sizeof(TEntry));	//TEntry == 48 Bytes n = HASH_SIZE / (48/1000000) 
 
+void signal_callback_handler(int signum) {
+	threads.stop();
+	free(TTable);
+	delete[] board;
+	exit(signum);
+}
+
 void output(std::string str) {
 	std::cout << str;
 }
+
 template<typename K, typename V>
 void print_map(std::unordered_map<K, V> const& m)
 {
@@ -31,6 +40,7 @@ void print_map(std::unordered_map<K, V> const& m)
 		std::cout << "{" << pair.first << ": " << pair.second << "}\n";
 	}
 }
+
 int main() {
 	// Commands
 	// test perft
@@ -39,6 +49,8 @@ int main() {
 	board->apply_fen(fen);
 	std::thread searchThread;
 	bool thread_started = false;
+	signal(SIGINT, signal_callback_handler);
+
 	while (true) {
 		std::string input;
 		std::getline(std::cin, input);
@@ -85,12 +97,14 @@ int main() {
 					board->make_move(move);
 				}
 			}
+			while (!board->move_stack.empty()) {
+				board->move_stack.pop();
+			}
 		}
 		if (input.find("position startpos") != std::string::npos) {
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 			board->repetition_table.clear();
 			if (input.find("moves") != std::string::npos) {
-				//auto begin = std::chrono::high_resolution_clock::now();
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
 				index++;
@@ -98,9 +112,9 @@ int main() {
 					Move move = convert_uci_to_Move(param[index]);
 					board->make_move(move);				
 				}
-				//auto end = std::chrono::high_resolution_clock::now();
-				//auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-				//std::cout << "time taken to read " << time_diff << std::endl;
+			}
+			while (!board->move_stack.empty()) {
+				board->move_stack.pop();
 			}
 		}
 		if (input.find("go perft") != std::string::npos) {
@@ -130,24 +144,15 @@ int main() {
 			std::cout <<std::fixed<< "startpos " << " nodes " << x << " nps " << x / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
 		}
 		if (input.find("go depth") != std::string::npos and not thread_started) {
-			while (!board->move_stack.empty()) {
-				board->move_stack.pop();
-			}
 			std::size_t start_index = input.find("depth");
 			std::string depth_str = input.substr(start_index + 6);
 			int depth = std::stoi(depth_str);
 			threads.begin(depth);
 		}
 		if (input == "go" or input == "go infinite" and not thread_started) {
-			while (!board->move_stack.empty()) {
-				board->move_stack.pop();
-			}
 			threads.begin(60);
 		}
 		if (input.find("go movetime") != std::string::npos) {
-			while (!board->move_stack.empty()) {
-				board->move_stack.pop();
-			}
 			std::size_t start_index = input.find("movetime");
 			std::string movetime_str = input.substr(start_index + 6);
 			int movetime = std::stoi(movetime_str);
@@ -155,9 +160,6 @@ int main() {
 			threads.begin(60, time_given);
 		}
 		if (input.find("go wtime") != std::string::npos) {
-			while (!board->move_stack.empty()) {
-				board->move_stack.pop();
-			}
 			std::vector<std::string> param = split_input(input);
 			int movetime = board->side_to_move ? std::stoi(param[4]) :std::stoi(param[2]);
 			int time_given = time_left(movetime);

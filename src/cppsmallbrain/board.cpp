@@ -1920,6 +1920,7 @@ MoveList Board::generate_legal_moves() {
     int king_sq = _bitscanforward(king_mask);
     init(IsWhite);
     U64 move_mask = 0ULL;
+    possible_moves.e = 0;
     if (doublecheck < 2) {
         while (pawn_mask) {
             from_index = _bitscanforward(pawn_mask);

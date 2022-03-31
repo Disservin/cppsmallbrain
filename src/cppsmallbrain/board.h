@@ -25,13 +25,12 @@ struct Pertft_Info {
 };
 
 struct MA {
-    //std::vector<std::vector<long long>> myarray;
     std::vector<Pertft_Info> myarray;
 };
 
 struct MoveList {
     Move movelist[256];
-    int e=0;
+    int e = 0;
 };
 
 struct BoardState {
