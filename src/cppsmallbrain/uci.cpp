@@ -46,9 +46,13 @@ int main(int argc, char** argv) {
 	while (true) {
 		if (argc > 1) {
 			if (argv[1] == std::string("bench")) {
-				threads.begin(7, -1, 1);
+				Searcher searcher_class = Searcher(board, 7, -1);
+				std::thread thread = std::thread(&Searcher::iterative_search, searcher_class, 7, 1);
+				thread.join();
+				break;
 			}
 		}
+
 		std::string input;
 		std::getline(std::cin, input);
 		if (input == "uci") {
