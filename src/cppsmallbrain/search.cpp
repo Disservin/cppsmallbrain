@@ -24,7 +24,7 @@ bool Searcher::can_exit_early() {
 	return false;
 }
 
-int Searcher::iterative_search(int search_depth) {
+int Searcher::iterative_search(int search_depth, int bench) {
 	int result = 0;
 	int lowerbounds = -INFINITE;
 	int upperbounds = INFINITE;
@@ -41,7 +41,7 @@ int Searcher::iterative_search(int search_depth) {
 	for (int i = 1; i <= search_depth; i++) {
 		search_to_depth = i;
 		bestmove = {};
-		result = alpha_beta(lowerbounds, upperbounds, player, true, i, ply);
+		result = alpha_beta(lowerbounds, upperbounds, player, true, i, ply, false);
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 		if (can_exit_early()) {
@@ -62,6 +62,14 @@ int Searcher::iterative_search(int search_depth) {
 	std::vector<std::string> param = split_input(last_pv);
 	std::string bm = param[0];
 	std::cout << "bestmove " << bm << std::endl;
+	if (bench) {
+		auto end = std::chrono::high_resolution_clock::now();
+		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+		std::cout << "\n---------------------------" << std::endl;
+		std::cout << "Total time (ms) : " << time_diff << std::endl;
+		std::cout << "Nodes searched  : " << nodes << std::endl;
+		std::cout << "Nodes/second    : " << static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01)) << std::endl;
+	}
 	return 0;
 }
 
@@ -73,6 +81,9 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	int stand_pat = 0;
 	if (in_check) {
 		 stand_pat = -MATE + ply;
+		 if (board->is_checkmate(IsWhite)) {
+			 return -MATE + ply;
+		}
 	}
 	else {
 		stand_pat = evaluation() * player;
@@ -116,26 +127,29 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 }
 
 //"position fen 1k6/6R1/7P/5K2/8/8/8/8 b - - 0 2";
-int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply) {
-	Move null_move;
+int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply, bool null) {
 	bool Is_White = board->side_to_move ? 0 : 1;
 	int bestvalue = -INFINITE;
 	int old_alpha = alpha;
 
 	pv_length[ply] = ply;
-
+	// Early exit
 	if (can_exit_early()) {
 		return 0;
 	}
-
-	if (!root_node && board->is_threefold_rep()) {
-		return 0;
-	}
+	
+	// At root node repetition detection for 3 times
 	if (root_node && board->is_threefold_rep3()) {
 		return 0;
 	}
-
-	if (depth == 0) {
+	// At not root node repetition detection for 2 times
+	if (!root_node) {		
+		if (board->is_threefold_rep()) {
+			return 0;
+		}
+	}
+	// Enter qsearch if not in check else increase depth
+	if (depth <= 0) {
 		int king_sq = _bitscanforward(board->King(Is_White));
 		if ((board->is_square_attacked(Is_White, king_sq))) {
 			depth++;
@@ -147,6 +161,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		}
 	}
 
+	// Check TT for entry
 	U64 key = board->board_hash;
 	U64 index = key % tt_size;
 	bool u_move = false;
@@ -163,17 +178,22 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		if (alpha >= beta) {
 			return TTable[index].score;
 		}
+		// use TT move
 		u_move = true;
 	}
 
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.size;
 	current_ply = ply;
+	// Move ordering
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
-
+	
+	int king_sq = _bitscanforward(board->King(Is_White));
+	bool inCheck = board->is_square_attacked(Is_White, king_sq);
+	
+	// Game over ?
 	if (count == 0) {
-		int king_sq = _bitscanforward(board->King(Is_White));
-		if (board->is_square_attacked(Is_White, king_sq)) {
+		if (inCheck) {
 			return -MATE + ply;
 		}
 		return 0;
@@ -182,11 +202,36 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	//	return 0;
 	//}
 
+	bool onPv = (beta - alpha > 1);
+	if (!inCheck && !onPv) {
+		int staticEval = evaluation();
+		// Razor
+		if (depth <= 1 && (staticEval + 150) < alpha) {
+			return qsearch(alpha, beta, player, 10, ply);
+		}
+		// Null move 
+		//if (board->full_moves <= 40 && !null && depth >= 3) {
+		//	int reduction = 2;//(depth >= 6) ? 3 : depth >= 3 ? 2 : 1;
+		//	int old_ep = board->en_passant_square;
+		//	board->side_to_move ^= 1;
+		//	board->board_hash ^= RANDOM_ARRAY[780];
+		//	board->en_passant_square = 64;
+		//	board->full_moves++;
+		//	int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - reduction, ply + 1, true);
+		//	board->side_to_move ^= 1;
+		//	board->board_hash ^= RANDOM_ARRAY[780];
+		//	board->en_passant_square = old_ep;
+		//	board->full_moves--;
+		//	if (score >= beta) return score;
+		//}
+	}
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) {
 			break;
 		}
 		Move move = n_moves.movelist[i];
+		
+		// Passed pawn extension
 		int new_depth = depth - 1;
 		if (new_depth == 1 and move.piece == 0) {
 			if (Is_White and square_rank(move.to_square) >= 5) {
@@ -197,9 +242,10 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 		}
 		board->make_move(move);
-		int score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1);
+		int score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
 		board->unmake_move();
 
+		// Cut-off
 		if (score > bestvalue) {
 			bestvalue = score;
 			if (depth == search_to_depth) {
@@ -212,12 +258,14 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			pv_length[ply] = pv_length[ply + 1];
 			if (score > alpha) {
 				alpha = score;		
+				// Beta cut-off
 				if (score >= beta) {
 					break;
 				}
 			}
 		}
 	}
+	// Store position in TT
 	if (!can_exit_early() and !(bestvalue >= 19000) and !(bestvalue <= -19000) and 
 		(TTable[index].depth <= depth or TTable[index].age + 3 <= board->full_moves)) {
 		TTable[index].flag = EXACT;

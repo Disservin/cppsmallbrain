@@ -246,45 +246,44 @@ bool Board::is_stalemate(bool IsWhite) {
     U64 move_mask = 0ULL;
     //Easiest to look up
     while (knight_mask) {
-        from_index = _bitscanforward(knight_mask);
+        from_index = pop_lsb(&knight_mask);
         move_mask = legal_knight_moves(IsWhite, from_index);
         if (move_mask) {
             return false;
         }
-        knight_mask = _blsr_u64(knight_mask);
     }
     //Highest probabilty that any of these can move
     while (pawn_mask) {
-        from_index = _bitscanforward(pawn_mask);
+        from_index = pop_lsb(&pawn_mask);
         move_mask = legal_pawn_moves(IsWhite, from_index, en_passant_square);
         if (move_mask) {
             return false;
         }
-        pawn_mask = _blsr_u64(pawn_mask);
+        //pawn_mask = _blsr_u64(pawn_mask);
     }
     while (bishop_mask) {
-        from_index = _bitscanforward(bishop_mask);
+        from_index = pop_lsb(&bishop_mask);
         move_mask = legal_bishop_moves(IsWhite, from_index);
         if (move_mask) {
             return false;
         }
-        bishop_mask = _blsr_u64(bishop_mask);
+        //bishop_mask = _blsr_u64(bishop_mask);
     }
     while (rook_mask) {
-        from_index = _bitscanforward(rook_mask);
+        from_index = pop_lsb(&rook_mask);
         move_mask = legal_rook_moves(IsWhite, from_index);
         if (move_mask) {
             return false;
         }
-        rook_mask = _blsr_u64(rook_mask);
+        //rook_mask = _blsr_u64(rook_mask);
     }
     while (queen_mask) {
-        from_index = _bitscanforward(queen_mask);
+        from_index = pop_lsb(&queen_mask);
         move_mask = legal_queen_moves(IsWhite, from_index);
         if (move_mask) {
             return false;
         }
-        queen_mask = _blsr_u64(queen_mask);
+        //queen_mask = _blsr_u64(queen_mask);
     }
     return true;
 }
@@ -322,7 +321,8 @@ U64 Board::generate_zobrist_hash() {
             piece = piece * 2 + 1;
             hash ^= RANDOM_ARRAY[64 * piece + sq];
         }
-        white = _blsr_u64(white);
+        pop_lsb(&white);
+        //white = _blsr_u64(white);
     }
     while (black) {
         int sq = _bitscanforward(black);
@@ -331,7 +331,8 @@ U64 Board::generate_zobrist_hash() {
             piece = piece * 2;
             hash ^= RANDOM_ARRAY[64 * piece + sq];
         }
-        black = _blsr_u64(black);
+        pop_lsb(&black);
+        //black = _blsr_u64(black);
     }
 
     U64 ep_hash = 0ULL;
@@ -1777,10 +1778,11 @@ void Board::make_move(Move& move) {
 
     if (move.null == 1) {
         side_to_move ^= 1;
-        board_hash ^= IsWhite ? RANDOM_ARRAY[780] : 0;
+        board_hash ^= RANDOM_ARRAY[780];
+        add_repetition(board_hash);
+        full_moves++;
         return;
     }
-
     // piece needs to be set at its bitboard remove this for performance if you are 100% theres a piece at that square
     if (not _test_bit(bitboards[piece], to_square)) {
         save_board_state();
@@ -2170,16 +2172,15 @@ MoveList Board::generate_legal_moves() {
 
     move_mask = legal_king_moves(IsWhite, king_sq);
     while (move_mask) {
-        int to_index = _bitscanforward(move_mask);
+        int to_index = pop_lsb(&move_mask);
         move.piece = KING;
         move.from_square = king_sq;
         move.to_square = to_index;
         move.promotion = -1;
         possible_moves.movelist[possible_moves.size] = move;
-        possible_moves.size++;
-        move_mask = _blsr_u64(move_mask);
+        possible_moves.size++;  
     }
-    pop_lsb(&king_mask);
+    
     return possible_moves;
 }
 

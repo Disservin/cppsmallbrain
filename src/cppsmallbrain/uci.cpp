@@ -1,7 +1,7 @@
-#pragma once
 #include <chrono>
 #include <algorithm>
 #include <signal.h>
+#include <iostream>
 
 #include "board.h"
 #include "search.h"
@@ -14,7 +14,9 @@
 ThreadManager threads;
 Board* board = new Board();
 U64 tt_size = 4294967*2;
-TEntry* TTable = (TEntry*)malloc(tt_size * sizeof(TEntry));	//TEntry == 48 Bytes n = HASH_SIZE / (48/1000000) 
+TEntry* TTable = (TEntry*)malloc(tt_size * sizeof(TEntry));	
+
+std::atomic<bool> stopped;
 
 void signal_callback_handler(int signum) {
 	threads.stop();
@@ -35,13 +37,17 @@ void print_map(std::unordered_map<K, V> const& m)
 	}
 }
 
-int main() {
+int main(int argc, char* argv[]) {
 	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 	board->apply_fen(fen);
 	std::thread searchThread;
 	bool thread_started = false;
 	signal(SIGINT, signal_callback_handler);
 	while (true) {
+		
+		if (argc > 2 && argv[1] == std::string("bench")) {
+			threads.begin(7, -1, 1);
+		}
 		std::string input;
 		std::getline(std::cin, input);
 		if (input == "uci") {
@@ -59,8 +65,8 @@ int main() {
 		if (input.find("setoption name Hash value") != std::string::npos) {
 			std::size_t start_index = input.find("value");
 			std::string size_str = input.substr(start_index + 6);
-			U64 elements = (static_cast<unsigned long long>(std::stoi(size_str)) * 1000000)/48;
-			TTable = (TEntry*)realloc(TTable, elements*48);
+			U64 elements = (static_cast<unsigned long long>(std::stoi(size_str)) * 1000000)/sizeof(TEntry);
+			TTable = (TEntry*)realloc(TTable, elements*sizeof(TEntry));
 			tt_size = elements;
 		}
 		if (input == "ucinewgame") {
@@ -70,7 +76,7 @@ int main() {
 		if (input.find("quit") != std::string::npos) {
 			threads.stop();
 			free(TTable);
-			delete[] board;
+			delete board;
 			break;
 		}
 		if (input.find("position fen") != std::string::npos) {
@@ -78,6 +84,8 @@ int main() {
 			fen = input.substr(start_index + 4);
 			board->apply_fen(fen);
 			board->repetition_table.clear();
+			board->full_moves = 1;
+			board->half_moves = 0;
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
@@ -94,6 +102,8 @@ int main() {
 		if (input.find("position startpos") != std::string::npos) {
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 			board->repetition_table.clear();
+			board->full_moves = 1;
+			board->half_moves = 0;
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
@@ -185,6 +195,9 @@ int main() {
 		if (input == "hash") {
 			std::cout << board->generate_zobrist_hash()<<std::endl;
 			std::cout << board->board_hash << std::endl;
+		}
+		if (input == "bench") {
+			threads.begin(7, -1, 1);
 		}
 	}
 }

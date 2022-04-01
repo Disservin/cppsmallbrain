@@ -1,11 +1,12 @@
 #pragma once
-#include <intrin.h>
 #include <iostream>  
 #include <cmath>
 #include <string>
+#include <bitset>
+#include <intrin.h>
 
-#pragma intrinsic(_BitScanForward)
-#pragma intrinsic(_BitScanReverse)
+//#pragma intrinsic(_BitScanForward)
+//#pragma intrinsic(_BitScanReverse)
 
 #define U64 unsigned __int64
 
@@ -36,6 +37,11 @@ inline int square_distance(int a, int b) {
     return std::max(std::abs(square_file(a) - square_file(b)), std::abs(square_rank(a) - square_rank(b)));
 }
 
+//inline int _test_bit(U64, int sq) {
+//    std::bitset<64> b;
+//    return b.test(sq);
+//}
+
 inline int _test_bit(U64 bit, int sq) {
     __int64 test = bit;
     if (_bittest64(&test, sq)) {
@@ -45,7 +51,7 @@ inline int _test_bit(U64 bit, int sq) {
         return false;
     }
 }
-
+//
 #if defined(__GNUC__)  // GCC, Clang, ICC
 inline int _bitscanreverse(U64 b) {
     return 63 ^ __builtin_clzll(b);
@@ -70,22 +76,26 @@ inline int _bitscanreverse(U64 mask) {
 }
 #endif
 
+//inline int popcount(U64 mask) {
+//
+//#ifndef defined(_MSC_VER) || defined(__INTEL_COMPILER)
+//
+//    return (int)_mm_popcnt_u64(mask);
+//
+//#else
+//
+//    return __builtin_popcountll(mask);
+//
+//#endif
+//}
 inline int popcount(U64 mask) {
-
-#ifndef defined(_MSC_VER) || defined(__INTEL_COMPILER)
-
-    return (int)_mm_popcnt_u64(mask);
-
-#else
-
-    return __builtin_popcountll(mask);
-
-#endif
-}
-
+    std::bitset<64> b(mask);
+    return b.count();
+}	
 inline int pop_lsb(U64* mask) {
     const int s = _bitscanforward(*mask);
-    *mask = _blsr_u64(*mask);
+    //*mask = _blsr_u64(*mask);
+    *mask &= *mask - 1;
     return s;
 }
 
