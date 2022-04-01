@@ -37,16 +37,17 @@ void print_map(std::unordered_map<K, V> const& m)
 	}
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char** argv) {
 	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 	board->apply_fen(fen);
 	std::thread searchThread;
 	bool thread_started = false;
 	signal(SIGINT, signal_callback_handler);
 	while (true) {
-		
-		if (argc > 2 && argv[1] == std::string("bench")) {
-			threads.begin(7, -1, 1);
+		if (argc > 1) {
+			if (argv[1] == std::string("bench")) {
+				threads.begin(7, -1, 1);
+			}
 		}
 		std::string input;
 		std::getline(std::cin, input);
