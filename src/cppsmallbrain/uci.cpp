@@ -1,11 +1,6 @@
 #pragma once
 #include <chrono>
-#include <iostream>
-#include <thread>
-#include <optional>
 #include <algorithm>
-#include <atomic>
-#include <cstdlib>
 #include <signal.h>
 
 #include "board.h"
@@ -171,24 +166,24 @@ int main() {
 		}
 		if (input == "captures") {
 			MoveList n_moves = board->generate_capture_moves();
-			int count = n_moves.e;
+			int count = n_moves.size;
 			for (int i = 0; i < count; i++) {
 				Move move = n_moves.movelist[i];
 				std::cout << print_move(move) << std::endl;
 			}
-			std::cout << "count " << n_moves.e << std::endl;
+			std::cout << "count " << n_moves.size << std::endl;
 		}
 		if (input == "moves") {
 			MoveList n_moves = board->generate_legal_moves();
-			int count = n_moves.e;
+			int count = n_moves.size;
 			for (int i = 0; i < count; i++) {
 				Move move = n_moves.movelist[i];
 				std::cout << print_move(move) << std::endl;
 			}
-			std::cout << "count " << n_moves.e << std::endl;
+			std::cout << "count " << n_moves.size << std::endl;
 		}
 		if (input == "hash") {
-			std::cout << board->generate_zhash()<<std::endl;
+			std::cout << board->generate_zobrist_hash()<<std::endl;
 			std::cout << board->board_hash << std::endl;
 		}
 	}

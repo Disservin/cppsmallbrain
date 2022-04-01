@@ -1,8 +1,5 @@
 #include <chrono>
 #include <algorithm> 
-#include <unordered_map>
-#include <functional>
-#include <thread>
 
 #include "board.h"
 #include "general.h"
@@ -91,7 +88,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	}
 
 	MoveList n_moves = board->generate_legal_moves();
-	int count = n_moves.e;
+	int count = n_moves.size;
 	current_ply = ply;
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return mmlva(m1) > mmlva(m2); });
 
@@ -170,7 +167,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	}
 
 	MoveList n_moves = board->generate_legal_moves();
-	int count = n_moves.e;
+	int count = n_moves.size;
 	current_ply = ply;
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
 
@@ -190,9 +187,17 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			break;
 		}
 		Move move = n_moves.movelist[i];
-
+		int new_depth = depth - 1;
+		if (new_depth == 1 and move.piece == 0) {
+			if (Is_White and square_rank(move.to_square) >= 5) {
+				new_depth++;
+			}
+			if (!Is_White and square_rank(move.to_square) >= 5) {
+				new_depth++;
+			}
+		}
 		board->make_move(move);
-		int score = -alpha_beta(-beta, -alpha, -player, false, depth - 1, ply + 1);
+		int score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1);
 		board->unmake_move();
 
 		if (score > bestvalue) {
@@ -265,12 +270,12 @@ int Searcher::score_move(Move move, bool u_move) {
 
 int Searcher::mmlva(Move move) {
 	static constexpr int mvvlva[7][7] = { {0, 0, 0, 0, 0, 0, 0},
-	{0, 105.0, 104.0, 103.0, 102.0, 101.0, 100.0},
-	{0, 205.0, 204.0, 203.0, 202.0, 201.0, 200.0},
-	{0, 305.0, 304.0, 303.0, 302.0, 301.0, 300.0},
-	{0, 405.0, 404.0, 403.0, 402.0, 401.0, 400.0},
-	{0, 505.0, 504.0, 503.0, 502.0, 501.0, 500.0},
-	{0, 605.0, 604.0, 603.0, 602.0, 601.0, 600.0} };
+	{0, 105, 104, 103, 102, 101, 100},
+	{0, 205, 204, 203, 202, 201, 200},
+	{0, 305, 304, 303, 302, 301, 300},
+	{0, 405, 404, 403, 402, 401, 400},
+	{0, 505, 504, 503, 502, 501, 500},
+	{0, 605, 604, 603, 602, 601, 600} };
 	int attacker = board->piece_type_at(move.from_square) + 1;
 	int victim = board->piece_type_at(move.to_square) + 1;
 	if (victim == -1) {

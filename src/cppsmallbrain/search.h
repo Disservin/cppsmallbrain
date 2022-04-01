@@ -1,7 +1,7 @@
 #pragma once
 #include <atomic>
 #include <iostream>
-#include <functional>
+#include <chrono>
 
 #include "board.h"
 

@@ -2,25 +2,11 @@
 #include <intrin.h>
 #include <iostream>  
 #include <cmath>
-#include <vector>
 #include <string>
-#include <iostream>
-#include <list>
-#include <bitset>
-#include <sstream>
-#include <algorithm>
-#include <stdlib.h>
-#include <iterator>
-#include <vector>
-#include <chrono>
-#include <cmath>
-#include <intrin.h>
-#include <assert.h>
 
 #pragma intrinsic(_BitScanForward)
 #pragma intrinsic(_BitScanReverse)
 
-#define _Compiletime __forceinline static constexpr
 #define U64 unsigned __int64
 
 enum Score {
@@ -33,8 +19,7 @@ struct Move {
     int from_square = -1;
     int to_square = -1;
     int promotion = -1;
-    int null = 0;   // 1 == True 0 == False
-    int capture = -1;    
+    int null = 0;   // 1 == True 0 == False 
 };
 
 //Gets the file index of the square where 0 is the a-file
@@ -71,8 +56,7 @@ inline int _bitscanforward(U64 b) {
     return __builtin_ctzll(b);
 }
 
-#elif defined(_MSC_VER)  // MSVC
-#ifdef _WIN64  // MSVC, WIN64
+#else
 inline int _bitscanforward(U64 mask) {
     unsigned long index;
     _BitScanForward64(&index, mask);
@@ -85,7 +69,6 @@ inline int _bitscanreverse(U64 mask) {
     return index;
 }
 #endif
-#endif
 
 inline int popcount(U64 mask) {
 
@@ -93,7 +76,7 @@ inline int popcount(U64 mask) {
 
     return (int)_mm_popcnt_u64(mask);
 
-#else // Assumed gcc or compatible compiler
+#else
 
     return __builtin_popcountll(mask);
 

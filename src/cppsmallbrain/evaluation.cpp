@@ -1,7 +1,8 @@
+#include <map>
+
 #include "board.h"
 #include "general.h"
 #include "evaluation.h"
-#include <map>
 
 // Values were taken from Stockfish https://github.com/official-stockfish/Stockfish/blob/master/src/psqt.cpp
 // Released under GNU General Public License v3.0 https://github.com/official-stockfish/Stockfish/blob/master/Copying.txt
@@ -36,7 +37,7 @@ const int knightValue = 320;
 const int bishopValue = 330;
 const int rookValue = 500;
 const int queenValue = 900;
-static std::map<int, int*> piece_to_array =
+static std::map<int, int*> piece_to_mg =
 	{
 	{ 0,   w_pawn_mg},
 	{ 1,   w_knight_mg},
@@ -51,35 +52,71 @@ static std::map<int, int*> piece_to_array =
 	{ 10,  b_queen_mg },
 	{ 11,  b_king_mg },
 	};
+static std::map<int, int*> piece_to_eg =
+	{
+	{ 0,   w_pawn_eg},
+	{ 1,   w_knight_eg},
+	{ 2,   w_bishop_eg},
+	{ 3,   w_rook_eg },
+	{ 4,   w_queen_eg },
+	{ 5,   w_king_eg },
+	{ 6,   b_pawn_eg},
+	{ 7,   b_knight_eg},
+	{ 8,   b_bishop_eg },
+	{ 9,   b_rook_eg },
+	{ 10,  b_queen_eg },
+	{ 11,  b_king_eg },
+	};
+static std::map<int, int>phase_values = { { 1, 0 }, { 2 , 1 }, { 3 , 1 }, { 4 , 2 }, { 5 , 4 }, {6 , 0} };
 
 int evaluation() {
-	int eval = 0;
+	int eval_mg = 0;
+	int eval_eg = 0;
 	int material = 0;
-
-	material += popcount(board->bitboards[0]) * pawnValue;
-	material += popcount(board->bitboards[1]) * knightValue;
-	material += popcount(board->bitboards[2]) * bishopValue;
-	material += popcount(board->bitboards[3]) * rookValue;
-	material += popcount(board->bitboards[4]) * queenValue;
-
-	material -= popcount(board->bitboards[6]) * pawnValue;
-	material -= popcount(board->bitboards[7]) * knightValue;
-	material -= popcount(board->bitboards[8]) * bishopValue;
-	material -= popcount(board->bitboards[9]) * rookValue;
-	material -= popcount(board->bitboards[10]) * queenValue;
+	int phase = 0;
 	
-	eval += material;
+	int wpawns = popcount(board->bitboards[0]);
+	int wknight = popcount(board->bitboards[1]);
+	int wbishop = popcount(board->bitboards[2]);
+	int wrook = popcount(board->bitboards[3]);
+	int wqueen = popcount(board->bitboards[4]);
 
+	int bpawns = popcount(board->bitboards[6]);
+	int bknight = popcount(board->bitboards[7]);
+	int bbishop = popcount(board->bitboards[8]);
+	int brook = popcount(board->bitboards[9]);
+	int bqueen = popcount(board->bitboards[10]);
+	
+	phase += wknight + bknight;
+	phase += wbishop + bbishop;
+	phase += (wrook + brook) * 2;
+	phase += (wqueen + bqueen) * 4;
+	
+	material += (wpawns - bpawns) * pawnValue;
+	material += (wknight - bknight) * knightValue;
+	material += (wbishop - bbishop) * bishopValue;
+	material += (wrook - brook) * rookValue;
+	material += (wqueen - bqueen) * queenValue;
+
+	eval_mg += material;
+	eval_eg += material;
+	
 	U64 pieces_white = board->White;
 	U64 pieces_black = board->Black;
 
 	while (pieces_white) {
 		int square = pop_lsb(&pieces_white);
-		eval += piece_to_array[board->piece_at_square(square)][square];
+		int piece = board->piece_at_square(square);
+		eval_mg += piece_to_mg[piece][square];
+		eval_eg += piece_to_eg[piece][square];
 	}
 	while (pieces_black) {
 		int square = pop_lsb(&pieces_black);
-		eval -= piece_to_array[board->piece_at_square(square)][square];
+		int piece = board->piece_at_square(square);
+		eval_mg -= piece_to_mg[piece][square];
+		eval_eg -= piece_to_eg[piece][square];
 	}
-	return eval;
+	phase = 24 - phase;
+	phase = (phase * 256 + (24 / 2)) / 24;
+	return ((eval_mg * (256 - phase)) + (eval_eg * phase))/256;
 }
