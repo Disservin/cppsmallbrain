@@ -11,15 +11,11 @@ extern TEntry* TTable;
 extern U64 tt_size;
 
 bool Searcher::can_exit_early() {
-	if (stopped) {
-		return true;
-	}
+	if (stopped) return true;
 	if (nodes & 1023 and limit_time) {
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-		if (time_given - time_diff < 0) {
-			return true;
-		}
+		if (time_given - time_diff < 0) return true;
 	}
 	return false;
 }
@@ -79,9 +75,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	int stand_pat = 0;
 	if (in_check) {
 		 stand_pat = -MATE + ply;
-		 if (board->is_checkmate(IsWhite)) {
-			 return -MATE + ply;
-		}
+		 if (board->is_checkmate(IsWhite)) return -MATE + ply;
 	}
 	else {
 		stand_pat = evaluation() * player;
@@ -92,9 +86,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 			alpha = stand_pat;
 		}
 	}
-	if (depth == 0) {
-		return alpha;
-	}
+	if (depth == 0) return alpha;
 
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.size;
@@ -102,9 +94,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return mmlva(m1) > mmlva(m2); });
 
 	for (int i = 0; i < count; i++) {
-		if (can_exit_early()) {
-			break;
-		}
+		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
 		if (board->piece_at(move.to_square) != -1 or move.promotion != -1 or (move.piece == board->PAWN and (move.to_square == 7 or move.to_square == 0))) {
 			//if ((stand_pat < alpha - delta_pruning(move)) && popcount(board->Occ) >= 13 && move.promotion == -1 && board->piece_at(move.to_square) != -1) {
@@ -117,9 +107,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 				stand_pat = score;
 				if (score > alpha) {
 					alpha = score;
-					if (score >= beta) {
-						break;
-					}
+					if (score >= beta) break;
 				}
 			}
 		}
@@ -132,22 +120,18 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	bool Is_White = board->side_to_move ? 0 : 1;
 	int bestvalue = -INFINITE;
 	int old_alpha = alpha;
+	bool pv_node = (beta - alpha > 1);
 
 	pv_length[ply] = ply;
+
 	// Early exit
-	if (can_exit_early()) {
-		return 0;
-	}
+	if (can_exit_early()) return 0;
 	
 	// At root node repetition detection for 3 times
-	if (root_node && board->is_threefold_rep3()) {
-		return 0;
-	}
+	if (root_node && board->is_threefold_rep3()) return 0;
 	// At not root node repetition detection for 2 times
 	if (!root_node) {		
-		if (board->is_threefold_rep()) {
-			return 0;
-		}
+		if (board->is_threefold_rep()) return 0;
 	}
 	// Enter qsearch if not in check else increase depth
 	if (depth <= 0) {
@@ -157,8 +141,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		}
 		else {
 			nodes++;
-			int value = qsearch(alpha, beta, player, 10, ply); //  //;//evaluation() * player; //
-			return value;
+			return qsearch(alpha, beta, player, 10, ply);
 		}
 	}
 
@@ -167,18 +150,14 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	U64 index = key % tt_size;
 	bool u_move = false;
 	if (TTable[index].key == key and TTable[index].depth >= depth and !root_node) {
-		if (TTable[index].flag == EXACT) {
-			return TTable[index].score;
-		}
+		if (TTable[index].flag == EXACT) return TTable[index].score;
 		else if (TTable[index].flag == LOWERBOUND) {
 			alpha = std::max(alpha, TTable[index].score);
 		}
 		else if (TTable[index].flag == UPPERBOUND) {
 			beta = std::min(beta, TTable[index].score);
 		}
-		if (alpha >= beta) {
-			return TTable[index].score;
-		}
+		if (alpha >= beta) return TTable[index].score;
 		// use TT move
 		u_move = true;
 	}
@@ -194,42 +173,23 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	
 	// Game over ?
 	if (count == 0) {
-		if (inCheck) {
-			return -MATE + ply;
-		}
+		if (inCheck) return -MATE + ply;
 		return 0;
 	}
+
 	//if (!root_node and board->half_moves > 75) {
 	//	return 0;
 	//}
-
-	bool onPv = (beta - alpha > 1);
-	if (!inCheck && !onPv) {
+	
+	if (!inCheck && !pv_node) {
 		int staticEval = evaluation();
 		// Razor
 		if (depth <= 1 && (staticEval + 150) < alpha) {
 			return qsearch(alpha, beta, player, 10, ply);
 		}
-		// Null move 
-		//if (board->full_moves <= 40 && !null && depth >= 3) {
-		//	int reduction = 2;//(depth >= 6) ? 3 : depth >= 3 ? 2 : 1;
-		//	int old_ep = board->en_passant_square;
-		//	board->side_to_move ^= 1;
-		//	board->board_hash ^= RANDOM_ARRAY[780];
-		//	board->en_passant_square = 64;
-		//	board->full_moves++;
-		//	int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - reduction, ply + 1, true);
-		//	board->side_to_move ^= 1;
-		//	board->board_hash ^= RANDOM_ARRAY[780];
-		//	board->en_passant_square = old_ep;
-		//	board->full_moves--;
-		//	if (score >= beta) return score;
-		//}
 	}
 	for (int i = 0; i < count; i++) {
-		if (can_exit_early()) {
-			break;
-		}
+		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
 		
 		// Passed pawn extension
@@ -260,9 +220,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			if (score > alpha) {
 				alpha = score;		
 				// Beta cut-off
-				if (score >= beta) {
-					break;
-				}
+				if (score >= beta) break;
 			}
 		}
 	}
@@ -328,7 +286,7 @@ int Searcher::mmlva(Move move) {
 	int attacker = board->piece_type_at(move.from_square) + 1;
 	int victim = board->piece_type_at(move.to_square) + 1;
 	if (victim == -1) {
-		victim = 1;
+		victim = 0;
 	}
 	return mvvlva[victim][attacker];
 }
@@ -360,7 +318,6 @@ std::string Searcher::print_move(Move move) {
 	else {
 		std::cout << from_index << " " << to_index;
 	}
-
 	std::string pieces[5] = {
 		"","n", "b", "r", "q"
 	};
