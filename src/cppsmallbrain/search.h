@@ -43,8 +43,6 @@ public:
 	int qsearch(int alpha, int beta, int player, int depth, int ply);
 
 	int alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply, bool null);
-	
-	int delta_pruning(Move move);
 		
 	std::string get_pv_line();
 
