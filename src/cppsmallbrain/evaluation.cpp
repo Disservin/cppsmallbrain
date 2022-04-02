@@ -67,7 +67,6 @@ static std::map<int, int*> piece_to_eg =
 	{ 10,  b_queen_eg },
 	{ 11,  b_king_eg },
 	};
-static std::map<int, int>phase_values = { { 1, 0 }, { 2 , 1 }, { 3 , 1 }, { 4 , 2 }, { 5 , 4 }, {6 , 0} };
 
 int evaluation() {
 	int eval_mg = 0;
