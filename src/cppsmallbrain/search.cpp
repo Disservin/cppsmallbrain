@@ -291,11 +291,6 @@ int Searcher::mmlva(Move move) {
 	return mvvlva[victim][attacker];
 }
 
-int Searcher::delta_pruning(Move move) {
-	std::map<int, int>piece_values = { { 0, 100 }, { 1 , 320 }, { 2 , 330 }, { 3 , 500 }, { 4 , 900 }, {5 , 0} };
-	int piece = board->piece_to_piece_type((board->piece_at_square(move.to_square)));
-	return piece_values[piece] + 200;
-}
 int Searcher::is_pv_move(Move move, int ply) {
 	return pv_table[0][ply].from_square == move.from_square && pv_table[0][ply].to_square == move.to_square &&
 		pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion &&
