@@ -85,6 +85,10 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	}
 	else {
 		stand_pat = evaluation() * player;
+		// Delta Pruning
+		if (stand_pat < alpha - 500) {
+			return alpha;
+		}
 		if (stand_pat >= beta) {
 			return beta;
 		}
@@ -107,9 +111,9 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 		}
 		Move move = n_moves.movelist[i];
 		if (board->piece_at(move.to_square) != -1 or move.promotion != -1 or (move.piece == board->PAWN and (move.to_square == 7 or move.to_square == 0))) {
-			if ((stand_pat < alpha - delta_pruning(move)) && popcount(board->Occ) >= 13 && move.promotion == -1 && board->piece_at(move.to_square) != -1) {
-				continue;
-			}
+			//if ((stand_pat < alpha - delta_pruning(move)) && popcount(board->Occ) >= 13 && move.promotion == -1 && board->piece_at(move.to_square) != -1) {
+			//	return alpha;
+			//}
 			board->make_move(move);
 			int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
 			board->unmake_move();
