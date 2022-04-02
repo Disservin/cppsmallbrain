@@ -23,6 +23,9 @@ public:
 	enum {
 		UPPERBOUND, LOWERBOUND, EXACT
 	};
+	
+	
+	
 	std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 
 	Board* board;
@@ -41,6 +44,8 @@ public:
 
 	int alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply, bool null);
 	
+	int delta_pruning(Move move);
+		
 	std::string get_pv_line();
 
 	std::string get_bestmove();

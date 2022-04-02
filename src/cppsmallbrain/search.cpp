@@ -107,6 +107,9 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 		}
 		Move move = n_moves.movelist[i];
 		if (board->piece_at(move.to_square) != -1 or move.promotion != -1 or (move.piece == board->PAWN and (move.to_square == 7 or move.to_square == 0))) {
+			if ((stand_pat < alpha - delta_pruning(move)) && popcount(board->Occ) >= 13 && move.promotion == -1 && board->piece_at(move.to_square) != -1) {
+				continue;
+			}
 			board->make_move(move);
 			int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
 			board->unmake_move();
@@ -328,6 +331,12 @@ int Searcher::mmlva(Move move) {
 		victim = 1;
 	}
 	return mvvlva[victim][attacker];
+}
+
+int Searcher::delta_pruning(Move move) {
+	std::map<int, int>piece_values = { { 0, 100 }, { 1 , 320 }, { 2 , 330 }, { 3 , 500 }, { 4 , 900 }, {5 , 0} };
+	int piece = board->piece_to_piece_type((board->piece_at_square(move.to_square)));
+	return piece_values[piece] + 200;
 }
 int Searcher::is_pv_move(Move move, int ply) {
 	return pv_table[0][ply].from_square == move.from_square && pv_table[0][ply].to_square == move.to_square &&
