@@ -86,12 +86,8 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	else {
 		stand_pat = evaluation() * player;
 		// Delta Pruning
-		if (stand_pat < alpha - 500) {
-			return alpha;
-		}
-		if (stand_pat >= beta) {
-			return beta;
-		}
+		if (stand_pat < alpha - 500) return alpha;
+		if (stand_pat >= beta) return beta;
 		if (alpha < stand_pat) {
 			alpha = stand_pat;
 		}
