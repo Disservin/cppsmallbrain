@@ -38,10 +38,11 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
 
-	for (int i = 1; i <= search_depth; i++) {
-		search_to_depth = i;
+	for (int depth = 1; depth <= search_depth; depth++) {
+		search_to_depth = depth;
 		bestmove = {};
-		result = alpha_beta(lowerbounds, upperbounds, player, true, i, ply, false);
+		//result = alpha_beta(lowerbounds, upperbounds, player, true, depth, ply, false);
+		result = aspiration_search(player, depth, result);
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 		if (can_exit_early()) {
@@ -56,7 +57,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		}
 		else {
 			last_pv = get_pv_line();
-			std::cout << std::fixed << "info depth " << i << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01)) << " time " << time_diff << " pv " << get_pv_line() << std::endl;
+			std::cout << std::fixed << "info depth " << depth << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01)) << " time " << time_diff << " pv " << get_pv_line() << std::endl;
 		}
 	}	
 	std::vector<std::string> param = split_input(last_pv);
@@ -69,6 +70,28 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		std::cout << nodes << " nodes "<< static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01))<< " nps" << std::endl;
 	}
 	return 0;
+}
+
+int Searcher::aspiration_search(int player, int depth, int prev_eval) {
+	int ply = 0;
+	int result = 0;
+	int alpha = -INFINITE;
+	int beta = INFINITE;
+	if (depth == 1) {
+		result = alpha_beta(alpha, beta, player, true, depth, ply, false);
+	}
+	else {
+		alpha = prev_eval - 50;
+		beta = prev_eval + 50;
+		result = alpha_beta(alpha, beta, player, true, depth, ply, false);
+	}
+	if (result <= alpha) {
+		result = alpha_beta(-INFINITE, alpha, player, true, depth, ply, false);
+	}
+	else if (result >= beta) {
+		result = alpha_beta(beta, INFINITE, player, true, depth, ply, false);
+	}
+	return result;
 }
 
 int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {

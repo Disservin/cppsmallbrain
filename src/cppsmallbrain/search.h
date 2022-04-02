@@ -36,7 +36,9 @@ public:
 	bool can_exit_early();
 
 	int iterative_search(int search_depth, int bench = 0);
-
+	
+	int aspiration_search(int player, int depth, int prev_eval);
+	
 	int qsearch(int alpha, int beta, int player, int depth, int ply);
 
 	int alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply, bool null);
