@@ -202,7 +202,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	//if (!root_node and board->half_moves > 75) {
 	//	return 0;
 	//}
-	
+	int reduction = 0;
 	if (!inCheck && !pv_node) {
 		int staticEval = evaluation() * player;
 		// Razor
@@ -216,12 +216,18 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			board->board_hash ^= RANDOM_ARRAY[780];
 			board->en_passant_square = 64;
 			board->full_moves++;
-			int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - 2, ply + 1, true);
+			int r = depth > 6 ? 4 : 3;
+			int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - r, ply + 1, true);
 			board->side_to_move ^= 1;
 			board->board_hash ^= RANDOM_ARRAY[780];
 			board->en_passant_square = old_ep;
 			board->full_moves--;
-			if (score >= beta) return score;
+			if (score >= beta) { 
+				reduction -= 4;
+				if (depth <= 0) {
+					return qsearch(alpha, beta, player, 10, ply);
+				}
+			};
 		}
 	}
 	
@@ -247,7 +253,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		board->make_move(move);
 
 		tried_moves++;
-
+		new_depth -= reduction;
 		int score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
 		board->unmake_move();
 
