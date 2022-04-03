@@ -137,7 +137,6 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	return stand_pat;
 }
 
-//"position fen 1k6/6R1/7P/5K2/8/8/8/8 b - - 0 2";
 int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply, bool null) {
 	bool Is_White = board->side_to_move ? 0 : 1;
 	int bestvalue = -INFINITE;
@@ -222,7 +221,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		if (depth <= 1 && (staticEval + 150) < alpha) {
 			return qsearch(alpha, beta, player, 10, ply);
 		}
-		// Null move
+		// Null move reduction
 		if (popcount(board->Occ) >= 13 && !null && depth >= 3) {
 			int old_ep = board->en_passant_square;
 			board->side_to_move ^= 1;
@@ -260,6 +259,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 				new_depth++;
 			}
 		}
+		
+		// Late move reduction
 		if (tried_moves > 3 + 2 * root_node && depth >= 3 && !u_move && !inCheck && board->piece_at_square(move.to_square) == -1) {
 			new_depth -= 1;
 		}
