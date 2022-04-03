@@ -216,15 +216,15 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			board->board_hash ^= RANDOM_ARRAY[780];
 			board->en_passant_square = 64;
 			board->full_moves++;
-			int r = depth > 6 ? 4 : 3;
+			int r = depth > 6 ? 3 : 2;
 			int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - r, ply + 1, true);
 			board->side_to_move ^= 1;
 			board->board_hash ^= RANDOM_ARRAY[780];
 			board->en_passant_square = old_ep;
 			board->full_moves--;
 			if (score >= beta) { 
-				reduction -= 4;
-				if (depth <= 0) {
+				reduction = 2;
+				if (depth - 3 <= 0) {
 					return qsearch(alpha, beta, player, 10, ply);
 				}
 			};
