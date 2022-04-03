@@ -36,7 +36,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
 	memset(history_table, 0, sizeof(history_table));
-	
+
 	for (int depth = 1; depth <= search_depth; depth++) {
 		search_to_depth = depth;
 		bestmove = {};
@@ -150,11 +150,25 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	if (can_exit_early()) return 0;
 	
 	// At root node repetition detection for 3 times
-	if (root_node && board->is_threefold_rep3()) return 0;
+	if (root_node) {
+		if (board->is_threefold_rep3()) return 0;
+		if (board->half_moves >= 100) {
+			MoveList n_moves = board->generate_legal_moves();
+			if (n_moves.size == 0) return -MATE + ply;
+			return 0;
+		}
+	}
+
 	// At not root node repetition detection for 2 times
 	if (!root_node) {		
 		if (board->is_threefold_rep()) return 0;
+		if (board->half_moves >= 100) {
+			MoveList n_moves = board->generate_legal_moves();
+			if (n_moves.size == 0) return -MATE + ply;
+			return 0;
+		}
 	}
+
 	// Enter qsearch if not in check else increase depth
 	if (depth <= 0) {
 		int king_sq = _bitscanforward(board->King(Is_White));
@@ -180,6 +194,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			beta = std::min(beta, TTable[index].score);
 		}
 		if (alpha >= beta) return TTable[index].score;
+
 		// use TT move
 		u_move = true;
 	}
@@ -187,6 +202,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.size;
 	current_ply = ply;
+
 	// Move ordering
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
 	
@@ -199,9 +215,6 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		return 0;
 	}
 
-	//if (!root_node and board->half_moves > 75) {
-	//	return 0;
-	//}
 	int reduction = 0;
 	if (!inCheck && !pv_node) {
 		int staticEval = evaluation() * player;
@@ -227,7 +240,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 				if (depth - 3 <= 0) {
 					return qsearch(alpha, beta, player, 10, ply);
 				}
-			};
+			}
 		}
 	}
 	
@@ -250,11 +263,15 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		if (tried_moves > 3 + 2 * root_node && depth >= 3 && !u_move && !inCheck && board->piece_at_square(move.to_square) == -1) {
 			new_depth -= 1;
 		}
+
 		board->make_move(move);
 
 		tried_moves++;
+
 		new_depth -= reduction;
+
 		int score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
+
 		board->unmake_move();
 
 		// Cut-off
@@ -280,6 +297,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 		}
 	}
+
 	// Store position in TT
 	if (!can_exit_early() and !(bestvalue >= 19000) and !(bestvalue <= -19000) and 
 		(TTable[index].depth <= depth or TTable[index].age + 3 <= board->full_moves)) {

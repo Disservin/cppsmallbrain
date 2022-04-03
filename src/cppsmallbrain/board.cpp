@@ -299,7 +299,7 @@ int Board::is_game_over() {
         }
         return 0;
     }
-    if (half_moves >= 50) {
+    if (half_moves >= 100) {
         return 0;
     }
     if (is_threefold_rep3()) {
