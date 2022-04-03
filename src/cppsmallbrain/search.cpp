@@ -10,6 +10,8 @@
 extern TEntry* TTable;
 extern U64 tt_size;
 
+int history_table[2][64][64] = { {0},{0} };
+
 bool Searcher::can_exit_early() {
 	if (stopped) return true;
 	if (nodes & 1023 and limit_time) {
@@ -33,7 +35,8 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	begin = std::chrono::high_resolution_clock::now();
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
-
+	memset(history_table, 0, sizeof(history_table));
+	
 	for (int depth = 1; depth <= search_depth; depth++) {
 		search_to_depth = depth;
 		bestmove = {};
@@ -239,7 +242,12 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			if (score > alpha) {
 				alpha = score;		
 				// Beta cut-off
-				if (score >= beta) break;
+				if (score >= beta) {
+					if (board->piece_at_square(move.to_square) == -1) {
+						history_table[Is_White][move.from_square][move.to_square] += depth * depth;
+					}
+					break;
+				}
 			}
 		}
 	}
@@ -274,6 +282,7 @@ std::string Searcher::get_pv_line() {
 }
 
 int Searcher::score_move(Move move, bool u_move) {
+	int IsWhite = board->side_to_move ? 0 : 1;
 	if (is_pv_move(move, current_ply)) {
 		return 10000;
 	}
@@ -283,8 +292,14 @@ int Searcher::score_move(Move move, bool u_move) {
 		TTable[board->board_hash % tt_size].move.promotion == move.promotion) {
 		return 5000;
 	}
-	else if (board->piece_at(move.to_square) != -1 or (move.to_square == board->en_passant_square and move.piece == 0)) {
+	else if (move.promotion != -1) {
+		return 700;
+	}
+	else if (board->piece_at(move.to_square) != -1) {
 		return mmlva(move);
+	}
+	else if (history_table[IsWhite][move.from_square][move.to_square]) {
+		return history_table[IsWhite][move.from_square][move.to_square] * 50;
 	}
 	else if (move.piece == -1) {
 		return 0;
