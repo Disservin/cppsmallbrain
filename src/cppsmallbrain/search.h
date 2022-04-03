@@ -24,8 +24,6 @@ public:
 		UPPERBOUND, LOWERBOUND, EXACT
 	};
 	
-	
-	
 	std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 
 	Board* board;
