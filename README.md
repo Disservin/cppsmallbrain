@@ -6,7 +6,7 @@ Compile it like this
 
 ## Elo 
        # PLAYER            : RATING  ERROR   POINTS  PLAYED    (%)
-       1 Smallbrain        : 1737.5   61.4     79.5     100   79.5%
-       2 Stockfish 1500    : 1500.0   ----     20.5     100   20.5%
-TC = 60/0.6 for 40 moves <br>
+       1 Smallbrain        : 1730.3   50.1    113.5     144   78.8%
+       2 Stockfish 1500    : 1500.0   ----     30.5     144   21.2%
+TC = 60/0.6<br>
 Ordo -s 8000
