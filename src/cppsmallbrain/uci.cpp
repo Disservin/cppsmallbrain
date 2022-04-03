@@ -87,10 +87,10 @@ int main(int argc, char** argv) {
 		if (input.find("position fen") != std::string::npos) {
 			std::size_t start_index = input.find("fen");
 			fen = input.substr(start_index + 4);
-			board->apply_fen(fen);
-			board->repetition_table.clear();
-			board->full_moves = 1;
 			board->half_moves = 0;
+			board->full_moves = 1;
+			board->apply_fen(fen);
+			board->repetition_table.clear();		
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
@@ -104,11 +104,12 @@ int main(int argc, char** argv) {
 				board->move_stack.pop();
 			}
 		}
-		if (input.find("position startpos") != std::string::npos) {
-			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-			board->repetition_table.clear();
+		if (input.find("position startpos") != std::string::npos) {			
 			board->full_moves = 1;
 			board->half_moves = 0;
+			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+			board->repetition_table.clear();
+
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
