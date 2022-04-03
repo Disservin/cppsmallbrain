@@ -209,7 +209,22 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		if (depth <= 1 && (staticEval + 150) < alpha) {
 			return qsearch(alpha, beta, player, 10, ply);
 		}
+		// Null move
+		if (popcount(board->Occ) >= 13 && !null && depth >= 3) {
+			int old_ep = board->en_passant_square;
+			board->side_to_move ^= 1;
+			board->board_hash ^= RANDOM_ARRAY[780];
+			board->en_passant_square = 64;
+			board->full_moves++;
+			int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - 2, ply + 1, true);
+			board->side_to_move ^= 1;
+			board->board_hash ^= RANDOM_ARRAY[780];
+			board->en_passant_square = old_ep;
+			board->full_moves--;
+			if (score >= beta) return score;
+		}
 	}
+	
 	
 	int tried_moves = 0;
 	for (int i = 0; i < count; i++) {
