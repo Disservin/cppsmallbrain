@@ -210,6 +210,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			return qsearch(alpha, beta, player, 10, ply);
 		}
 	}
+	
+	int tried_moves = 0;
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
@@ -224,7 +226,13 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 				new_depth++;
 			}
 		}
+		if (tried_moves > 3 + 2 * root_node && depth >= 3 && !u_move && !inCheck && board->piece_at_square(move.to_square) == -1) {
+			new_depth -= 1;
+		}
 		board->make_move(move);
+
+		tried_moves++;
+
 		int score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
 		board->unmake_move();
 
@@ -295,7 +303,7 @@ int Searcher::score_move(Move move, bool u_move) {
 	else if (move.promotion != -1) {
 		return 700;
 	}
-	else if (board->piece_at(move.to_square) != -1) {
+	else if (board->piece_at_square(move.to_square) != -1) {
 		return mmlva(move);
 	}
 	else if (history_table[IsWhite][move.from_square][move.to_square]) {
