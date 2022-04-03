@@ -115,6 +115,26 @@ int evaluation() {
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
 	}
+	
+	//King Safety
+	int king_sq_white = _bitscanforward(board->King(true));
+	int king_sq_black = _bitscanforward(board->King(false));
+	if (king_sq_white == 6) {
+		if (!_test_bit(board->bitboards[board->WPAWN], 14) ||
+			!_test_bit(board->bitboards[board->WPAWN], 15) || 
+			!_test_bit(board->bitboards[board->WPAWN], 23)) {
+			eval_mg -= 50;
+			eval_eg -= 15;
+		}
+	}
+	if (king_sq_black == 62) {
+		if (!_test_bit(board->bitboards[board->BPAWN], 54) ||
+			!_test_bit(board->bitboards[board->BPAWN], 55) ||
+			!_test_bit(board->bitboards[board->BPAWN], 47)) {
+			eval_mg += 50;
+			eval_eg += 15;
+		}
+	}
 	phase = 24 - phase;
 	phase = (phase * 256 + (24 / 2)) / 24;
 	return ((eval_mg * (256 - phase)) + (eval_eg * phase))/256;
