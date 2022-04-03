@@ -179,7 +179,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	//}
 	
 	if (!inCheck && !pv_node) {
-		int staticEval = evaluation();
+		int staticEval = evaluation() * player;
 		// Razor
 		if (depth <= 1 && (staticEval + 150) < alpha) {
 			return qsearch(alpha, beta, player, 10, ply);
