@@ -301,9 +301,6 @@ int Searcher::score_move(Move move, bool u_move) {
 	else if (history_table[IsWhite][move.from_square][move.to_square]) {
 		return history_table[IsWhite][move.from_square][move.to_square];
 	}
-	else if (move.piece == -1) {
-		return 0;
-	}
 	else {
 		return 0;
 	}
