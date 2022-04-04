@@ -156,7 +156,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	if (!root_node) {		
 		if (board->is_threefold_rep()) return 0;
 		if (board->half_moves >= 100) {
-			bool inCheck = board->is_square_attacked(Is_White, board->King(Is_White));
+			int king_sq = _bitscanforward(board->King(Is_White));
+			bool inCheck = board->is_square_attacked(Is_White, king_sq);
 			if (inCheck) {
 				MoveList moves = board->generate_legal_moves();
 				if (moves.size == 0) return -MATE + ply;
