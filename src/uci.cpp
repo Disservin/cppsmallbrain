@@ -174,11 +174,16 @@ int main(int argc, char** argv) {
 		}
 		if (input == "b") {
 			board->print_board();
-			std::cout << board->half_moves << " " << board->full_moves << std::endl;
-		}
-		if (input == "eval") {
-			std::cout << evaluation()<<"\n";
-			
+			std::cout << "fen:         " << board->get_fen() << std::endl;
+			std::cout << "eval:        " << evaluation() << std::endl;
+			MoveList moves = board->generate_legal_moves();
+			std::cout << "move count:  " << moves.size << std::endl;
+			std::cout << "zobrist key: " << board->board_hash << std::endl;
+			if (board->en_passant_square == 64)
+				std::cout << "en passant square: " << "-" << std::endl;
+			else {
+				std::cout << "en passant square: " << square_to_coordinates[board->en_passant_square] << std::endl;;
+			}
 		}
 		if (input == "captures") {
 			MoveList n_moves = board->generate_capture_moves();
@@ -198,10 +203,7 @@ int main(int argc, char** argv) {
 			}
 			std::cout << "count " << n_moves.size << std::endl;
 		}
-		if (input == "hash") {
-			std::cout << board->generate_zobrist_hash()<<std::endl;
-			std::cout << board->board_hash << std::endl;
-		}
+
 		if (input == "bench") {
 			threads.begin(7, -1, 1);
 		}

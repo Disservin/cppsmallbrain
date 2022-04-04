@@ -184,6 +184,8 @@ public:
 
     void apply_fen(std::string fen);
 
+    std::string get_fen();
+
     void print_bitboard(std::bitset<64> bitset);
 
     void print_board();

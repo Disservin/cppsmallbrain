@@ -149,6 +149,64 @@ void Board::apply_fen(std::string fen)
     board_hash = generate_zobrist_hash();
 }
 
+std::string Board::get_fen() {
+    int pos = 0;
+    int sq;
+    char letter;
+    std::map<int, char> piece_to_int =
+    {
+    { 0,'P'},
+    { 1,'N'},
+    { 2,'B'},
+    { 3,'R'},
+    { 4,'Q'},
+    { 5,'K'},
+    { 6,'p'},
+    { 7,'n'},
+    { 8,'b'},
+    { 9,'r'},
+    { 10,'q'},
+    { 11,'k'},
+    };
+    std::string fen = "";
+    for (int rank = 7; rank >= 0; rank--) {
+        int free_space = 0;
+        for (int file = 0; file < 8; file++) {
+            sq = rank * 8 + file;
+            int piece = piece_at_square(sq);
+            if (piece != -1) {
+                if (free_space) {
+                    fen += std::to_string(free_space);
+                    free_space = 0;
+                }
+                letter = piece_to_int[piece];
+                fen += letter;
+            }
+            else {
+                free_space++;
+            }  
+        }
+        if (free_space != 0) {
+            fen += std::to_string(free_space);
+        }
+        fen += rank > 0 ? "/" : "";
+    }
+    fen += side_to_move ? " b " : " w ";
+    if (castling_rights & 1)
+        fen += "K";
+    if (castling_rights & 2)
+        fen += "Q";
+    if (castling_rights & 4)
+        fen += "k";
+    if (castling_rights & 8)
+        fen += "q";
+    fen += " - ";
+    fen += std::to_string(half_moves);
+    fen += " " + std::to_string(full_moves / 2);
+    return fen;
+}
+
+
 // prints a U64 in bitboard representation
 void Board::print_bitboard(std::bitset<64> bits) {
     std::string str_bitset = bits.to_string();
