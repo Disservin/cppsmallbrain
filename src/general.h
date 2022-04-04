@@ -37,10 +37,14 @@ inline int square_distance(int a, int b) {
     return std::max(std::abs(square_file(a) - square_file(b)), std::abs(square_rank(a) - square_rank(b)));
 }
 
-//inline int _test_bit(U64, int sq) {
-//    std::bitset<64> b;
-//    return b.test(sq);
-//}
+inline bool get_square_color(int square) {
+    if ((square % 8) % 2 == (square / 8) % 2) {
+        return 0;
+    }
+    else {
+        return 1;
+    }
+}
 
 inline int _test_bit(U64 bit, int sq) {
     __int64 test = bit;
@@ -89,8 +93,7 @@ inline int _bitscanreverse(U64 mask) {
 //#endif
 //}
 inline int popcount(U64 mask) {
-    std::bitset<64> b(mask);
-    return b.count();
+    return std::bitset<64>(mask).count();
 }	
 inline int pop_lsb(U64* mask) {
     const int s = _bitscanforward(*mask);

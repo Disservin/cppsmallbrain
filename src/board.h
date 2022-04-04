@@ -200,7 +200,7 @@ public:
 
     bool is_stalemate(bool IsWhite);
 
-    int is_game_over();
+    bool is_game_over();
 
     U64 generate_zobrist_hash();
 

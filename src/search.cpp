@@ -37,7 +37,8 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	memset(pv_length, 0, sizeof(pv_length));
 	memset(history_table, 0, sizeof(history_table));
 
-	if (board->is_game_over() >= 0) {
+	if (board->is_game_over()) {
+		std::cout << "info depth 0 score mate 0" << std::endl;
 		std::cout << "bestmove (none)" << std::endl;
 		return 0;
 	}
@@ -164,6 +165,19 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 			return 0;
 		}
+		int am_pieces = popcount(board->Occ);
+		if (am_pieces == 2) {
+			return 0;
+		}
+		if (am_pieces == 3) {
+			if (board->bitboards[board->WKNIGHT] || board->bitboards[board->WBISHOP] ||
+				board->bitboards[board->BKNIGHT] || board->bitboards[board->BBISHOP]) return 0;
+		}
+		if (am_pieces == 4) {
+			if (board->bitboards[board->BBISHOP] && board->bitboards[board->WBISHOP] &&
+				get_square_color(_bitscanforward(board->bitboards[board->BBISHOP])) ==
+				get_square_color(_bitscanforward(board->bitboards[board->WBISHOP]))) return 0;
+		}
 	}
 
 	// Enter qsearch if not in check else increase depth
@@ -206,7 +220,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	bool inCheck = board->checkmask == 18446744073709551615ULL ? false : true; 
 	
 	// Game over ?
-	if (count == 0) {
+	if (!count) {
 		if (inCheck) return -MATE + ply;
 		return 0;
 	}
