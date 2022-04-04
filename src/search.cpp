@@ -269,7 +269,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			if (Is_White and square_rank(move.to_square) >= 5) {
 				new_depth++;
 			}
-			if (!Is_White and square_rank(move.to_square) >= 5) {
+			if (!Is_White and square_rank(move.to_square) <= 2) {
 				new_depth++;
 			}
 		}
