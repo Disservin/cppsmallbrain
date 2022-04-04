@@ -1,4 +1,5 @@
 #include <map>
+#include <tuple>
 
 #include "board.h"
 #include "general.h"
@@ -135,7 +136,131 @@ int evaluation() {
 			eval_eg += 15;
 		}
 	}
+	U64 hf_w, hf_b;
+	std::tie(hf_w, hf_b) = half_open_file(board->bitboards[board->WPAWN], board->bitboards[board->BPAWN]);
+	int open_rooks = rook_open_file(hf_w, hf_b, board->bitboards[board->WROOK], board->bitboards[board->BROOK]);
+	eval_mg += open_rooks * 44;
+	eval_eg += open_rooks * 5;
+	
 	phase = 24 - phase;
 	phase = (phase * 256 + (24 / 2)) / 24;
 	return ((eval_mg * (256 - phase)) + (eval_eg * phase))/256;
+}
+
+U64 nortFill(U64 gen) {
+	gen |= (gen << 8);
+	gen |= (gen << 16);
+	gen |= (gen << 32);
+	return gen;
+}
+U64 soutFill(U64 gen) {
+	gen |= (gen >> 8);
+	gen |= (gen >> 16);
+	gen |= (gen >> 32);
+	return gen;
+}
+U64 fileFill(U64 gen) {
+	return (nortFill(gen) | soutFill(gen));
+} 
+	
+U64 halfopenoropenfile(U64 gen) {
+	return ~fileFill(gen);
+}
+
+bool is_a_file(int square) {
+	if ((square & 7) == 0) {
+		return true;
+	}
+	return false;
+}
+
+bool is_h_file(int square) {
+	if ((square & 7) == 7) {
+		return true;
+	}
+	return false;
+}	
+
+std::tuple<U64, U64> half_open_file(U64 White, U64 Black) {
+
+	U64 openfile = (~(fileFill(White)) & ~(fileFill(White)));
+
+	return { halfopenoropenfile(Black), halfopenoropenfile(Black) };
+}
+
+int isolated_pawn(int square, U64 hf_open) {
+	if ((not is_a_file(square) and _test_bit(hf_open, square - 1)) ||
+		(not is_h_file(square) and _test_bit(hf_open, square + 1)) ||
+		(_test_bit(hf_open, square + 1) && _test_bit(hf_open, square - 1))) {
+		return 1;
+	}
+	return 0;
+}
+
+std::tuple<int, int> doubled_pawns(U64 pawns, U64 White, U64 Black) {
+	U64 bb_pawns_white = pawns & White;
+	U64 x = popcount(pawns & (pawns << 8));
+	U64 bb_pawns_black = pawns & Black;
+	U64 y = popcount(pawns & (pawns >> 8));
+	return { x, y };
+}
+
+int supported_pawn(int square, U64 pawns, bool IsWhite) {
+	if (IsWhite) {
+		if (_test_bit(pawns, square - 7) && !is_h_file(square) || _test_bit(pawns, square - 9) && is_a_file(square)) {
+			return 1;
+		}
+	}
+	else {
+		if (_test_bit(pawns, square + 7) && !is_a_file(square) || _test_bit(pawns, square + 9) && is_h_file(square)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int neighbour_pawns(int square, U64 pawns) {
+	if (_test_bit(pawns, square + 1) && !is_h_file(square) || _test_bit(pawns, square - 1) && !is_a_file(square))
+		return 1;
+	return 0;
+}
+
+int connected_pawns(int square, U64 pawns, bool IsWhite) {
+	if (neighbour_pawns(square, pawns) or supported_pawn(square, pawns, IsWhite))
+		return 1;
+	return 0;
+}
+
+int backwards_pawn(int square, U64 pawn_white, U64 pawn_black, bool IsWhite) {
+	if (IsWhite) {
+		if (neighbour_pawns(square, pawn_white))
+			return 0;
+		int y = 8;
+		while (square-y >= 0) {
+			if (_test_bit(pawn_white, square - (y - 1)) && !is_a_file(square) || (_test_bit(pawn_white, square - (y + 1)) && !is_h_file(square)))
+				return 1;
+			y += 8;
+		}
+		if (_test_bit(pawn_black, square + (9 * 2)) && !is_h_file(square) || (_test_bit(pawn_black, square + (7 * 2)) && !is_a_file(square)) || _test_bit(pawn_black, square + 8))
+			return 1;
+	}
+	else {
+		if (neighbour_pawns(square, pawn_black))
+			return 0;
+		int y = 8;
+		while (square + y < 64) {
+			if (_test_bit(pawn_black, square + (y - 1)) && !is_a_file(square) || (_test_bit(pawn_black, square + (y + 1)) && !is_h_file(square)))
+				return 1;
+			y += 8;
+		}
+		if (_test_bit(pawn_white, square - (9 * 2)) && !is_h_file(square) || (_test_bit(pawn_white, square - (7 * 2)) && !is_a_file(square)) || _test_bit(pawn_white, square - 8))
+			return 1;
+	}
+	return 0;
+}
+
+int rook_open_file(U64 hf_w, U64 hf_b, U64 White_rooks, U64 Black_rooks) {
+	int x = popcount(White_rooks & hf_w);
+	int y = popcount(Black_rooks & hf_b);
+	return x-y;
 }
