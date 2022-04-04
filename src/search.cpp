@@ -11,6 +11,7 @@ extern TEntry* TTable;
 extern U64 tt_size;
 
 int history_table[2][64][64] = { {0},{0} };
+int heighest_depth = 0;
 
 bool Searcher::can_exit_early() {
 	if (stopped) return true;
@@ -36,7 +37,8 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
 	memset(history_table, 0, sizeof(history_table));
-
+	heighest_depth = 0;
+	
 	if (board->is_game_over()) {
 		std::cout << "info depth 0 score mate 0" << std::endl;
 		std::cout << "bestmove (none)" << std::endl;
@@ -60,7 +62,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		}
 		else {
 			last_pv = get_pv_line();
-			std::cout << std::fixed << "info depth " << depth << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01)) << " time " << time_diff << " pv " << get_pv_line() << std::endl;
+			std::cout << std::fixed << "info depth " << depth << " seldepth " << heighest_depth << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01)) << " time " << time_diff << " pv " << get_pv_line() << std::endl;
 		}
 	}	
 	std::vector<std::string> param = split_input(last_pv);
@@ -191,7 +193,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			return qsearch(alpha, beta, player, 10, ply);
 		}
 	}
-
+	if (ply > heighest_depth)
+		heighest_depth = ply;
 	// Check TT for entry
 	U64 key = board->board_hash;
 	U64 index = key % tt_size;
