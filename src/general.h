@@ -55,7 +55,7 @@ inline int _test_bit(U64 bit, int sq) {
         return false;
     }
 }
-//
+
 #if defined(__GNUC__)  // GCC, Clang, ICC
 inline int _bitscanreverse(U64 b) {
     return 63 ^ __builtin_clzll(b);
