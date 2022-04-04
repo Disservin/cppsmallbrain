@@ -288,24 +288,14 @@ bool Board::is_stalemate(bool IsWhite) {
     return true;
 }
 
-// returns 1 for checkmate 0 for draws and -1 for not over
-int Board::is_game_over() {
+// returns true if the game is over otherwise false
+bool Board::is_game_over() {
     MoveList moves = generate_legal_moves();
-    if (moves.size == 0) {
-        bool IsWhite = side_to_move ? 0 : 1;
-        int king_sq = _bitscanforward(King(IsWhite));
-        if (is_square_attacked(IsWhite, king_sq)) {
-            return 1;
-        }
-        return 0;
-    }
-    if (half_moves >= 100) {
-        return 0;
-    }
-    if (is_threefold_rep3()) {
-        return 0;
-    }
-    return -1;
+    int count = moves.size;
+    if (!count) return true;
+    if (half_moves >= 100) return true;
+    if (is_threefold_rep3()) return true;
+    return false;
 }
 
 U64 Board::generate_zobrist_hash() {
