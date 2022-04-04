@@ -183,9 +183,9 @@ bool is_h_file(int square) {
 
 std::tuple<U64, U64> half_open_file(U64 White, U64 Black) {
 
-	U64 openfile = (~(fileFill(White)) & ~(fileFill(White)));
+	U64 openfile = (~(fileFill(White)) & ~(fileFill(Black)));
 
-	return { halfopenoropenfile(Black), halfopenoropenfile(Black) };
+	return { halfopenoropenfile(White), halfopenoropenfile(Black) };
 }
 
 int isolated_pawn(int square, U64 hf_open) {
