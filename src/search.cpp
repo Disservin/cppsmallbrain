@@ -163,6 +163,19 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			}
 			return 0;
 		}
+		int am_pieces = popcount(board->Occ);
+		if (am_pieces == 2) {
+			return 0;
+		}
+		if (am_pieces == 3) {
+			if (board->bitboards[board->WKNIGHT] || board->bitboards[board->WBISHOP] ||
+				board->bitboards[board->BKNIGHT] || board->bitboards[board->BBISHOP]) return 0;
+		}
+		if (am_pieces == 4) {
+			if (board->bitboards[board->BBISHOP] && board->bitboards[board->WBISHOP] &&
+				get_square_color(_bitscanforward(board->bitboards[board->BBISHOP])) ==
+				get_square_color(_bitscanforward(board->bitboards[board->WBISHOP]))) return 0;
+		}
 	}
 
 	// Enter qsearch if not in check else increase depth
