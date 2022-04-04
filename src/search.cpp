@@ -276,7 +276,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		
 		// Late move reduction
 		if (tried_moves > 3 + 2 * root_node && depth >= 3 && !u_move && !inCheck && board->piece_at_square(move.to_square) == -1) {
-			new_depth -= 1;
+			new_depth -= 2;
 		}
 
 		board->make_move(move);
