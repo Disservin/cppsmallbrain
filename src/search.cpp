@@ -37,6 +37,10 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	memset(pv_length, 0, sizeof(pv_length));
 	memset(history_table, 0, sizeof(history_table));
 
+	if (board->is_game_over() >= 0) {
+		std::cout << "bestmove (none)" << std::endl;
+		return 0;
+	}
 	for (int depth = 1; depth <= search_depth; depth++) {
 		search_to_depth = depth;
 		bestmove = {};
@@ -147,19 +151,6 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 
 	// Early exit
 	if (can_exit_early()) return 0;
-	
-	// At root node repetition detection for 3 times
-	if (root_node) {
-		if (board->is_threefold_rep3()) return 0;
-		if (board->half_moves >= 100) {
-			bool inCheck = board->is_square_attacked(Is_White, board->King(Is_White));
-			if (inCheck) {
-				MoveList moves = board->generate_legal_moves();
-				if (moves.size == 0) return -MATE + ply;
-				return 0;
-			}
-		}
-	}
 
 	// At not root node repetition detection for 2 times
 	if (!root_node) {		
@@ -169,8 +160,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 			if (inCheck) {
 				MoveList moves = board->generate_legal_moves();
 				if (moves.size == 0) return -MATE + ply;
-				return 0;
 			}
+			return 0;
 		}
 	}
 
@@ -211,8 +202,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	// Move ordering
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
 	
-	int king_sq = _bitscanforward(board->King(Is_White));
-	bool inCheck = board->is_square_attacked(Is_White, king_sq);
+	bool inCheck = board->checkmask == 18446744073709551615ULL ? false : true; 
 	
 	// Game over ?
 	if (count == 0) {
