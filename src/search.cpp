@@ -115,12 +115,6 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	std::vector<std::string> param = split_input(last_pv);
 	std::string bm = param[0];
 	std::cout << "bestmove " << bm << std::endl;
-	if (bench) {
-		auto end = std::chrono::high_resolution_clock::now();
-		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-		std::cout << "\n---------------------------" << std::endl;
-		std::cout << nodes << " nodes "<< static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01))<< " nps" << std::endl;
-	}
 	return 0;
 }
 
