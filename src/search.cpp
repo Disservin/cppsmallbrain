@@ -44,6 +44,53 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		std::cout << "bestmove (none)" << std::endl;
 		return 0;
 	}
+	if (bench) {
+		U64 nodes_searched = 0;
+		board->apply_fen("8/1p1r2kp/2b2pp1/p3p3/P7/1B4P1/1PP1RP2/2K5 w - - 0 34");
+		heighest_depth = 0;
+		nodes = 0;
+		std::cout << "fen: 8/1p1r2kp/2b2pp1/p3p3/P7/1B4P1/1PP1RP2/2K5 w - - 0 34" << std::endl;
+		for (int depth = 1; depth <= 7; depth++) {
+			result = aspiration_search(player, depth, result);
+			nodes_searched += nodes;
+			std::cout << "info depth " << depth << " seldepth " << heighest_depth <<" score cp " << result << " nodes " << nodes << std::endl;
+		}
+		std::cout << ""<< std::endl;
+		board->apply_fen("8/8/8/8/p1b2k2/8/1P3K2/8 w - - 4 70");
+		heighest_depth = 0;
+		nodes = 0;
+		std::cout << "fen: 8/8/8/8/p1b2k2/8/1P3K2/8 w - - 4 70" << std::endl;
+		for (int depth = 1; depth <= 7; depth++) {
+			result = aspiration_search(player, depth, result);
+			nodes_searched += nodes;
+			std::cout << "info depth " << depth << " seldepth " << heighest_depth << " score cp " << result << " nodes " << nodes << std::endl;
+		}
+		std::cout << "" << std::endl;
+		board->apply_fen("6k1/3qb1p1/4p3/2ppB1p1/1p3pQ1/3P4/rPR3PP/r1R2K2 w - - 6 28");
+		heighest_depth = 0;
+		nodes = 0;
+		std::cout << "fen: 6k1/3qb1p1/4p3/2ppB1p1/1p3pQ1/3P4/rPR3PP/r1R2K2 w - - 6 28" << std::endl;
+		for (int depth = 1; depth <= 7; depth++) {
+			result = aspiration_search(player, depth, result);
+			nodes_searched += nodes;
+			std::cout << "info depth " << depth << " seldepth " << heighest_depth << " score cp " << result << " nodes " << nodes << std::endl;
+		}
+		std::cout << "" << std::endl;
+		board->apply_fen("r2qk2r/1bppbppp/p1n2n2/1p2p3/4P3/1B1P1N2/PPP2PPP/RNBQ1RK1 w kq - 2 8");
+		heighest_depth = 0;
+		nodes = 0;
+		std::cout << "fen: r2qk2r/1bppbppp/p1n2n2/1p2p3/4P3/1B1P1N2/PPP2PPP/RNBQ1RK1 w kq - 2 8" << std::endl;
+		for (int depth = 1; depth <= 7; depth++) {
+			result = aspiration_search(player, depth, result);
+			nodes_searched += nodes;
+			std::cout << "info depth " << depth << " seldepth " << heighest_depth << " score cp " << result << " nodes " << nodes << std::endl;
+		}
+		auto end = std::chrono::high_resolution_clock::now();
+		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+		std::cout << "\n---------------------------" << std::endl;
+		std::cout << nodes_searched << " nodes " << static_cast<int>(nodes_searched / ((time_diff / static_cast<double>(1000)) + 0.01)) << " nps" << std::endl;
+		return 0;
+	}
 	for (int depth = 1; depth <= search_depth; depth++) {
 		search_to_depth = depth;
 		bestmove = {};
