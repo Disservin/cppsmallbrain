@@ -11,11 +11,11 @@ extern std::atomic<bool> stopped;
 
 class Searcher {
 public: 
-	static const int max_ply = 60;
-	int pv_length[max_ply] = { 0 };
+	static const unsigned __int8 max_ply = 60;
+	unsigned __int8 pv_length[max_ply] = { 0 };
 	Move pv_table[max_ply][max_ply] = { };
-	int current_ply = 0;
-	int search_to_depth = 60;
+	unsigned __int8 current_ply = 0;
+	unsigned __int8 search_to_depth = 60;
 	U64 nodes = 0;
 	Move bestmove;
 	int time_given = -1;
@@ -38,11 +38,11 @@ public:
 
 	int iterative_search(int search_depth, int bench = 0);
 	
-	int aspiration_search(int player, int depth, int prev_eval);
+	int aspiration_search(int player, unsigned __int8 depth, int prev_eval);
 	
-	int qsearch(int alpha, int beta, int player, int depth, int ply);
+	int qsearch(int alpha, int beta, int player, unsigned __int8 depth, int ply);
 
-	int alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply, bool null);
+	int alpha_beta(int alpha, int beta, int player, bool root_node, unsigned __int8 depth, int ply, bool null);
 		
 	std::string get_pv_line();
 
@@ -54,5 +54,5 @@ public:
 
 	int mmlva(Move move);
 
-	int is_pv_move(Move move, int ply);
+	bool is_pv_move(Move move, int ply);
 };

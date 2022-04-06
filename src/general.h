@@ -16,20 +16,19 @@ enum Score {
 };
 
 struct Move {
-    int piece = -1;
-    int from_square = -1;
-    int to_square = -1;
-    int promotion = -1;
-    int null = 0;   // 1 == True 0 == False 
+    __int8 piece = -1;
+    __int8 from_square = -1;
+    __int8 to_square = -1;
+    __int8 promotion = -1;
 };
 
 //Gets the file index of the square where 0 is the a-file
-inline int square_file(int sq) {
+inline __int8 square_file(__int8 sq) {
     return sq & 7;
 }
 
 //Gets the rank index of the square where 0 is the first rank."""
-inline int square_rank(int sq) {    
+inline __int8 square_rank(__int8 sq) {
     return sq >> 3;
 }
 
@@ -39,14 +38,14 @@ inline int square_distance(int a, int b) {
 
 inline bool get_square_color(int square) {
     if ((square % 8) % 2 == (square / 8) % 2) {
-        return 0;
+        return false;
     }
     else {
-        return 1;
+        return true;
     }
 }
 
-inline int _test_bit(U64 bit, int sq) {
+inline bool _test_bit(U64 bit, int sq) {
     __int64 test = bit;
     if (_bittest64(&test, sq)) {
         return true;
@@ -67,13 +66,13 @@ inline int _bitscanforward(U64 b) {
 }
 
 #else
-inline int _bitscanforward(U64 mask) {
+inline __int8 _bitscanforward(U64 mask) {
     unsigned long index;
     _BitScanForward64(&index, mask);
     return index;
 }
 
-inline int _bitscanreverse(U64 mask) {
+inline __int8 _bitscanreverse(U64 mask) {
     unsigned long index;
     _BitScanReverse64(&index, mask);
     return index;
@@ -92,11 +91,11 @@ inline int _bitscanreverse(U64 mask) {
 //
 //#endif
 //}
-inline int popcount(U64 mask) {
+inline __int8 popcount(U64 mask) {
     return std::bitset<64>(mask).count();
 }	
-inline int pop_lsb(U64* mask) {
-    const int s = _bitscanforward(*mask);
+inline __int8 pop_lsb(U64* mask) {
+    const __int8 s = _bitscanforward(*mask);
     //*mask = _blsr_u64(*mask);
     *mask &= *mask - 1;
     return s;

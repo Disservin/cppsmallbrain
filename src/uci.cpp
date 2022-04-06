@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
 			tt_size = elements;
 		}
 		if (input == "ucinewgame") {
-			memset(TTable, 0, tt_size * 48);
+			memset(TTable, 0, tt_size * sizeof(TEntry));
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 		}
 		if (input.find("quit") != std::string::npos) {
@@ -129,10 +129,10 @@ int main(int argc, char** argv) {
 			int depth = std::stoi(depth_str);
 			Perft perft(board);
 			auto begin = std::chrono::high_resolution_clock::now();
-			U64 result = perft.speed_test_perft(depth, depth);
+			U64 result = perft.bulk_test_perft(depth, depth);
 			auto end = std::chrono::high_resolution_clock::now();
 			auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-			std::cout << "startpos " << " nodes " << result << " nps " << result / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
+			std::cout << std::fixed << "startpos " << " nodes " << result << " nps " << result / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
 		}
 		if (input.find("test perft") != std::string::npos) {
 			std::cout << "\nTest started" << std::endl;

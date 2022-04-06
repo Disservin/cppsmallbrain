@@ -25,10 +25,7 @@ bool Searcher::can_exit_early() {
 
 int Searcher::iterative_search(int search_depth, int bench) {
 	int result = 0;
-	int lowerbounds = -INFINITE;
-	int upperbounds = INFINITE;
 	int player = board->side_to_move ? -1 : 1;
-	int ply = 0;
 
 	std::string last_pv = "";
 	nodes = 0;
@@ -118,8 +115,8 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	return 0;
 }
 
-int Searcher::aspiration_search(int player, int depth, int prev_eval) {
-	int ply = 0;
+int Searcher::aspiration_search(int player, unsigned __int8 depth, int prev_eval) {
+	unsigned __int8 ply = 0;
 	int result = 0;
 	int alpha = -INFINITE;
 	int beta = INFINITE;
@@ -140,9 +137,9 @@ int Searcher::aspiration_search(int player, int depth, int prev_eval) {
 	return result;
 }
 
-int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
+int Searcher::qsearch(int alpha, int beta, int player, unsigned __int8 depth, int ply) {
 	bool IsWhite = board->side_to_move ? 0 : 1;
-	int king_sq = _bitscanforward(board->King(IsWhite));
+	__int8 king_sq = _bitscanforward(board->King(IsWhite));
 	bool in_check = board->is_square_attacked(IsWhite, king_sq);
 	nodes++;
 	int stand_pat = 0;
@@ -185,7 +182,7 @@ int Searcher::qsearch(int alpha, int beta, int player, int depth, int ply) {
 	return stand_pat;
 }
 
-int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int depth, int ply, bool null) {
+int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, unsigned __int8 depth, int ply, bool null) {
 	bool Is_White = board->side_to_move ? 0 : 1;
 	int bestvalue = -INFINITE;
 	int old_alpha = alpha;
@@ -255,7 +252,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 	}
 
 	MoveList n_moves = board->generate_legal_moves();
-	int count = n_moves.size;
+	unsigned __int8 count = n_moves.size;
 	current_ply = ply;
 
 	// Move ordering
@@ -298,8 +295,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, int de
 		}
 	}
 	
-	
-	int tried_moves = 0;
+	unsigned __int8 tried_moves = 0;
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
@@ -425,10 +421,9 @@ int Searcher::mmlva(Move move) {
 	return mvvlva[victim][attacker];
 }
 
-int Searcher::is_pv_move(Move move, int ply) {
+bool Searcher::is_pv_move(Move move, int ply) {
 	return pv_table[0][ply].from_square == move.from_square && pv_table[0][ply].to_square == move.to_square &&
-		pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion &&
-		pv_table[0][ply].null == move.null;
+		pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion;
 }
 
 std::string Searcher::get_bestmove() {

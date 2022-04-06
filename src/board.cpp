@@ -27,13 +27,14 @@ void Board::apply_fen(std::string fen)
     {
         bitboards[i] = 0ULL;
     }
-    std::string position = split_input(fen)[0];
-    std::string move_right = split_input(fen)[1];
-    std::string castling = split_input(fen)[2];
-    std::string en_passant = split_input(fen)[3];
-    std::string half_move_clock = split_input(fen)[4];
-    std::string full_move_counter = split_input(fen)[5];
-
+    std::vector<std::string> params = split_input(fen);
+    std::string position = params[0];
+    std::string move_right = params[1];
+    std::string castling = params[2];
+    std::string en_passant = params[3];
+    std::string half_move_clock = params[4];
+    std::string full_move_counter = params[5];
+    
     // Side to move
     // I really want to change 0 to 1 but any changes to this have failed, i'll try to change this in the future.
     if (move_right == "w")
@@ -429,7 +430,7 @@ inline void Board::save_board_state()
     board.castle_rights = castling_rights;
     board.board_hash = board_hash;
     board.half_move = half_moves;
-    std::copy(board_pieces, board_pieces +64, board.piece_loc);
+    std::copy(board_pieces, board_pieces + 64, board.piece_loc);
     move_stack.push(board);
 }
 
@@ -440,12 +441,12 @@ inline void Board::update_occupancies() {
 }
 
 // returns color specific int for piece without complex computation
-int Board::piece_at_square(int sq) {
+__int8 Board::piece_at_square(__int8 sq) {
     return board_pieces[sq];
 }
 
 // returns color specific int for piece
-int Board::piece_at(int sq, int given) {
+__int8 Board::piece_at(__int8 sq, int given) {
     bool white = false;
     if (given > -1) {
         white = given;
@@ -500,7 +501,7 @@ int Board::piece_at(int sq, int given) {
 }
 
 // returns int for piece
-int Board::piece_type_at(int sq) {
+__int8 Board::piece_type_at(__int8 sq) {
     U64 pawns = bitboards[WPAWN] | bitboards[BPAWN];
     U64 knights = bitboards[WKNIGHT] | bitboards[BKNIGHT];
     U64 bishops = bitboards[WBISHOP] | bitboards[BBISHOP];
@@ -529,7 +530,7 @@ int Board::piece_type_at(int sq) {
     return -1;
 }
 
-int Board::piece_to_piece_type(int piece) {
+__int8 Board::piece_to_piece_type(__int8 piece) {
 	switch (piece) {
 	case WPAWN:
 		return 0;
@@ -560,7 +561,7 @@ int Board::piece_to_piece_type(int piece) {
 	}
 }
 // converts int to string
-std::string Board::piece_type(int piece) {
+std::string Board::piece_type(__int8 piece) {
     if (piece == -1) {
         return "-";
     }
@@ -738,7 +739,7 @@ U64 Board::Queens(bool IsWhite)
 }
 
 // squares seen by a pawn
-U64 Board::seen_by_pawn(bool IsWhite, int sq, int ep) {
+U64 Board::seen_by_pawn(bool IsWhite, __int8 sq, unsigned __int8 ep) {
     U64 ep_m = (1ULL << ep);
     U64 new_mask = 0ULL;
     U64 mask = (1ULL << sq);
@@ -787,7 +788,7 @@ U64 Board::seen_by_pawn(bool IsWhite, int sq, int ep) {
 }
 
 // squares seen by a bishop
-inline U64 Board::seen_by_bishop(bool IsWhite, int sq) {
+inline U64 Board::seen_by_bishop(bool IsWhite, __int8 sq) {
     U64 bishop_move = 0ULL;
     U64 victims = IsWhite ? Black : White;
     U64 blockers = IsWhite ? White : Black;
@@ -837,12 +838,12 @@ inline U64 Board::seen_by_bishop(bool IsWhite, int sq) {
 }
 
 // squares seen by a knight
-inline U64 Board::seen_by_knight(int sq) {
+inline U64 Board::seen_by_knight(__int8 sq) {
     return knightattacks[sq];
 }
 
 // squares seen by a rook
-inline U64 Board::seen_by_rook(bool IsWhite, int sq) {
+inline U64 Board::seen_by_rook(bool IsWhite, __int8 sq) {
     U64 rook_move = 0ULL;
     U64 victims = IsWhite ? Black : White;
     U64 blockers = IsWhite ? White : Black;
@@ -895,7 +896,7 @@ inline U64 Board::seen_by_rook(bool IsWhite, int sq) {
 }
 
 // squares seen by a king
-inline U64 Board::seen_by_king(int sq) {
+inline U64 Board::seen_by_king(__int8 sq) {
     U64 king_move = 0ULL;
     king_move |= (1ULL << sq);
 
@@ -912,7 +913,7 @@ inline U64 Board::seen_by_king(int sq) {
 }
 
 // legal pawn moves
-inline U64 Board::legal_pawn_moves(bool IsWhite, int sq, int ep) {
+inline U64 Board::legal_pawn_moves(bool IsWhite, __int8 sq, unsigned __int8 ep) {
     U64 mask = 1ULL << sq;
     U64 attack_l = 0ULL;
     U64 attack_r = 0ULL;
@@ -1041,7 +1042,7 @@ inline U64 Board::legal_pawn_moves(bool IsWhite, int sq, int ep) {
 }
 
 // legal knight moves
-inline U64 Board::legal_knight_moves(bool IsWhite, int sq) {
+inline U64 Board::legal_knight_moves(bool IsWhite, __int8 sq) {
     if (_test_bit(pin_dg, sq) or _test_bit(pin_hv, sq)) {
         return 0ULL;
     }
@@ -1049,7 +1050,7 @@ inline U64 Board::legal_knight_moves(bool IsWhite, int sq) {
 }
 
 // legal bishop moves
-inline U64 Board::legal_bishop_moves(bool IsWhite, int sq) {
+inline U64 Board::legal_bishop_moves(bool IsWhite, __int8 sq) {
     if (_test_bit(pin_dg, sq)) {
         return seen_by_bishop(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_dg;
     }
@@ -1061,7 +1062,7 @@ inline U64 Board::legal_bishop_moves(bool IsWhite, int sq) {
 }
 
 // legal rook moves
-inline U64 Board::legal_rook_moves(bool IsWhite, int sq) {
+inline U64 Board::legal_rook_moves(bool IsWhite, __int8 sq) {
     if (_test_bit(pin_hv, sq)) {
         return seen_by_rook(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_hv;
     }
@@ -1072,12 +1073,12 @@ inline U64 Board::legal_rook_moves(bool IsWhite, int sq) {
 }
 
 // legal queen moves
-inline U64 Board::legal_queen_moves(bool IsWhite, int sq) {
+inline U64 Board::legal_queen_moves(bool IsWhite, __int8 sq) {
     return legal_rook_moves(IsWhite, sq) | legal_bishop_moves(IsWhite, sq);
 }
 
 // legal king moves
-inline U64 Board::legal_king_moves(bool IsWhite, int sq) {
+inline U64 Board::legal_king_moves(bool IsWhite, __int8 sq) {
     U64 moves = seen_by_king(sq) & EnemyOrEmpty(IsWhite);
     U64 final_moves = 0ULL;
     int to_index;
@@ -1154,7 +1155,7 @@ inline U64 Board::legal_king_moves(bool IsWhite, int sq) {
 }
 
 // detects if the square is attacked
-inline bool Board::is_square_attacked(bool IsWhite, int sq) {
+inline bool Board::is_square_attacked(bool IsWhite, __int8 sq) {
     U64 us = IsWhite ? White : Black;
     U64 enemy = IsWhite ? Black : White;
     unsigned long index = 0;
@@ -1367,7 +1368,7 @@ inline void Board::create_pin_masks(bool IsWhite) {
 }
 
 // creates the checkmask
-U64 Board::create_checkmask(bool IsWhite, int sq) {
+U64 Board::create_checkmask(bool IsWhite, __int8 sq) {
     U64 us = IsWhite ? White : Black;
     U64 enemy = IsWhite ? Black : White;
     U64 checks = 0ULL;
@@ -1573,7 +1574,7 @@ U64 Board::create_checkmask(bool IsWhite, int sq) {
 }
 
 // checks if removing the piece at square would be an attack on our king
-U64 Board::would_be_attack(bool IsWhite, int sq) {
+U64 Board::would_be_attack(bool IsWhite, __int8 sq) {
     U64 us = IsWhite ? White : Black;
     U64 enemy = IsWhite ? Black : White;
     U64 checks = 0ULL;
@@ -1617,7 +1618,7 @@ U64 Board::would_be_attack(bool IsWhite, int sq) {
 }
 
 // detects if the piece is pinned horizontal or vertical
-U64 Board::is_pinned_hv(bool IsWhite, int sq) {
+U64 Board::is_pinned_hv(bool IsWhite, __int8 sq) {
     U64 enemy;
     U64 us;
     enemy = IsWhite ? Black : White;
@@ -1691,7 +1692,7 @@ U64 Board::is_pinned_hv(bool IsWhite, int sq) {
 }
 
 // detects if the piece is pinned diagonal
-U64 Board::is_pinned_dg(bool IsWhite, int sq) {
+U64 Board::is_pinned_dg(bool IsWhite, __int8 sq) {
     U64 enemy;
     U64 us;
     if (IsWhite) {
@@ -1820,17 +1821,10 @@ void Board::make_move(Move& move) {
         piece = piece + (side_to_move * 6);
     }
 
-    int captured_piece = -1;
+    __int8 captured_piece = -1;
     bool IsWhite = side_to_move ? 0 : 1;
     bool enemy = side_to_move ^ 1;
 
-    if (move.null == 1) {
-        side_to_move ^= 1;
-        board_hash ^= RANDOM_ARRAY[780];
-        add_repetition(board_hash);
-        full_moves++;
-        return;
-    }
     // piece needs to be set at its bitboard remove this for performance if you are 100% theres a piece at that square
     if (not _test_bit(bitboards[piece], to_square)) {
         save_board_state();
@@ -2114,6 +2108,7 @@ void Board::unmake_move() {
 MoveList Board::generate_legal_moves() {
     Move move;
     MoveList possible_moves{};
+    possible_moves.size = 0;
     int from_index = 0;
     int enemy = side_to_move ^ 1;
     U64 we = side_to_move ? Black : White;
@@ -2127,7 +2122,7 @@ MoveList Board::generate_legal_moves() {
     int king_sq = _bitscanforward(king_mask);
     init(IsWhite);
     U64 move_mask = 0ULL;
-    possible_moves.size = 0;
+    
     if (doublecheck < 2) {
         while (pawn_mask) {
             from_index = _bitscanforward(pawn_mask);

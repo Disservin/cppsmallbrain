@@ -18,4 +18,4 @@ thread_manager.o: thread_manager.cpp thread_manager.h
 	g++ -c -flto -O3 -march=native -std=c++17 -static-libgcc -static-libstdc++ -static -lpthread thread_manager.cpp
 
 clean:
-	rm *.o output
+	rm *.o smallbrain
