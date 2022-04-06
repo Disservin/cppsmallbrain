@@ -19,7 +19,10 @@ public:
 	U64 nodes = 0;
 	Move bestmove;
 	int time_given = -1;
-	int limit_time = false;
+	bool limit_time = false;
+	int history_table[2][64][64] = { {0},{0} };
+	__int8 heighest_depth = 0;
+	
 	enum {
 		UPPERBOUND, LOWERBOUND, EXACT
 	};
@@ -38,7 +41,7 @@ public:
 
 	int iterative_search(int search_depth, int bench = 0);
 	
-	int aspiration_search(int player, unsigned __int8 depth, int prev_eval);
+	int aspiration_search(int player, int depth, int prev_eval);
 	
 	int qsearch(int alpha, int beta, int player, unsigned __int8 depth, int ply);
 

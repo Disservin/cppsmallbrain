@@ -201,12 +201,15 @@ std::string Board::get_fen() {
         fen += "k";
     if (castling_rights & 8)
         fen += "q";
-    fen += " - ";
+    if (en_passant_square == no_sq)
+        fen += " - ";
+    else
+        fen += " "+ square_to_coordinates[en_passant_square] + " ";
+	
     fen += std::to_string(half_moves);
     fen += " " + std::to_string(full_moves / 2);
     return fen;
 }
-
 
 // prints a U64 in bitboard representation
 void Board::print_bitboard(std::bitset<64> bits) {

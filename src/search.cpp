@@ -10,9 +10,6 @@
 extern TEntry* TTable;
 extern U64 tt_size;
 
-int history_table[2][64][64] = { {0},{0} };
-int heighest_depth = 0;
-
 bool Searcher::can_exit_early() {
 	if (stopped) return true;
 	if (nodes & 1023 and limit_time) {
@@ -50,7 +47,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		for (int depth = 1; depth <= 7; depth++) {
 			result = aspiration_search(player, depth, result);
 			nodes_searched += nodes;
-			std::cout << "info depth " << depth << " seldepth " << heighest_depth <<" score cp " << result << " nodes " << nodes << std::endl;
+			std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
 		}
 		std::cout << ""<< std::endl;
 		board->apply_fen("8/8/8/8/p1b2k2/8/1P3K2/8 w - - 4 70");
@@ -60,7 +57,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		for (int depth = 1; depth <= 7; depth++) {
 			result = aspiration_search(player, depth, result);
 			nodes_searched += nodes;
-			std::cout << "info depth " << depth << " seldepth " << heighest_depth << " score cp " << result << " nodes " << nodes << std::endl;
+			std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
 		}
 		std::cout << "" << std::endl;
 		board->apply_fen("6k1/3qb1p1/4p3/2ppB1p1/1p3pQ1/3P4/rPR3PP/r1R2K2 w - - 6 28");
@@ -70,7 +67,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		for (int depth = 1; depth <= 7; depth++) {
 			result = aspiration_search(player, depth, result);
 			nodes_searched += nodes;
-			std::cout << "info depth " << depth << " seldepth " << heighest_depth << " score cp " << result << " nodes " << nodes << std::endl;
+			std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
 		}
 		std::cout << "" << std::endl;
 		board->apply_fen("r2qk2r/1bppbppp/p1n2n2/1p2p3/4P3/1B1P1N2/PPP2PPP/RNBQ1RK1 w kq - 2 8");
@@ -80,12 +77,12 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		for (int depth = 1; depth <= 7; depth++) {
 			result = aspiration_search(player, depth, result);
 			nodes_searched += nodes;
-			std::cout << "info depth " << depth << " seldepth " << heighest_depth << " score cp " << result << " nodes " << nodes << std::endl;
+			std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
 		}
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 		std::cout << "\n---------------------------" << std::endl;
-		std::cout << nodes_searched << " nodes " << static_cast<int>(nodes_searched / ((time_diff / static_cast<double>(1000)) + 0.01)) << " nps" << std::endl;
+		std::cout << unsigned(nodes_searched) << " nodes " << unsigned(static_cast<int>(nodes_searched / ((time_diff / static_cast<double>(1000)) + 0.01))) << " nps" << std::endl;
 		return 0;
 	}
 	for (int depth = 1; depth <= search_depth; depth++) {
@@ -106,7 +103,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		}
 		else {
 			last_pv = get_pv_line();
-			std::cout << std::fixed << "info depth " << depth << " seldepth " << heighest_depth << " score cp " << result << " nodes " << nodes << " nps " << static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01)) << " time " << time_diff << " pv " << get_pv_line() << std::endl;
+			std::cout << std::fixed << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << " nps " << unsigned(static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01))) << " time " << unsigned(time_diff) << " pv " << get_pv_line() << std::endl;
 		}
 	}	
 	std::vector<std::string> param = split_input(last_pv);
@@ -115,7 +112,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	return 0;
 }
 
-int Searcher::aspiration_search(int player, unsigned __int8 depth, int prev_eval) {
+int Searcher::aspiration_search(int player, int depth, int prev_eval) {
 	unsigned __int8 ply = 0;
 	int result = 0;
 	int alpha = -INFINITE;
