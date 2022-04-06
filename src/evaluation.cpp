@@ -106,6 +106,7 @@ int evaluation() {
 
 	while (pieces_white) {
 		int square = pop_lsb(&pieces_white);
+		//std::cout << square << std::endl;
 		int piece = board->piece_at_square(square);
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];

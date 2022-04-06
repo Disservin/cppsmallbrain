@@ -159,11 +159,12 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	MoveList n_moves = board->generate_legal_moves();
 	int count = n_moves.size;
 	current_ply = ply;
-	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return mmlva(m1) > mmlva(m2); });
+	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const std::uint_least16_t& m1, const std::uint_least16_t& m2) {return mmlva(m1) > mmlva(m2); });
 
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
-		Move move = n_moves.movelist[i];
+		//Move move = n_moves.movelist[i];
+		auto move = unpack_move(n_moves.movelist[i]);
 		if (board->piece_at(move.to_square) != -1 or move.promotion != -1 or (move.piece == board->PAWN and (move.to_square == 7 or move.to_square == 0))) {
 			board->make_move(move);
 			int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
@@ -226,7 +227,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		}
 		else {
 			nodes++;
-			return qsearch(alpha, beta, player, 10, ply);
+			return evaluation() * player;
+			//return qsearch(alpha, beta, player, 10, ply);
 		}
 	}
 	if (ply > heighest_depth)
@@ -254,7 +256,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	current_ply = ply;
 
 	// Move ordering
-	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
+	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const std::uint_least16_t& m1, const std::uint_least16_t& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
 	
 	bool inCheck = board->checkmask == 18446744073709551615ULL ? false : true; 
 	
@@ -296,7 +298,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	uint8_t tried_moves = 0;
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
-		Move move = n_moves.movelist[i];
+		//Move move = n_moves.movelist[i];
+		auto move = unpack_move(n_moves.movelist[i]);
 		
 		// Passed pawn extension
 		int new_depth = depth - 1;
@@ -378,32 +381,33 @@ std::string Searcher::get_pv_line() {
 	return output;
 }
 
-int Searcher::score_move(Move move, bool u_move) {
+int Searcher::score_move(std::uint_least16_t move, bool u_move) {
 	int IsWhite = board->side_to_move ? 0 : 1;
+	Move m = unpack_move(move);
 	if (is_pv_move(move, current_ply)) {
 		return 10000;
 	}
-	else if (u_move && TTable[board->board_hash % tt_size].move.piece == move.piece &&
-		TTable[board->board_hash % tt_size].move.from_square == move.from_square &&
-		TTable[board->board_hash % tt_size].move.to_square == move.to_square &&
-		TTable[board->board_hash % tt_size].move.promotion == move.promotion) {
+	else if (u_move && TTable[board->board_hash % tt_size].move.piece == m.piece &&
+		TTable[board->board_hash % tt_size].move.from_square == m.from_square &&
+		TTable[board->board_hash % tt_size].move.to_square == m.to_square &&
+		TTable[board->board_hash % tt_size].move.promotion == m.promotion) {
 		return 5000;
 	}
-	else if (move.promotion != -1) {
+	else if (m.promotion != -1) {
 		return 700;
 	}
-	else if (board->piece_at_square(move.to_square) != -1) {
+	else if (board->piece_at_square(m.to_square) != -1) {
 		return mmlva(move);
 	}
-	else if (history_table[IsWhite][move.from_square][move.to_square]) {
-		return history_table[IsWhite][move.from_square][move.to_square];
+	else if (history_table[IsWhite][m.from_square][m.to_square]) {
+		return history_table[IsWhite][m.from_square][m.to_square];
 	}
 	else {
 		return 0;
 	}
 }
 
-int Searcher::mmlva(Move move) {
+int Searcher::mmlva(std::uint_least16_t move) {
 	static constexpr int mvvlva[7][7] = { {0, 0, 0, 0, 0, 0, 0},
 	{0, 105, 104, 103, 102, 101, 100},
 	{0, 205, 204, 203, 202, 201, 200},
@@ -411,17 +415,19 @@ int Searcher::mmlva(Move move) {
 	{0, 405, 404, 403, 402, 401, 400},
 	{0, 505, 504, 503, 502, 501, 500},
 	{0, 605, 604, 603, 602, 601, 600} };
-	int attacker = board->piece_type_at(move.from_square) + 1;
-	int victim = board->piece_type_at(move.to_square) + 1;
+	Move m = unpack_move(move);
+	int attacker = board->piece_type_at(m.from_square) + 1;
+	int victim = board->piece_type_at(m.to_square) + 1;
 	if (victim == -1) {
 		victim = 0;
 	}
 	return mvvlva[victim][attacker];
 }
 
-bool Searcher::is_pv_move(Move move, int ply) {
-	return pv_table[0][ply].from_square == move.from_square && pv_table[0][ply].to_square == move.to_square &&
-		pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion;
+bool Searcher::is_pv_move(std::uint_least16_t move, int ply) {
+	Move m = unpack_move(move);
+	return pv_table[0][ply].from_square == m.from_square && pv_table[0][ply].to_square == m.to_square &&
+		pv_table[0][ply].piece == m.piece && pv_table[0][ply].promotion == m.promotion;
 }
 
 std::string Searcher::get_bestmove() {

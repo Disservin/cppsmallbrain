@@ -24,7 +24,7 @@ struct MA {
 };
 
 struct MoveList {
-    Move movelist[255];
+    std::uint_least16_t movelist[255];
     uint8_t size = 0;
 };
 
@@ -325,3 +325,9 @@ public:
 
     void test();
 };
+
+/*constexpr*/
+std::uint_least16_t pack_move(const Move m);
+
+/*constexpr*/
+Move unpack_move(const std::uint_least16_t bits);

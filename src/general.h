@@ -16,11 +16,19 @@ enum Score {
     INFINITE = MATE + 1,
 };
 
-struct Move {
-    int8_t  piece = -1;
-    int8_t  from_square = -1;
-    int8_t  to_square = -1;
-    int8_t  promotion = -1;
+//struct Move {
+//    int8_t   piece = 0;
+//    int8_t   from_square = 0;
+//    int8_t   to_square = 0;
+//    int8_t   promotion = -1;
+//};
+
+struct Move
+{
+    int piece{};
+    int from_square{};
+    int to_square{};
+    int promotion{};
 };
 
 //Gets the file index of the square where 0 is the a-file

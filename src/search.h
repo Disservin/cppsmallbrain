@@ -53,9 +53,9 @@ public:
 
 	std::string print_move(Move move);
 
-	int score_move(Move move, bool u_move);
+	int score_move(std::uint_least16_t move, bool u_move);
 
-	int mmlva(Move move);
+	int mmlva(std::uint_least16_t move);
 
-	bool is_pv_move(Move move, int ply);
+	bool is_pv_move(std::uint_least16_t move, int ply);
 };

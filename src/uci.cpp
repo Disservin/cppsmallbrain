@@ -189,7 +189,8 @@ int main(int argc, char** argv) {
 			MoveList n_moves = board->generate_capture_moves();
 			int count = n_moves.size;
 			for (int i = 0; i < count; i++) {
-				Move move = n_moves.movelist[i];
+				//Move move = n_moves.movelist[i];
+				auto move = unpack_move(n_moves.movelist[i]);
 				std::cout << print_move(move) << std::endl;
 			}
 			std::cout << "count " << unsigned(n_moves.size) << std::endl;
@@ -198,7 +199,8 @@ int main(int argc, char** argv) {
 			MoveList n_moves = board->generate_legal_moves();
 			int count = n_moves.size;
 			for (int i = 0; i < count; i++) {
-				Move move = n_moves.movelist[i];
+				//Move move = n_moves.movelist[i];
+				auto move = unpack_move(n_moves.movelist[i]);
 				std::cout << print_move(move) << std::endl;
 			}
 			std::cout << "count " << unsigned(n_moves.size) << std::endl;

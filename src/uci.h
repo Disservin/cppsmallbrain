@@ -56,10 +56,6 @@ Move convert_uci_to_Move(std::string input) {
     }
     else {
         std::cout << "FALSE INPUT" << std::endl;
-        move.to_square = -1;
-        move.from_square = -1;
-        move.piece = -1;
-        move.promotion = -1;
         return move;
     }
 }
