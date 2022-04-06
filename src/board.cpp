@@ -308,7 +308,7 @@ bool Board::is_stalemate(bool IsWhite) {
     U64 move_mask = 0ULL;
     //Easiest to look up
     while (knight_mask) {
-        from_index = pop_lsb(&knight_mask);
+        from_index = pop_lsb(knight_mask);
         move_mask = legal_knight_moves(IsWhite, from_index);
         if (move_mask) {
             return false;
@@ -316,7 +316,7 @@ bool Board::is_stalemate(bool IsWhite) {
     }
     //Highest probabilty that any of these can move
     while (pawn_mask) {
-        from_index = pop_lsb(&pawn_mask);
+        from_index = pop_lsb(pawn_mask);
         move_mask = legal_pawn_moves(IsWhite, from_index, en_passant_square);
         if (move_mask) {
             return false;
@@ -324,7 +324,7 @@ bool Board::is_stalemate(bool IsWhite) {
         //pawn_mask = _blsr_u64(pawn_mask);
     }
     while (bishop_mask) {
-        from_index = pop_lsb(&bishop_mask);
+        from_index = pop_lsb(bishop_mask);
         move_mask = legal_bishop_moves(IsWhite, from_index);
         if (move_mask) {
             return false;
@@ -332,7 +332,7 @@ bool Board::is_stalemate(bool IsWhite) {
         //bishop_mask = _blsr_u64(bishop_mask);
     }
     while (rook_mask) {
-        from_index = pop_lsb(&rook_mask);
+        from_index = pop_lsb(rook_mask);
         move_mask = legal_rook_moves(IsWhite, from_index);
         if (move_mask) {
             return false;
@@ -340,7 +340,7 @@ bool Board::is_stalemate(bool IsWhite) {
         //rook_mask = _blsr_u64(rook_mask);
     }
     while (queen_mask) {
-        from_index = pop_lsb(&queen_mask);
+        from_index = pop_lsb(queen_mask);
         move_mask = legal_queen_moves(IsWhite, from_index);
         if (move_mask) {
             return false;
@@ -373,7 +373,7 @@ U64 Board::generate_zobrist_hash() {
             piece = piece * 2 + 1;
             hash ^= RANDOM_ARRAY[64 * piece + sq];
         }
-        pop_lsb(&white);
+        pop_lsb(white);
         //white = _blsr_u64(white);
     }
     while (black) {
@@ -383,7 +383,7 @@ U64 Board::generate_zobrist_hash() {
             piece = piece * 2;
             hash ^= RANDOM_ARRAY[64 * piece + sq];
         }
-        pop_lsb(&black);
+        pop_lsb(black);
         //black = _blsr_u64(black);
     }
 
@@ -2131,7 +2131,7 @@ MoveList Board::generate_legal_moves() {
             from_index = _bitscanforward(pawn_mask);
             move_mask = legal_pawn_moves(IsWhite, from_index, en_passant_square);
             while (move_mask) {
-                int to_index = pop_lsb(&move_mask);
+                int to_index = pop_lsb(move_mask);
                 move.piece = PAWN;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -2156,13 +2156,13 @@ MoveList Board::generate_legal_moves() {
                     possible_moves.size++;
                 }
             }
-            pop_lsb(&pawn_mask);
+            pop_lsb(pawn_mask);
         }
         while (knight_mask) {
             from_index = _bitscanforward(knight_mask);
             move_mask = legal_knight_moves(IsWhite, from_index);
             while (move_mask) {
-                int to_index = pop_lsb(&move_mask);
+                int to_index = pop_lsb(move_mask);
                 move.piece = KNIGHT;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -2170,13 +2170,13 @@ MoveList Board::generate_legal_moves() {
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
-            pop_lsb(&knight_mask);
+            pop_lsb(knight_mask);
         }
         while (bishop_mask) {
             from_index = _bitscanforward(bishop_mask);
             move_mask = legal_bishop_moves(IsWhite, from_index);
             while (move_mask) {
-                int to_index = pop_lsb(&move_mask);
+                int to_index = pop_lsb(move_mask);
                 move.piece = BISHOP;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -2184,13 +2184,13 @@ MoveList Board::generate_legal_moves() {
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
-            pop_lsb(&bishop_mask);
+            pop_lsb(bishop_mask);
         }
         while (rook_mask) {
             from_index = _bitscanforward(rook_mask);
             move_mask = legal_rook_moves(IsWhite, from_index);
             while (move_mask) {
-                int to_index = pop_lsb(&move_mask);
+                int to_index = pop_lsb(move_mask);
                 move.piece = ROOK;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -2198,13 +2198,13 @@ MoveList Board::generate_legal_moves() {
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
-            pop_lsb(&rook_mask);
+            pop_lsb(rook_mask);
         }
         while (queen_mask) {
             from_index = _bitscanforward(queen_mask);
             move_mask = legal_queen_moves(IsWhite, from_index);
             while (move_mask) {
-                int to_index = pop_lsb(&move_mask);
+                int to_index = pop_lsb(move_mask);
                 move.piece = QUEEN;
                 move.from_square = from_index;
                 move.to_square = to_index;
@@ -2212,13 +2212,13 @@ MoveList Board::generate_legal_moves() {
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
-            pop_lsb(&queen_mask);
+            pop_lsb(queen_mask);
         }
     }
 
     move_mask = legal_king_moves(IsWhite, king_sq);
     while (move_mask) {
-        int to_index = pop_lsb(&move_mask);
+        int to_index = pop_lsb(move_mask);
         move.piece = KING;
         move.from_square = king_sq;
         move.to_square = to_index;
@@ -2231,12 +2231,13 @@ MoveList Board::generate_legal_moves() {
 }
 
 MoveList Board::generate_capture_moves() {
-    MoveList possible_moves;
     Move move;
-    memset(possible_moves.movelist, 0, sizeof(possible_moves.movelist));
+    MoveList possible_moves{};
+    possible_moves.size = 0;
+
+    int enemy = side_to_move ^ 1;
     U64 we = side_to_move ? Black : White;
-    int enemy = side_to_move ? 1 : 0;
-    bool IsWhite = side_to_move ? 0 : 1;
+    bool IsWhite = side_to_move ? false : true;
 
     U64 pawn_mask = (bitboards[BPAWN] | bitboards[WPAWN]) & we;
     U64 knight_mask = (bitboards[BKNIGHT] | bitboards[WKNIGHT]) & we;
@@ -2246,25 +2247,24 @@ MoveList Board::generate_capture_moves() {
     U64 king_mask = (bitboards[BKING] | bitboards[WKING]) & we;
     int king_sq = _bitscanforward(king_mask);
     init(IsWhite);
-    create_pin_masks(IsWhite);
-    int from_square = -1;
-    int to_square = -1;
+    bool inCheck = checkmask == 18446744073709551615ULL ? false : true;
     U64 move_mask = 0ULL;
-    possible_moves.size = 0;
-    bool in_check = is_square_attacked(IsWhite, king_sq);
-    if (possible_moves.size < 0) {
-        return {};
-    }
-    while (pawn_mask) {
-        from_square = _bitscanforward(pawn_mask);
-        move_mask = legal_pawn_moves(IsWhite, from_square, en_passant_square);
-        while (move_mask) {
-            to_square = pop_lsb(&move_mask);
-            move.piece = PAWN;
-            move.from_square = from_square;
-            move.to_square = to_square;
-            if (piece_at_square(to_square) != -1 or square_rank(to_square) == 7 or square_rank(to_square) == 0 or in_check) {
-                if (square_rank(to_square) == 7 or square_rank(to_square) == 0) {
+
+    if (doublecheck < 2) {
+        while (pawn_mask) {
+            int from_index = _bitscanforward(pawn_mask);
+            U64 all_moves = legal_pawn_moves(IsWhite, from_index, en_passant_square);
+            move_mask = inCheck ? all_moves : all_moves & (Enemy(IsWhite) | rank_8_mask);
+            while (move_mask) {
+                int to_index = pop_lsb(move_mask);
+                move.piece = PAWN;
+                move.from_square = from_index;
+                move.to_square = to_index;
+                if (to_index == en_passant_square) {
+                    continue;
+                }
+                move.promotion = -1;
+                if (square_rank(to_index) == 7 or square_rank(to_index) == 0) {
                     move.promotion = QUEEN;
                     possible_moves.movelist[possible_moves.size] = move;
                     possible_moves.size++;
@@ -2284,88 +2284,80 @@ MoveList Board::generate_capture_moves() {
                     possible_moves.size++;
                 }
             }
+            pop_lsb(pawn_mask);
         }
-        pop_lsb(&pawn_mask);
-    }
-    while (knight_mask) {
-        from_square = _bitscanforward(knight_mask);
-        move_mask = legal_knight_moves(IsWhite, from_square);
-        while (move_mask) {
-            to_square = pop_lsb(&move_mask);
-            move.piece = KNIGHT;
-            move.from_square = from_square;
-            move.to_square = to_square;
-            if (piece_at_square(to_square) != -1 or in_check) {
+        while (knight_mask) {
+            int from_index = _bitscanforward(knight_mask);
+            U64 all_moves = legal_knight_moves(IsWhite, from_index);
+            move_mask = inCheck ? all_moves : all_moves & Enemy(IsWhite);
+            while (move_mask) {
+                int to_index = pop_lsb(move_mask);
+                move.piece = KNIGHT;
+                move.from_square = from_index;
+                move.to_square = to_index;
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
+            pop_lsb(knight_mask);
         }
-        pop_lsb(&knight_mask);
-    }
-    while (bishop_mask) {
-        from_square = _bitscanforward(bishop_mask);
-        move_mask = legal_knight_moves(IsWhite, from_square);
-        while (move_mask) {
-            to_square = pop_lsb(&move_mask);
-            move.piece = BISHOP;
-            move.from_square = from_square;
-            move.to_square = to_square;
-            if (piece_at_square(to_square) != -1 or in_check) {
+        while (bishop_mask) {
+            int from_index = _bitscanforward(bishop_mask);
+            U64 all_moves = legal_bishop_moves(IsWhite, from_index);
+            move_mask = inCheck ? all_moves : all_moves & Enemy(IsWhite);
+            while (move_mask) {
+                int to_index = pop_lsb(move_mask);
+                move.piece = BISHOP;
+                move.from_square = from_index;
+                move.to_square = to_index;
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
+            pop_lsb(bishop_mask);
         }
-        pop_lsb(&bishop_mask);
-    }
-    while (rook_mask) {
-        from_square = _bitscanforward(rook_mask);
-        move_mask = legal_knight_moves(IsWhite, from_square);
-        while (move_mask) {
-            to_square = pop_lsb(&move_mask);
-            move.piece = ROOK;
-            move.from_square = from_square;
-            move.to_square = to_square;
-            if (piece_at_square(to_square) != -1 or in_check) {
+        while (rook_mask) {
+            int from_index = _bitscanforward(rook_mask);
+            U64 all_moves = legal_rook_moves(IsWhite, from_index);
+            move_mask = inCheck ? all_moves : all_moves & Enemy(IsWhite);
+            while (move_mask) {
+                int to_index = pop_lsb(move_mask);
+                move.piece = ROOK;
+                move.from_square = from_index;
+                move.to_square = to_index;
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
+            pop_lsb(rook_mask);
         }
-        pop_lsb(&rook_mask);
-    }
-    while (queen_mask) {
-        from_square = _bitscanforward(queen_mask);
-        move_mask = legal_knight_moves(IsWhite, from_square);
-        while (move_mask) {
-            to_square = pop_lsb(&move_mask);
-            move.piece = QUEEN;
-            move.from_square = from_square;
-            move.to_square = to_square;
-            if (piece_at_square(to_square) != -1 or in_check) {
+        while (queen_mask) {
+            int from_index = _bitscanforward(queen_mask);
+            U64 all_moves = legal_queen_moves(IsWhite, from_index);
+            move_mask = inCheck ? all_moves : all_moves & Enemy(IsWhite);
+            while (move_mask) {
+                int to_index = pop_lsb(move_mask);
+                move.piece = QUEEN;
+                move.from_square = from_index;
+                move.to_square = to_index;
                 move.promotion = -1;
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
+            pop_lsb(queen_mask);
         }
-        pop_lsb(&queen_mask);
     }
-    while (king_mask) {
-        from_square = _bitscanforward(king_mask);
-        move_mask = legal_knight_moves(IsWhite, from_square);
-        while (move_mask) {
-            to_square = pop_lsb(&move_mask);
-            move.piece = KING;
-            move.from_square = from_square;
-            move.to_square = to_square;
-            if (piece_at_square(to_square) != -1 or in_check) {
-                move.promotion = -1;
-                possible_moves.movelist[possible_moves.size] = move;
-                possible_moves.size++;
-            }
-        }
-        pop_lsb(&king_mask);
+
+    U64 all_moves = legal_king_moves(IsWhite, king_sq);
+    move_mask = inCheck ? all_moves : all_moves & Enemy(IsWhite);
+    while (move_mask) {
+        int to_index = pop_lsb(move_mask);
+        move.piece = KING;
+        move.from_square = king_sq;
+        move.to_square = to_index;
+        move.promotion = -1;
+        possible_moves.movelist[possible_moves.size] = move;
+        possible_moves.size++;
     }
     return possible_moves;
 }

@@ -156,7 +156,7 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	}
 	if (depth == 0) return alpha;
 
-	MoveList n_moves = board->generate_legal_moves();
+	MoveList n_moves = board->generate_capture_moves();
 	int count = n_moves.size;
 	current_ply = ply;
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return mmlva(m1) > mmlva(m2); });
@@ -164,16 +164,14 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
-		if (board->piece_at(move.to_square) != -1 or move.promotion != -1 or (move.piece == board->PAWN and (move.to_square == 7 or move.to_square == 0))) {
-			board->make_move(move);
-			int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
-			board->unmake_move();
-			if (score > stand_pat) {
-				stand_pat = score;
-				if (score > alpha) {
-					alpha = score;
-					if (score >= beta) break;
-				}
+		board->make_move(move);
+		int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
+		board->unmake_move();
+		if (score > stand_pat) {
+			stand_pat = score;
+			if (score > alpha) {
+				alpha = score;
+				if (score >= beta) break;
 			}
 		}
 	}
