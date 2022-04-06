@@ -444,12 +444,12 @@ inline void Board::update_occupancies() {
 }
 
 // returns color specific int for piece without complex computation
-__int8 Board::piece_at_square(__int8 sq) {
+int8_t Board::piece_at_square(int8_t sq) {
     return board_pieces[sq];
 }
 
 // returns color specific int for piece
-__int8 Board::piece_at(__int8 sq, int given) {
+int8_t Board::piece_at(int8_t sq, int given) {
     bool white = false;
     if (given > -1) {
         white = given;
@@ -504,7 +504,7 @@ __int8 Board::piece_at(__int8 sq, int given) {
 }
 
 // returns int for piece
-__int8 Board::piece_type_at(__int8 sq) {
+int8_t Board::piece_type_at(int8_t sq) {
     U64 pawns = bitboards[WPAWN] | bitboards[BPAWN];
     U64 knights = bitboards[WKNIGHT] | bitboards[BKNIGHT];
     U64 bishops = bitboards[WBISHOP] | bitboards[BBISHOP];
@@ -533,7 +533,7 @@ __int8 Board::piece_type_at(__int8 sq) {
     return -1;
 }
 
-__int8 Board::piece_to_piece_type(__int8 piece) {
+int8_t Board::piece_to_piece_type(int8_t piece) {
 	switch (piece) {
 	case WPAWN:
 		return 0;
@@ -564,7 +564,7 @@ __int8 Board::piece_to_piece_type(__int8 piece) {
 	}
 }
 // converts int to string
-std::string Board::piece_type(__int8 piece) {
+std::string Board::piece_type(int8_t piece) {
     if (piece == -1) {
         return "-";
     }
@@ -742,7 +742,7 @@ U64 Board::Queens(bool IsWhite)
 }
 
 // squares seen by a pawn
-U64 Board::seen_by_pawn(bool IsWhite, __int8 sq, unsigned __int8 ep) {
+U64 Board::seen_by_pawn(bool IsWhite, int8_t sq, uint8_t ep) {
     U64 ep_m = (1ULL << ep);
     U64 new_mask = 0ULL;
     U64 mask = (1ULL << sq);
@@ -791,7 +791,7 @@ U64 Board::seen_by_pawn(bool IsWhite, __int8 sq, unsigned __int8 ep) {
 }
 
 // squares seen by a bishop
-inline U64 Board::seen_by_bishop(bool IsWhite, __int8 sq) {
+inline U64 Board::seen_by_bishop(bool IsWhite, int8_t sq) {
     U64 bishop_move = 0ULL;
     U64 victims = IsWhite ? Black : White;
     U64 blockers = IsWhite ? White : Black;
@@ -841,12 +841,12 @@ inline U64 Board::seen_by_bishop(bool IsWhite, __int8 sq) {
 }
 
 // squares seen by a knight
-inline U64 Board::seen_by_knight(__int8 sq) {
+inline U64 Board::seen_by_knight(int8_t sq) {
     return knightattacks[sq];
 }
 
 // squares seen by a rook
-inline U64 Board::seen_by_rook(bool IsWhite, __int8 sq) {
+inline U64 Board::seen_by_rook(bool IsWhite, int8_t sq) {
     U64 rook_move = 0ULL;
     U64 victims = IsWhite ? Black : White;
     U64 blockers = IsWhite ? White : Black;
@@ -899,7 +899,7 @@ inline U64 Board::seen_by_rook(bool IsWhite, __int8 sq) {
 }
 
 // squares seen by a king
-inline U64 Board::seen_by_king(__int8 sq) {
+inline U64 Board::seen_by_king(int8_t sq) {
     U64 king_move = 0ULL;
     king_move |= (1ULL << sq);
 
@@ -916,7 +916,7 @@ inline U64 Board::seen_by_king(__int8 sq) {
 }
 
 // legal pawn moves
-inline U64 Board::legal_pawn_moves(bool IsWhite, __int8 sq, unsigned __int8 ep) {
+inline U64 Board::legal_pawn_moves(bool IsWhite, int8_t sq, uint8_t ep) {
     U64 mask = 1ULL << sq;
     U64 attack_l = 0ULL;
     U64 attack_r = 0ULL;
@@ -1045,7 +1045,7 @@ inline U64 Board::legal_pawn_moves(bool IsWhite, __int8 sq, unsigned __int8 ep) 
 }
 
 // legal knight moves
-inline U64 Board::legal_knight_moves(bool IsWhite, __int8 sq) {
+inline U64 Board::legal_knight_moves(bool IsWhite, int8_t sq) {
     if (_test_bit(pin_dg, sq) or _test_bit(pin_hv, sq)) {
         return 0ULL;
     }
@@ -1053,7 +1053,7 @@ inline U64 Board::legal_knight_moves(bool IsWhite, __int8 sq) {
 }
 
 // legal bishop moves
-inline U64 Board::legal_bishop_moves(bool IsWhite, __int8 sq) {
+inline U64 Board::legal_bishop_moves(bool IsWhite, int8_t sq) {
     if (_test_bit(pin_dg, sq)) {
         return seen_by_bishop(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_dg;
     }
@@ -1065,7 +1065,7 @@ inline U64 Board::legal_bishop_moves(bool IsWhite, __int8 sq) {
 }
 
 // legal rook moves
-inline U64 Board::legal_rook_moves(bool IsWhite, __int8 sq) {
+inline U64 Board::legal_rook_moves(bool IsWhite, int8_t sq) {
     if (_test_bit(pin_hv, sq)) {
         return seen_by_rook(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_hv;
     }
@@ -1076,12 +1076,12 @@ inline U64 Board::legal_rook_moves(bool IsWhite, __int8 sq) {
 }
 
 // legal queen moves
-inline U64 Board::legal_queen_moves(bool IsWhite, __int8 sq) {
+inline U64 Board::legal_queen_moves(bool IsWhite, int8_t sq) {
     return legal_rook_moves(IsWhite, sq) | legal_bishop_moves(IsWhite, sq);
 }
 
 // legal king moves
-inline U64 Board::legal_king_moves(bool IsWhite, __int8 sq) {
+inline U64 Board::legal_king_moves(bool IsWhite, int8_t sq) {
     U64 moves = seen_by_king(sq) & EnemyOrEmpty(IsWhite);
     U64 final_moves = 0ULL;
     int to_index;
@@ -1158,7 +1158,7 @@ inline U64 Board::legal_king_moves(bool IsWhite, __int8 sq) {
 }
 
 // detects if the square is attacked
-inline bool Board::is_square_attacked(bool IsWhite, __int8 sq) {
+inline bool Board::is_square_attacked(bool IsWhite, int8_t sq) {
     U64 us = IsWhite ? White : Black;
     U64 enemy = IsWhite ? Black : White;
     unsigned long index = 0;
@@ -1371,7 +1371,7 @@ inline void Board::create_pin_masks(bool IsWhite) {
 }
 
 // creates the checkmask
-U64 Board::create_checkmask(bool IsWhite, __int8 sq) {
+U64 Board::create_checkmask(bool IsWhite, int8_t sq) {
     U64 us = IsWhite ? White : Black;
     U64 enemy = IsWhite ? Black : White;
     U64 checks = 0ULL;
@@ -1577,7 +1577,7 @@ U64 Board::create_checkmask(bool IsWhite, __int8 sq) {
 }
 
 // checks if removing the piece at square would be an attack on our king
-U64 Board::would_be_attack(bool IsWhite, __int8 sq) {
+U64 Board::would_be_attack(bool IsWhite, int8_t sq) {
     U64 us = IsWhite ? White : Black;
     U64 enemy = IsWhite ? Black : White;
     U64 checks = 0ULL;
@@ -1621,7 +1621,7 @@ U64 Board::would_be_attack(bool IsWhite, __int8 sq) {
 }
 
 // detects if the piece is pinned horizontal or vertical
-U64 Board::is_pinned_hv(bool IsWhite, __int8 sq) {
+U64 Board::is_pinned_hv(bool IsWhite, int8_t sq) {
     U64 enemy;
     U64 us;
     enemy = IsWhite ? Black : White;
@@ -1695,7 +1695,7 @@ U64 Board::is_pinned_hv(bool IsWhite, __int8 sq) {
 }
 
 // detects if the piece is pinned diagonal
-U64 Board::is_pinned_dg(bool IsWhite, __int8 sq) {
+U64 Board::is_pinned_dg(bool IsWhite, int8_t sq) {
     U64 enemy;
     U64 us;
     if (IsWhite) {
@@ -1824,7 +1824,7 @@ void Board::make_move(Move& move) {
         piece = piece + (side_to_move * 6);
     }
 
-    __int8 captured_piece = -1;
+    int8_t captured_piece = -1;
     bool IsWhite = side_to_move ? 0 : 1;
     bool enemy = side_to_move ^ 1;
 

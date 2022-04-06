@@ -11,17 +11,17 @@ extern std::atomic<bool> stopped;
 
 class Searcher {
 public: 
-	static const unsigned __int8 max_ply = 60;
-	unsigned __int8 pv_length[max_ply] = { 0 };
+	static const uint8_t max_ply = 60;
+	uint8_t pv_length[max_ply] = { 0 };
 	Move pv_table[max_ply][max_ply] = { };
-	unsigned __int8 current_ply = 0;
-	unsigned __int8 search_to_depth = 60;
+	uint8_t current_ply = 0;
+	uint8_t search_to_depth = 60;
 	U64 nodes = 0;
 	Move bestmove;
 	int time_given = -1;
 	bool limit_time = false;
 	int history_table[2][64][64] = { {0},{0} };
-	__int8 heighest_depth = 0;
+	int8_t heighest_depth = 0;
 	
 	enum {
 		UPPERBOUND, LOWERBOUND, EXACT
@@ -43,9 +43,9 @@ public:
 	
 	int aspiration_search(int player, int depth, int prev_eval);
 	
-	int qsearch(int alpha, int beta, int player, unsigned __int8 depth, int ply);
+	int qsearch(int alpha, int beta, int player, uint8_t depth, int ply);
 
-	int alpha_beta(int alpha, int beta, int player, bool root_node, unsigned __int8 depth, int ply, bool null);
+	int alpha_beta(int alpha, int beta, int player, bool root_node, uint8_t depth, int ply, bool null);
 		
 	std::string get_pv_line();
 

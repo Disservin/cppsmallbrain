@@ -4,6 +4,7 @@
 #include <string>
 #include <bitset>
 #include <intrin.h>
+#include <ostream>
 
 //#pragma intrinsic(_BitScanForward)
 //#pragma intrinsic(_BitScanReverse)
@@ -16,19 +17,27 @@ enum Score {
 };
 
 struct Move {
-    __int8 piece = -1;
-    __int8 from_square = -1;
-    __int8 to_square = -1;
-    __int8 promotion = -1;
+    int8_t  piece = -1;
+    int8_t  from_square = -1;
+    int8_t  to_square = -1;
+    int8_t  promotion = -1;
 };
 
+//struct Move
+//{
+//    int8_t from_square : 7 = -1;
+//    int8_t to_square : 7 = -1;
+//    int8_t piece : 4 = -1;
+//    int8_t promotion : 4 = -1;
+//};
+
 //Gets the file index of the square where 0 is the a-file
-inline __int8 square_file(__int8 sq) {
+inline int8_t square_file(int8_t sq) {
     return sq & 7;
 }
 
 //Gets the rank index of the square where 0 is the first rank."""
-inline __int8 square_rank(__int8 sq) {
+inline int8_t square_rank(int8_t sq) {
     return sq >> 3;
 }
 
@@ -66,13 +75,13 @@ inline int _bitscanforward(U64 b) {
 }
 
 #else
-inline __int8 _bitscanforward(U64 mask) {
+inline int8_t _bitscanforward(U64 mask) {
     unsigned long index;
     _BitScanForward64(&index, mask);
     return index;
 }
 
-inline __int8 _bitscanreverse(U64 mask) {
+inline int8_t _bitscanreverse(U64 mask) {
     unsigned long index;
     _BitScanReverse64(&index, mask);
     return index;
@@ -91,11 +100,11 @@ inline __int8 _bitscanreverse(U64 mask) {
 //
 //#endif
 //}
-inline __int8 popcount(U64 mask) {
+inline int8_t popcount(U64 mask) {
     return std::bitset<64>(mask).count();
 }	
-inline __int8 pop_lsb(U64* mask) {
-    const __int8 s = _bitscanforward(*mask);
+inline int8_t pop_lsb(U64* mask) {
+    const int8_t s = _bitscanforward(*mask);
     //*mask = _blsr_u64(*mask);
     *mask &= *mask - 1;
     return s;

@@ -81,6 +81,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		}
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+		std::cout << std::fixed << "time " << time_diff << std::endl;
 		std::cout << "\n---------------------------" << std::endl;
 		std::cout << unsigned(nodes_searched) << " nodes " << unsigned(static_cast<int>(nodes_searched / ((time_diff / static_cast<double>(1000)) + 0.01))) << " nps" << std::endl;
 		return 0;
@@ -113,7 +114,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 }
 
 int Searcher::aspiration_search(int player, int depth, int prev_eval) {
-	unsigned __int8 ply = 0;
+	uint8_t ply = 0;
 	int result = 0;
 	int alpha = -INFINITE;
 	int beta = INFINITE;
@@ -134,9 +135,9 @@ int Searcher::aspiration_search(int player, int depth, int prev_eval) {
 	return result;
 }
 
-int Searcher::qsearch(int alpha, int beta, int player, unsigned __int8 depth, int ply) {
+int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	bool IsWhite = board->side_to_move ? 0 : 1;
-	__int8 king_sq = _bitscanforward(board->King(IsWhite));
+	int8_t king_sq = _bitscanforward(board->King(IsWhite));
 	bool in_check = board->is_square_attacked(IsWhite, king_sq);
 	nodes++;
 	int stand_pat = 0;
@@ -179,7 +180,7 @@ int Searcher::qsearch(int alpha, int beta, int player, unsigned __int8 depth, in
 	return stand_pat;
 }
 
-int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, unsigned __int8 depth, int ply, bool null) {
+int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_t depth, int ply, bool null) {
 	bool Is_White = board->side_to_move ? 0 : 1;
 	int bestvalue = -INFINITE;
 	int old_alpha = alpha;
@@ -249,7 +250,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, unsign
 	}
 
 	MoveList n_moves = board->generate_legal_moves();
-	unsigned __int8 count = n_moves.size;
+	uint8_t count = n_moves.size;
 	current_ply = ply;
 
 	// Move ordering
@@ -292,7 +293,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, unsign
 		}
 	}
 	
-	unsigned __int8 tried_moves = 0;
+	uint8_t tried_moves = 0;
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
