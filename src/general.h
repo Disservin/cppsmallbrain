@@ -4,6 +4,7 @@
 #include <string>
 #include <bitset>
 #include <intrin.h>
+#include <ostream>
 
 //#pragma intrinsic(_BitScanForward)
 //#pragma intrinsic(_BitScanReverse)
@@ -16,20 +17,27 @@ enum Score {
 };
 
 struct Move {
-    int piece = -1;
-    int from_square = -1;
-    int to_square = -1;
-    int promotion = -1;
-    int null = 0;   // 1 == True 0 == False 
+    int8_t  piece = -1;
+    int8_t  from_square = -1;
+    int8_t  to_square = -1;
+    int8_t  promotion = -1;
 };
 
+//struct Move
+//{
+//    int8_t from_square : 7 = -1;
+//    int8_t to_square : 7 = -1;
+//    int8_t piece : 4 = -1;
+//    int8_t promotion : 4 = -1;
+//};
+
 //Gets the file index of the square where 0 is the a-file
-inline int square_file(int sq) {
+inline int8_t square_file(int8_t sq) {
     return sq & 7;
 }
 
 //Gets the rank index of the square where 0 is the first rank."""
-inline int square_rank(int sq) {    
+inline int8_t square_rank(int8_t sq) {
     return sq >> 3;
 }
 
@@ -39,14 +47,14 @@ inline int square_distance(int a, int b) {
 
 inline bool get_square_color(int square) {
     if ((square % 8) % 2 == (square / 8) % 2) {
-        return 0;
+        return false;
     }
     else {
-        return 1;
+        return true;
     }
 }
 
-inline int _test_bit(U64 bit, int sq) {
+inline bool _test_bit(U64 bit, int sq) {
     __int64 test = bit;
     if (_bittest64(&test, sq)) {
         return true;
@@ -67,13 +75,13 @@ inline int _bitscanforward(U64 b) {
 }
 
 #else
-inline int _bitscanforward(U64 mask) {
+inline int8_t _bitscanforward(U64 mask) {
     unsigned long index;
     _BitScanForward64(&index, mask);
     return index;
 }
 
-inline int _bitscanreverse(U64 mask) {
+inline int8_t _bitscanreverse(U64 mask) {
     unsigned long index;
     _BitScanReverse64(&index, mask);
     return index;
@@ -92,11 +100,11 @@ inline int _bitscanreverse(U64 mask) {
 //
 //#endif
 //}
-inline int popcount(U64 mask) {
+inline int8_t popcount(U64 mask) {
     return std::bitset<64>(mask).count();
 }	
-inline int pop_lsb(U64* mask) {
-    const int s = _bitscanforward(*mask);
+inline int8_t pop_lsb(U64* mask) {
+    const int8_t s = _bitscanforward(*mask);
     //*mask = _blsr_u64(*mask);
     *mask &= *mask - 1;
     return s;

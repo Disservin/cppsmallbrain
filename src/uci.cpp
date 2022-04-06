@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
 			tt_size = elements;
 		}
 		if (input == "ucinewgame") {
-			memset(TTable, 0, tt_size * 48);
+			memset(TTable, 0, tt_size * sizeof(TEntry));
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 		}
 		if (input.find("quit") != std::string::npos) {
@@ -129,10 +129,10 @@ int main(int argc, char** argv) {
 			int depth = std::stoi(depth_str);
 			Perft perft(board);
 			auto begin = std::chrono::high_resolution_clock::now();
-			U64 result = perft.speed_test_perft(depth, depth);
+			U64 result = perft.bulk_test_perft(depth, depth);
 			auto end = std::chrono::high_resolution_clock::now();
 			auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-			std::cout << "startpos " << " nodes " << result << " nps " << result / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
+			std::cout << std::fixed << "startpos " << " nodes " << unsigned(result) << " nps " << unsigned(result / (time_diff / 1000000000.0f)) << " time " << unsigned(time_diff / 1000000000.0f) << " seconds" << std::endl;
 		}
 		if (input.find("test perft") != std::string::npos) {
 			std::cout << "\nTest started" << std::endl;
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
 			U64 x = perft.bulk_test_perft(depth, depth);
 			auto end = std::chrono::high_resolution_clock::now();
 			auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-			std::cout <<std::fixed<< "startpos " << " nodes " << x << " nps " << x / (time_diff / 1000000000.0f) << " time " << time_diff / 1000000000.0f << " seconds" << std::endl;
+			std::cout <<std::fixed<< "startpos " << " nodes " << unsigned(x) << " nps " << unsigned(x / (time_diff / 1000000000.0f)) << " time " << unsigned(time_diff / 1000000000.0f) << " seconds" << std::endl;
 		}
 		if (input.find("go depth") != std::string::npos and not thread_started) {
 			std::size_t start_index = input.find("depth");
@@ -175,10 +175,10 @@ int main(int argc, char** argv) {
 		if (input == "b") {
 			board->print_board();
 			std::cout << "fen:         " << board->get_fen() << std::endl;
-			std::cout << "eval:        " << evaluation() << std::endl;
+			std::cout << "eval:        " << signed(evaluation()) << std::endl;
 			MoveList moves = board->generate_legal_moves();
-			std::cout << "move count:  " << moves.size << std::endl;
-			std::cout << "zobrist key: " << board->board_hash << std::endl;
+			std::cout << "move count:  " << unsigned(moves.size) << std::endl;
+			std::cout << "zobrist key: " << unsigned(board->board_hash) << std::endl;
 			if (board->en_passant_square == 64)
 				std::cout << "en passant square: " << "-" << std::endl;
 			else {
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
 				Move move = n_moves.movelist[i];
 				std::cout << print_move(move) << std::endl;
 			}
-			std::cout << "count " << n_moves.size << std::endl;
+			std::cout << "count " << unsigned(n_moves.size) << std::endl;
 		}
 		if (input == "moves") {
 			MoveList n_moves = board->generate_legal_moves();
@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
 				Move move = n_moves.movelist[i];
 				std::cout << print_move(move) << std::endl;
 			}
-			std::cout << "count " << n_moves.size << std::endl;
+			std::cout << "count " << unsigned(n_moves.size) << std::endl;
 		}
 
 		if (input == "bench") {
@@ -220,7 +220,7 @@ std::string print_move(Move move) {
 		str_move = from + to;
 	}
 	else {
-		std::cout << from_index << " " << to_index;
+		std::cout << unsigned(from_index) << " " << unsigned(to_index);
 	}
 
 	std::string pieces[5] = {

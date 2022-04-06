@@ -24,8 +24,8 @@ struct MA {
 };
 
 struct MoveList {
-    Move movelist[256];
-    int size = 0;
+    Move movelist[255];
+    uint8_t size = 0;
 };
 
 struct BoardState {
@@ -41,11 +41,11 @@ struct BoardState {
     U64 brook;
     U64 bqueen;
     U64 bking;
-    int en_passant;
-    int castle_rights;
-    int piece_loc[64];
+    uint8_t en_passant;
+    uint8_t castle_rights;
+    int8_t piece_loc[64];
+    uint8_t half_move;
     U64 board_hash;
-    int half_move;
 };
 
 class Board
@@ -124,7 +124,7 @@ public:
     U64 Occ = White | Black;
 
     // 0 White 1 Black
-    int side_to_move = 0;
+    int8_t side_to_move = 0;
 
     /*
     1  white king can castle to the king side
@@ -133,16 +133,16 @@ public:
     8  black king can castle to the queen side
     */
     enum { wk = 1, wq = 2, bk = 4, bq = 8 };
-    int castling_rights = 0;
+    uint8_t castling_rights = 0;
 	
     //en passant square
-    int en_passant_square = no_sq;
+    uint8_t en_passant_square = no_sq;
 
     //half_moves
-    int half_moves = 0;
+    uint8_t half_moves = 0;
 
     //full_moves
-    int full_moves = 1;
+    uint16_t full_moves = 1;
 
     // not A file constant	
     static constexpr U64 not_a_file = 18374403900871474942ULL; 
@@ -172,13 +172,13 @@ public:
     
     U64 pin_dg = 0ULL;
 
-    int doublecheck = 0;
+    int8_t doublecheck = 0;
 
     std::stack<BoardState> move_stack = {};
     
-    std::unordered_map<U64, int> repetition_table;
+    std::unordered_map<U64, uint8_t> repetition_table;
 
-    int board_pieces[64] = {-1};
+    int8_t board_pieces[64] = {-1};
 
     U64 board_hash = 0ULL;
 
@@ -210,15 +210,15 @@ public:
 
     void update_occupancies();
 
-    int piece_at_square(int sq);
+    int8_t piece_at_square(int8_t sq);
 
-    int piece_at(int sq, int given = -1);
+    int8_t piece_at(int8_t sq, int given = -1);
 
-    int piece_type_at(int sq);
+    int8_t piece_type_at(int8_t sq);
 
-    int piece_to_piece_type(int piece);
+    int8_t piece_to_piece_type(int8_t piece);
 		
-    std::string piece_type(int piece);
+    std::string piece_type(int8_t piece);
 
     U64 Pawn_Forward(bool IsWhite, U64 mask);
 
@@ -268,39 +268,39 @@ public:
 
     U64 Queens(bool IsWhite);
 
-    U64 seen_by_pawn(bool IsWhite, int sq, int ep);
+    U64 seen_by_pawn(bool IsWhite, int8_t sq, uint8_t ep);
 
-    U64 seen_by_bishop(bool IsWhite, int sq);
+    U64 seen_by_bishop(bool IsWhite, int8_t sq);
 
-    U64 seen_by_knight(int sq);
+    U64 seen_by_knight(int8_t sq);
 
-    U64 seen_by_rook(bool IsWhite, int sq);
+    U64 seen_by_rook(bool IsWhite, int8_t sq);
 
-    U64 seen_by_king(int sq);
+    U64 seen_by_king(int8_t sq);
 
-    U64 legal_pawn_moves(bool IsWhite, int sq, int ep = 64);
+    U64 legal_pawn_moves(bool IsWhite, int8_t sq, uint8_t ep = 64);
 
-    U64 legal_knight_moves(bool IsWhite, int sq);
+    U64 legal_knight_moves(bool IsWhite, int8_t sq);
 
-    U64 legal_bishop_moves(bool IsWhite, int sq);
+    U64 legal_bishop_moves(bool IsWhite, int8_t sq);
 
-    U64 legal_rook_moves(bool IsWhite, int sq);
+    U64 legal_rook_moves(bool IsWhite, int8_t sq);
 
-    U64 legal_queen_moves(bool IsWhite, int sq);
+    U64 legal_queen_moves(bool IsWhite, int8_t sq);
 
-    U64 legal_king_moves(bool IsWhite, int sq);
+    U64 legal_king_moves(bool IsWhite, int8_t sq);
 
-    bool is_square_attacked(bool IsWhite, int sq);
+    bool is_square_attacked(bool IsWhite, int8_t sq);
 
     void create_pin_masks(bool IsWhite);
 	
-    U64 create_checkmask(bool IsWhite, int sq);
+    U64 create_checkmask(bool IsWhite, int8_t sq);
 
-    U64 would_be_attack(bool IsWhite, int sq);
+    U64 would_be_attack(bool IsWhite, int8_t sq);
 
-    U64 is_pinned_hv(bool IsWhite, int sq);
+    U64 is_pinned_hv(bool IsWhite, int8_t sq);
 
-    U64 is_pinned_dg(bool IsWhite, int sq);
+    U64 is_pinned_dg(bool IsWhite, int8_t sq);
 
     void init(bool IsWhite);
 
