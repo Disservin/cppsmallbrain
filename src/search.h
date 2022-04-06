@@ -57,5 +57,5 @@ public:
 
 	int mmlva(std::uint_least16_t move);
 
-	bool is_pv_move(std::uint_least16_t move, int ply);
+	bool is_pv_move(Move move, int ply);
 };

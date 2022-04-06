@@ -165,7 +165,7 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 		if (can_exit_early()) break;
 		//Move move = n_moves.movelist[i];
 		auto move = unpack_move(n_moves.movelist[i]);
-		if (board->piece_at(move.to_square) != -1 or move.promotion != -1 or (move.piece == board->PAWN and (move.to_square == 7 or move.to_square == 0))) {
+		if (board->piece_at(move.to_square) != -1 or move.promotion or (move.piece == board->PAWN and (move.to_square == 7 or move.to_square == 0))) {
 			board->make_move(move);
 			int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
 			board->unmake_move();
@@ -227,8 +227,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		}
 		else {
 			nodes++;
-			return evaluation() * player;
-			//return qsearch(alpha, beta, player, 10, ply);
+			return qsearch(alpha, beta, player, 10, ply);
 		}
 	}
 	if (ply > heighest_depth)
@@ -384,7 +383,7 @@ std::string Searcher::get_pv_line() {
 int Searcher::score_move(std::uint_least16_t move, bool u_move) {
 	int IsWhite = board->side_to_move ? 0 : 1;
 	Move m = unpack_move(move);
-	if (is_pv_move(move, current_ply)) {
+	if (is_pv_move(m, current_ply)) {
 		return 10000;
 	}
 	else if (u_move && TTable[board->board_hash % tt_size].move.piece == m.piece &&
@@ -393,7 +392,7 @@ int Searcher::score_move(std::uint_least16_t move, bool u_move) {
 		TTable[board->board_hash % tt_size].move.promotion == m.promotion) {
 		return 5000;
 	}
-	else if (m.promotion != -1) {
+	else if (m.promotion) {
 		return 700;
 	}
 	else if (board->piece_at_square(m.to_square) != -1) {
@@ -424,8 +423,7 @@ int Searcher::mmlva(std::uint_least16_t move) {
 	return mvvlva[victim][attacker];
 }
 
-bool Searcher::is_pv_move(std::uint_least16_t move, int ply) {
-	Move m = unpack_move(move);
+bool Searcher::is_pv_move(Move m, int ply) {
 	return pv_table[0][ply].from_square == m.from_square && pv_table[0][ply].to_square == m.to_square &&
 		pv_table[0][ply].piece == m.piece && pv_table[0][ply].promotion == m.promotion;
 }
@@ -449,7 +447,7 @@ std::string Searcher::print_move(Move move) {
 	std::string pieces[5] = {
 		"","n", "b", "r", "q"
 	};
-	if (move.promotion != -1) {
+	if (move.promotion) {
 		std::string prom = pieces[move.promotion];
 		str_move += prom;
 	}

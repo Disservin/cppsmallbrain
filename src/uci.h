@@ -22,7 +22,7 @@ Move convert_uci_to_Move(std::string input) {
         to_index = (rank - 1) * 8 + file - 1;
         move.to_square = to_index;
         move.piece = board->piece_type_at(from_index);
-        move.promotion = -1;
+        move.promotion = 0;
         return move;
     }
     if (input.length() == 5) {
@@ -50,8 +50,8 @@ Move convert_uci_to_Move(std::string input) {
         { 'r', 3 },
         { 'q', 4 }
         };
-        move.promotion = piece_to_int[prom];
-        move.piece = 0;
+        move.promotion = 1;
+        move.piece = piece_to_int[prom];
         return move;
     }
     else {

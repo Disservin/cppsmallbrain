@@ -228,7 +228,7 @@ std::string print_move(Move move) {
 	std::string pieces[5] = {
 		"","n", "b", "r", "q"
 	};
-	if (move.promotion != -1) {
+	if (move.promotion) {
 		std::string prom = pieces[move.promotion];
 		str_move += prom;
 	}

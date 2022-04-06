@@ -1814,12 +1814,10 @@ void Board::make_move(Move& move) {
 
     int from_square = move.from_square;
     int to_square = move.to_square;
-    int promotion_piece = move.promotion;
     int piece = move.piece;
 
     piece = piece + (side_to_move * 6);
 
-    int8_t captured_piece = -1;
     bool IsWhite = side_to_move ? 0 : 1;
     bool enemy = side_to_move ^ 1;
 
@@ -1827,7 +1825,7 @@ void Board::make_move(Move& move) {
     if (not _test_bit(bitboards[piece], to_square)) {
         save_board_state();
         // Capture
-        captured_piece = piece_at_square(to_square);
+        int captured_piece = piece_at_square(to_square);
         if (captured_piece == WROOK) {
             if (to_square == 7) {
                 if (castling_rights & wk) {
@@ -1862,7 +1860,7 @@ void Board::make_move(Move& move) {
                 bitboards[captured_piece] &= ~(1ULL << to_square);
                 board_hash ^= RANDOM_ARRAY[64 * (2 * (captured_piece - (6 * enemy)) + !IsWhite) + to_square];
             }
-            promotion_piece = move.piece;
+            int promotion_piece = move.piece;
             board_hash ^= RANDOM_ARRAY[64 * (2 * 0 + IsWhite) + from_square];
             board_hash ^= RANDOM_ARRAY[64 * (2 * promotion_piece + IsWhite) + to_square];
 
@@ -2154,24 +2152,20 @@ MoveList Board::generate_legal_moves() {
                 move.piece = PAWN;
                 move.from_square = from_index;
                 move.to_square = to_index;
-                move.promotion = 0;
                 if (square_rank(to_index) == 7 or square_rank(to_index) == 0) {
                     move.promotion = 1;
                     //possible_moves.movelist[possible_moves.size] = move;
                     move.piece = QUEEN;					
                     possible_moves.movelist[possible_moves.size] = pack_move(move);
                     possible_moves.size++;
-                    move.promotion = 1;
                     //possible_moves.movelist[possible_moves.size] = move;
                     move.piece = ROOK;
                     possible_moves.movelist[possible_moves.size] = pack_move(move);
                     possible_moves.size++;
-                    move.promotion = 1;
                     //possible_moves.movelist[possible_moves.size] = move;
                     move.piece = KNIGHT;
                     possible_moves.movelist[possible_moves.size] = pack_move(move);
                     possible_moves.size++;
-                    move.promotion = 1;
                     //possible_moves.movelist[possible_moves.size] = move;
                     move.piece = BISHOP;
                     possible_moves.movelist[possible_moves.size] = pack_move(move);
@@ -2295,25 +2289,26 @@ MoveList Board::generate_capture_moves() {
             move.to_square = to_square;
             if (piece_at_square(to_square) != -1 or square_rank(to_square) == 7 or square_rank(to_square) == 0 or in_check) {
                 if (square_rank(to_square) == 7 or square_rank(to_square) == 0) {
-                    move.promotion = QUEEN;
+                    move.promotion = 1;
+                    move.piece = QUEEN;
                     //possible_moves.movelist[possible_moves.size] = move;
                     possible_moves.movelist[possible_moves.size] = pack_move(move);
                     possible_moves.size++;
-                    move.promotion = ROOK;
+                    move.piece = ROOK;
                     //possible_moves.movelist[possible_moves.size] = move;
                     possible_moves.movelist[possible_moves.size] = pack_move(move);
                     possible_moves.size++;
-                    move.promotion = KNIGHT;
+                    move.piece = KNIGHT;
                     //possible_moves.movelist[possible_moves.size] = move;
                     possible_moves.movelist[possible_moves.size] = pack_move(move);
                     possible_moves.size++;
-                    move.promotion = BISHOP;
+                    move.piece = BISHOP;
                     //possible_moves.movelist[possible_moves.size] = move;
                     possible_moves.movelist[possible_moves.size] = pack_move(move);
                     possible_moves.size++;
                 }
                 else {
-                    move.promotion = -1;
+                    move.promotion = 0;
                     //possible_moves.movelist[possible_moves.size] = move;
                     possible_moves.movelist[possible_moves.size] = pack_move(move);					
                     possible_moves.size++;
@@ -2331,7 +2326,7 @@ MoveList Board::generate_capture_moves() {
             move.from_square = from_square;
             move.to_square = to_square;
             if (piece_at_square(to_square) != -1 or in_check) {
-                move.promotion = -1;
+                move.promotion = 0;
                 //possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.movelist[possible_moves.size] = pack_move(move);
                 possible_moves.size++;
@@ -2348,7 +2343,7 @@ MoveList Board::generate_capture_moves() {
             move.from_square = from_square;
             move.to_square = to_square;
             if (piece_at_square(to_square) != -1 or in_check) {
-                move.promotion = -1;
+                move.promotion = 0;
                 //possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.movelist[possible_moves.size] = pack_move(move);
                 possible_moves.size++;
@@ -2365,7 +2360,7 @@ MoveList Board::generate_capture_moves() {
             move.from_square = from_square;
             move.to_square = to_square;
             if (piece_at_square(to_square) != -1 or in_check) {
-                move.promotion = -1;
+                move.promotion = 0;
                 //possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.movelist[possible_moves.size] = pack_move(move);
                 possible_moves.size++;
@@ -2382,7 +2377,7 @@ MoveList Board::generate_capture_moves() {
             move.from_square = from_square;
             move.to_square = to_square;
             if (piece_at_square(to_square) != -1 or in_check) {
-                move.promotion = -1;
+                move.promotion = 0;
                 //possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.movelist[possible_moves.size] = pack_move(move);
                 possible_moves.size++;
@@ -2399,7 +2394,7 @@ MoveList Board::generate_capture_moves() {
             move.from_square = from_square;
             move.to_square = to_square;
             if (piece_at_square(to_square) != -1 or in_check) {
-                move.promotion = -1;
+                move.promotion = 0;
                 //possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.movelist[possible_moves.size] = pack_move(move);
                 possible_moves.size++;
