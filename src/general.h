@@ -23,14 +23,6 @@ struct Move {
     int8_t  promotion = -1;
 };
 
-//struct Move
-//{
-//    int8_t from_square : 7 = -1;
-//    int8_t to_square : 7 = -1;
-//    int8_t piece : 4 = -1;
-//    int8_t promotion : 4 = -1;
-//};
-
 //Gets the file index of the square where 0 is the a-file
 inline int8_t square_file(int8_t sq) {
     return sq & 7;
@@ -75,16 +67,16 @@ inline int _bitscanforward(U64 b) {
 }
 
 #else
-inline int8_t _bitscanforward(U64 mask) {
+inline uint8_t _bitscanforward(U64 mask) {
     unsigned long index;
     _BitScanForward64(&index, mask);
-    return index;
+    return (uint8_t) index;
 }
 
-inline int8_t _bitscanreverse(U64 mask) {
+inline uint8_t _bitscanreverse(U64 mask) {
     unsigned long index;
     _BitScanReverse64(&index, mask);
-    return index;
+    return (uint8_t) index;
 }
 #endif
 
@@ -100,8 +92,8 @@ inline int8_t _bitscanreverse(U64 mask) {
 //
 //#endif
 //}
-inline int8_t popcount(U64 mask) {
-    return std::bitset<64>(mask).count();
+inline uint8_t popcount(U64 mask) {
+    return (uint8_t) std::bitset<64>(mask).count();
 }	
 inline int8_t pop_lsb(U64* mask) {
     const int8_t s = _bitscanforward(*mask);

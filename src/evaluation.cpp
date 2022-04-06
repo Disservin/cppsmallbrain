@@ -167,14 +167,14 @@ U64 halfopenoropenfile(U64 gen) {
 	return ~fileFill(gen);
 }
 
-bool is_a_file(int square) {
+bool is_a_file(int8_t square) {
 	if ((square & 7) == 0) {
 		return true;
 	}
 	return false;
 }
 
-bool is_h_file(int square) {
+bool is_h_file(int8_t square) {
 	if ((square & 7) == 7) {
 		return true;
 	}
@@ -188,7 +188,7 @@ std::tuple<U64, U64> half_open_file(U64 White, U64 Black) {
 	return { halfopenoropenfile(White), halfopenoropenfile(Black) };
 }
 
-int isolated_pawn(int square, U64 hf_open) {
+int8_t isolated_pawn(int8_t square, U64 hf_open) {
 	if ((not is_a_file(square) and _test_bit(hf_open, square - 1)) ||
 		(not is_h_file(square) and _test_bit(hf_open, square + 1)) ||
 		(_test_bit(hf_open, square + 1) && _test_bit(hf_open, square - 1))) {
@@ -197,7 +197,7 @@ int isolated_pawn(int square, U64 hf_open) {
 	return 0;
 }
 
-std::tuple<int, int> doubled_pawns(U64 pawns, U64 White, U64 Black) {
+std::tuple<uint8_t, uint8_t> doubled_pawns(U64 pawns, U64 White, U64 Black) {
 	U64 bb_pawns_white = pawns & White;
 	U64 x = popcount(pawns & (pawns << 8));
 	U64 bb_pawns_black = pawns & Black;
@@ -205,7 +205,7 @@ std::tuple<int, int> doubled_pawns(U64 pawns, U64 White, U64 Black) {
 	return { x, y };
 }
 
-int supported_pawn(int square, U64 pawns, bool IsWhite) {
+int8_t supported_pawn(int8_t square, U64 pawns, bool IsWhite) {
 	if (IsWhite) {
 		if (_test_bit(pawns, square - 7) && !is_h_file(square) || _test_bit(pawns, square - 9) && is_a_file(square)) {
 			return 1;
@@ -219,19 +219,19 @@ int supported_pawn(int square, U64 pawns, bool IsWhite) {
 	return 0;
 }
 
-int neighbour_pawns(int square, U64 pawns) {
+int8_t neighbour_pawns(int8_t square, U64 pawns) {
 	if (_test_bit(pawns, square + 1) && !is_h_file(square) || _test_bit(pawns, square - 1) && !is_a_file(square))
 		return 1;
 	return 0;
 }
 
-int connected_pawns(int square, U64 pawns, bool IsWhite) {
+int8_t connected_pawns(int8_t square, U64 pawns, bool IsWhite) {
 	if (neighbour_pawns(square, pawns) or supported_pawn(square, pawns, IsWhite))
 		return 1;
 	return 0;
 }
 
-int backwards_pawn(int square, U64 pawn_white, U64 pawn_black, bool IsWhite) {
+int8_t backwards_pawn(int8_t square, U64 pawn_white, U64 pawn_black, bool IsWhite) {
 	if (IsWhite) {
 		if (neighbour_pawns(square, pawn_white))
 			return 0;
@@ -259,8 +259,8 @@ int backwards_pawn(int square, U64 pawn_white, U64 pawn_black, bool IsWhite) {
 	return 0;
 }
 
-int rook_open_file(U64 hf_w, U64 hf_b, U64 White_rooks, U64 Black_rooks) {
-	int x = popcount(White_rooks & hf_w);
-	int y = popcount(Black_rooks & hf_b);
+int8_t rook_open_file(U64 hf_w, U64 hf_b, U64 White_rooks, U64 Black_rooks) {
+	int8_t x = popcount(White_rooks & hf_w);
+	int8_t y = popcount(Black_rooks & hf_b);
 	return x-y;
 }
