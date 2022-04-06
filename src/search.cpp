@@ -333,6 +333,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 				bestmove = move;
 			}
 			pv_table[ply][ply] = move;
+			
 			for (int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++) {
 				pv_table[ply][next_ply] = pv_table[ply + 1][next_ply];
 			}
@@ -448,7 +449,7 @@ std::string Searcher::print_move(Move move) {
 		"","n", "b", "r", "q"
 	};
 	if (move.promotion) {
-		std::string prom = pieces[move.promotion];
+		std::string prom = pieces[move.piece];
 		str_move += prom;
 	}
 	return str_move;
