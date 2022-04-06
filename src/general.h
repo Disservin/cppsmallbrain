@@ -95,10 +95,10 @@ inline uint8_t _bitscanreverse(U64 mask) {
 inline uint8_t popcount(U64 mask) {
     return (uint8_t) std::bitset<64>(mask).count();
 }	
-inline int8_t pop_lsb(U64* mask) {
-    const int8_t s = _bitscanforward(*mask);
+inline int8_t pop_lsb(U64& mask) {
+    int8_t s = _bitscanforward(mask);
     //*mask = _blsr_u64(*mask);
-    *mask &= *mask - 1;
+    mask &= mask - 1;
     return s;
 }
 

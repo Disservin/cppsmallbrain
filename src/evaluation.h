@@ -18,7 +18,7 @@ bool is_h_file(int8_t square);
 
 std::tuple<U64, U64> half_open_file(U64 White, U64 Black);
 
-int isolated_pawn(int square, U64 hf_open);
+int8_t isolated_pawn(int square, U64 hf_open);
 
 std::tuple<uint8_t, uint8_t> doubled_pawns(U64 pawns, U64 White, U64 Black);
 

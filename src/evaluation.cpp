@@ -105,14 +105,15 @@ int evaluation() {
 	U64 pieces_black = board->Black;
 
 	while (pieces_white) {
-		int square = pop_lsb(&pieces_white);
+		int square = pop_lsb(pieces_white);
 		int piece = board->piece_at_square(square);
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];
 	}
 	while (pieces_black) {
-		int square = pop_lsb(&pieces_black);
+		int square = pop_lsb(pieces_black);
 		int piece = board->piece_at_square(square);
+
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
 	}
