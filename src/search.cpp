@@ -338,9 +338,13 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 				// Beta cut-off
 				if (score >= beta) {
 					if (board->piece_at_square(move.to_square) == -1) {
-						history_table[Is_White][move.from_square][move.to_square] += depth * depth;
+						killerMoves[1][ply] = killerMoves[0][ply];
+						killerMoves[0][ply] = move;
 					}
 					break;
+				}
+				if (board->piece_at_square(move.to_square) == -1) {
+					history_table[Is_White][move.from_square][move.to_square] += depth * depth;
 				}
 			}
 		}
@@ -381,10 +385,7 @@ int Searcher::score_move(Move move, bool u_move) {
 	if (is_pv_move(move, current_ply)) {
 		return 10000;
 	}
-	else if (u_move && TTable[board->board_hash % tt_size].move.piece == move.piece &&
-		TTable[board->board_hash % tt_size].move.from_square == move.from_square &&
-		TTable[board->board_hash % tt_size].move.to_square == move.to_square &&
-		TTable[board->board_hash % tt_size].move.promotion == move.promotion) {
+	else if (u_move && compare_moves(TTable[board->board_hash % tt_size].move, move)) {
 		return 5000;
 	}
 	else if (move.promotion != -1) {
@@ -392,6 +393,12 @@ int Searcher::score_move(Move move, bool u_move) {
 	}
 	else if (board->piece_at_square(move.to_square) != -1) {
 		return mmlva(move);
+	}
+	else if (compare_moves(killerMoves[0][current_ply], move)) {
+		return 100;
+	}
+	else if (compare_moves(killerMoves[1][current_ply], move)) {
+		return 75;
 	}
 	else if (history_table[IsWhite][move.from_square][move.to_square]) {
 		return history_table[IsWhite][move.from_square][move.to_square];
@@ -420,6 +427,10 @@ int Searcher::mmlva(Move move) {
 bool Searcher::is_pv_move(Move move, int ply) {
 	return pv_table[0][ply].from_square == move.from_square && pv_table[0][ply].to_square == move.to_square &&
 		pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion;
+}
+
+bool Searcher::compare_moves(Move& m1, Move& m2) {
+	return m1.from_square == m2.from_square && m1.to_square == m2.to_square && m1.piece == m2.piece && m1.promotion == m2.promotion;
 }
 
 std::string Searcher::get_bestmove() {

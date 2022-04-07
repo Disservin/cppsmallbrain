@@ -13,14 +13,15 @@ class Searcher {
 public: 
 	static const uint8_t max_ply = 60;
 	uint8_t pv_length[max_ply] = { 0 };
-	Move pv_table[max_ply][max_ply] = { };
+	Move pv_table[max_ply][max_ply] = { 0 };
 	uint8_t current_ply = 0;
 	uint8_t search_to_depth = 60;
 	U64 nodes = 0;
 	Move bestmove;
 	int time_given = -1;
 	bool limit_time = false;
-	int history_table[2][64][64] = { {0},{0} };
+	int history_table[2][64][64] = { {0},{0}};
+	Move killerMoves[2][max_ply+1] = {0};
 	int8_t heighest_depth = 0;
 	
 	enum {
@@ -58,4 +59,6 @@ public:
 	int mmlva(Move move);
 
 	bool is_pv_move(Move move, int ply);
+
+	bool compare_moves(Move& m1, Move& m2);
 };
