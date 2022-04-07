@@ -39,51 +39,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 		return 0;
 	}
 	if (bench) {
-		U64 nodes_searched = 0;
-		board->apply_fen("8/1p1r2kp/2b2pp1/p3p3/P7/1B4P1/1PP1RP2/2K5 w - - 0 34");
-		heighest_depth = 0;
-		nodes = 0;
-		std::cout << "fen: 8/1p1r2kp/2b2pp1/p3p3/P7/1B4P1/1PP1RP2/2K5 w - - 0 34" << std::endl;
-		for (int depth = 1; depth <= 7; depth++) {
-			result = aspiration_search(player, depth, result);
-			nodes_searched += nodes;
-			std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
-		}
-		std::cout << ""<< std::endl;
-		board->apply_fen("8/8/8/8/p1b2k2/8/1P3K2/8 w - - 4 70");
-		heighest_depth = 0;
-		nodes = 0;
-		std::cout << "fen: 8/8/8/8/p1b2k2/8/1P3K2/8 w - - 4 70" << std::endl;
-		for (int depth = 1; depth <= 7; depth++) {
-			result = aspiration_search(player, depth, result);
-			nodes_searched += nodes;
-			std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
-		}
-		std::cout << "" << std::endl;
-		board->apply_fen("6k1/3qb1p1/4p3/2ppB1p1/1p3pQ1/3P4/rPR3PP/r1R2K2 w - - 6 28");
-		heighest_depth = 0;
-		nodes = 0;
-		std::cout << "fen: 6k1/3qb1p1/4p3/2ppB1p1/1p3pQ1/3P4/rPR3PP/r1R2K2 w - - 6 28" << std::endl;
-		for (int depth = 1; depth <= 7; depth++) {
-			result = aspiration_search(player, depth, result);
-			nodes_searched += nodes;
-			std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
-		}
-		std::cout << "" << std::endl;
-		board->apply_fen("r2qk2r/1bppbppp/p1n2n2/1p2p3/4P3/1B1P1N2/PPP2PPP/RNBQ1RK1 w kq - 2 8");
-		heighest_depth = 0;
-		nodes = 0;
-		std::cout << "fen: r2qk2r/1bppbppp/p1n2n2/1p2p3/4P3/1B1P1N2/PPP2PPP/RNBQ1RK1 w kq - 2 8" << std::endl;
-		for (int depth = 1; depth <= 7; depth++) {
-			result = aspiration_search(player, depth, result);
-			nodes_searched += nodes;
-			std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
-		}
-		auto end = std::chrono::high_resolution_clock::now();
-		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-		std::cout << std::fixed << "time " << time_diff << std::endl;
-		std::cout << "\n---------------------------" << std::endl;
-		std::cout << unsigned(nodes_searched) << " nodes " << unsigned(static_cast<int>(nodes_searched / ((time_diff / static_cast<double>(1000)) + 0.01))) << " nps" << std::endl;
+		make_bench();
 		return 0;
 	}
 	for (int depth = 1; depth <= search_depth; depth++) {
@@ -457,4 +413,106 @@ std::string Searcher::print_move(Move move) {
 		str_move += prom;
 	}
 	return str_move;
+}
+
+// A few positions from Eigenmanns Rapid Engine Test
+int Searcher::make_bench() {
+	int player = board->side_to_move ? -1 : 1;
+	int result{};
+	U64 nodes_searched = 0;
+	board->apply_fen("r1bqk1r1/1p1p1n2/p1n2pN1/2p1b2Q/2P1Pp2/1PN5/PB4PP/R4RK1 w q - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: r1bqk1r1/1p1p1n2/p1n2pN1/2p1b2Q/2P1Pp2/1PN5/PB4PP/R4RK1 w q - 0 1" << std::endl;
+	for (int depth = 1; depth <= 7; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}
+	std::cout << "" << std::endl;
+	board->apply_fen("r1n2N1k/2n2K1p/3pp3/5Pp1/b5R1/8/1PPP4/8 w - - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: r1n2N1k/2n2K1p/3pp3/5Pp1/b5R1/8/1PPP4/8 w - 0 1" << std::endl;
+	for (int depth = 1; depth <= 7; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}
+	std::cout << "" << std::endl;
+	board->apply_fen("r1b1r1k1/1pqn1pbp/p2pp1p1/P7/1n1NPP1Q/2NBBR2/1PP3PP/R6K w - - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: r1b1r1k1/1pqn1pbp/p2pp1p1/P7/1n1NPP1Q/2NBBR2/1PP3PP/R6K w - - 0 1" << std::endl;
+	for (int depth = 1; depth <= 7; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}
+	std::cout << "" << std::endl;
+	board->apply_fen("5b2/p2k1p2/P3pP1p/n2pP1p1/1p1P2P1/1P1KBN2/7P/8 w - - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: 5b2/p2k1p2/P3pP1p/n2pP1p1/1p1P2P1/1P1KBN2/7P/8 w - - 0 1" << std::endl;
+	for (int depth = 1; depth <= 7; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}
+	std::cout << "" << std::endl;
+	board->apply_fen("r3kbnr/1b3ppp/pqn5/1pp1P3/3p4/1BN2N2/PP2QPPP/R1BR2K1 w kq - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: r3kbnr/1b3ppp/pqn5/1pp1P3/3p4/1BN2N2/PP2QPPP/R1BR2K1 w kq - 0 1" << std::endl;
+	for (int depth = 1; depth <= 6; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}	
+	std::cout << "" << std::endl;
+	board->apply_fen("5rk1/pp1b4/4pqp1/2Ppb2p/1P2p3/4Q2P/P3BPP1/1R3R1K b - - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: 5rk1/pp1b4/4pqp1/2Ppb2p/1P2p3/4Q2P/P3BPP1/1R3R1K b - - 0 1" << std::endl;
+	for (int depth = 1; depth <= 7; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}	
+	std::cout << "" << std::endl;
+	board->apply_fen("r3r2k/1bq1nppp/p2b4/1pn1p2P/2p1P1QN/2P1N1P1/PPBB1P1R/2KR4 w - - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: r3r2k/1bq1nppp/p2b4/1pn1p2P/2p1P1QN/2P1N1P1/PPBB1P1R/2KR4 w - - 0 1" << std::endl;
+	for (int depth = 1; depth <= 6; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}
+	std::cout << "" << std::endl;
+	board->apply_fen("r1b2rk1/p2nqppp/1ppbpn2/3p4/2P5/1PN1PN2/PBQPBPPP/R4RK1 w - - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: r1b2rk1/p2nqppp/1ppbpn2/3p4/2P5/1PN1PN2/PBQPBPPP/R4RK1 w - - 0 1" << std::endl;
+	for (int depth = 1; depth <= 6; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}	
+	std::cout << "" << std::endl;
+	board->apply_fen("r4r1k/p1p3bp/2pp2p1/4nb2/N1P4q/1P5P/PBNQ1PP1/R4RK1 b - - 0 1");
+	heighest_depth = 0;
+	nodes = 0;
+	std::cout << "fen: r4r1k/p1p3bp/2pp2p1/4nb2/N1P4q/1P5P/PBNQ1PP1/R4RK1 b - - 0 1" << std::endl;
+	for (int depth = 1; depth <= 6; depth++) {
+		result = aspiration_search(player, depth, result);
+		nodes_searched += nodes;
+		std::cout << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << std::endl;
+	}
+	auto end = std::chrono::high_resolution_clock::now();
+	auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+	std::cout << std::fixed << "time " << time_diff << std::endl;
+	std::cout << "\n---------------------------" << std::endl;
+	std::cout << unsigned(nodes_searched) << " nodes " << unsigned(static_cast<int>(nodes_searched / ((time_diff / static_cast<double>(1000)) + 0.01))) << " nps" << std::endl;
+	return 0;
 }
