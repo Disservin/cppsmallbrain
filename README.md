@@ -1,14 +1,18 @@
 # cppsmallbrain
 
-Compile it like this 
+## Compile
 
-    g++ -flto -O3 -march=native -mavx2 -std=c++17 -static-libgcc -static-libstdc++ -static -lpthread .\board.cpp .\uci.cpp .\search.cpp .\evaluation.cpp        .\timecontroller.cpp  -w -o master
-
-or just use the make file in ./src
+Compile it using the Makefile in ./src <br>
+```
+make
+.\smallbrain.exe bench
+```
+compare the Bench with the Bench in the commit messages, they should be <br>
+the same, unless I screwed up.
 
 ## Elo 
        # PLAYER            : RATING  ERROR   POINTS  PLAYED    (%)
-       1 Smallbrain        : 1730.3   50.1    113.5     144   78.8%
-       2 Stockfish 1500    : 1500.0   ----     30.5     144   21.2%
-TC = 60/0.6<br>
-Ordo -s 8000
+       1 Smallbrain        : 1791.3   49.1    155.5     185   84.1%
+       2 Stockfish 1500    : 1500.0   ----     29.5     185   15.9%
+TC = 40/60+0.6<br>
+Calculated with ordo -s 8000
