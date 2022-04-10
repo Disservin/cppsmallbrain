@@ -32,9 +32,13 @@ void Board::apply_fen(std::string fen)
     std::string move_right = params[1];
     std::string castling = params[2];
     std::string en_passant = params[3];
-    std::string half_move_clock = params[4];
-    std::string full_move_counter = params[5];
-    
+    std::string half_move_clock = "0";
+    std::string full_move_counter = "1";
+    if (params.size() > 4) {
+        std::string half_move_clock = params[4];
+        std::string full_move_counter = params[5];
+    }
+
     // Side to move
     // I really want to change 0 to 1 but any changes to this have failed, i'll try to change this in the future.
     if (move_right == "w")
@@ -130,9 +134,9 @@ void Board::apply_fen(std::string fen)
 
     // half_move_clock
     half_moves = std::stoi(half_move_clock);
-
-    // full_move_counter
-    full_moves = std::stoi(full_move_counter) * 2;
+	
+    // full_move_counter actually half moves
+    full_moves = std::stoi(full_move_counter)*2;
 
     // Udates Bitboards
     update_occupancies();
@@ -207,7 +211,7 @@ std::string Board::get_fen() {
         fen += " "+ square_to_coordinates[en_passant_square] + " ";
 	
     fen += std::to_string(half_moves);
-    fen += " " + std::to_string(full_moves / 2);
+    fen += " " + std::to_string(full_moves/2);
     return fen;
 }
 

@@ -14,7 +14,7 @@
 ThreadManager threads;
 Board* board = new Board();
 U64 tt_size = 4294967*2;
-TEntry* TTable = (TEntry*)malloc(tt_size * sizeof(TEntry));	
+TEntry* TTable{};
 
 std::atomic<bool> stopped;
 
@@ -43,6 +43,10 @@ int main(int argc, char** argv) {
 	std::thread searchThread;
 	bool thread_started = false;
 	signal(SIGINT, signal_callback_handler);
+	TEntry* buffer, * oldbuffer;
+	if ((buffer = (TEntry*)malloc(tt_size * sizeof(TEntry))) == NULL)
+		exit(1);
+	
 	while (true) {
 		if (argc > 1) {
 			if (argv[1] == std::string("bench")) {
@@ -70,8 +74,14 @@ int main(int argc, char** argv) {
 		if (input.find("setoption name Hash value") != std::string::npos) {
 			std::size_t start_index = input.find("value");
 			std::string size_str = input.substr(start_index + 6);
-			U64 elements = (static_cast<unsigned long long>(std::stoi(size_str)) * 1000000)/sizeof(TEntry);
-			TTable = (TEntry*)realloc(TTable, elements*sizeof(TEntry));
+			U64 elements = (static_cast<unsigned long long>(std::stoi(size_str)) * 1000000) / sizeof(TEntry);
+			oldbuffer = buffer;
+			if ((buffer = (TEntry*)realloc(TTable, elements * sizeof(TEntry))) == NULL)
+			{
+				std::cout << "Error: Could not allocate memory for TT\n";
+				free(oldbuffer);
+				exit(1);
+			}
 			tt_size = elements;
 		}
 		if (input == "ucinewgame") {
@@ -80,16 +90,16 @@ int main(int argc, char** argv) {
 		}
 		if (input.find("quit") != std::string::npos) {
 			threads.stop();
-			free(TTable);
+			free(buffer);
 			delete board;
-			break;
+			exit(0);
 		}
 		if (input.find("position fen") != std::string::npos) {
 			std::size_t start_index = input.find("fen");
 			fen = input.substr(start_index + 4);
-			board->half_moves = 0;
-			board->full_moves = 1;
 			board->apply_fen(fen);
+			board->half_moves = 0;
+			board->full_moves = 2;
 			board->repetition_table.clear();		
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
@@ -105,7 +115,7 @@ int main(int argc, char** argv) {
 			}
 		}
 		if (input.find("position startpos") != std::string::npos) {			
-			board->full_moves = 1;
+			board->full_moves = 2;
 			board->half_moves = 0;
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 			board->repetition_table.clear();
@@ -132,7 +142,7 @@ int main(int argc, char** argv) {
 			U64 result = perft.bulk_test_perft(depth, depth);
 			auto end = std::chrono::high_resolution_clock::now();
 			auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-			std::cout << std::fixed << "startpos " << " nodes " << unsigned(result) << " nps " << unsigned(result / (time_diff / 1000000000.0f)) << " time " << unsigned(time_diff / 1000000000.0f) << " seconds" << std::endl;
+			std::cout << std::fixed << "startpos " << " nodes " << unsigned(result) << " nps " << unsigned(result / (time_diff / 1000000000.0f)) << " time " << (time_diff / 1000000000.0f) << " seconds" << std::endl;
 		}
 		if (input.find("test perft") != std::string::npos) {
 			std::cout << "\nTest started" << std::endl;
@@ -184,6 +194,8 @@ int main(int argc, char** argv) {
 			else {
 				std::cout << "en passant square: " << square_to_coordinates[board->en_passant_square] << std::endl;;
 			}
+			std::cout << "halfmove: " << unsigned(board->half_moves) << std::endl;
+			std::cout << "fullmove: " << unsigned(board->full_moves/2) << std::endl;			
 		}
 		if (input == "captures") {
 			MoveList n_moves = board->generate_capture_moves();

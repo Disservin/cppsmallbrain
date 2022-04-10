@@ -142,7 +142,7 @@ public:
     uint8_t half_moves = 0;
 
     //full_moves
-    uint16_t full_moves = 1;
+    uint16_t full_moves = 2;
 
     // not A file constant	
     static constexpr U64 not_a_file = 18374403900871474942ULL; 
