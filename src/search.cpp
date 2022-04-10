@@ -95,7 +95,6 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	bool IsWhite = board->side_to_move ? 0 : 1;
 	int8_t king_sq = _bitscanforward(board->King(IsWhite));
 	bool in_check = board->is_square_attacked(IsWhite, king_sq);
-	nodes++;
 	int stand_pat = 0;
 	if (in_check) {
 		 stand_pat = -MATE + ply;
@@ -120,6 +119,7 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
+		nodes++;
 		board->make_move(move);
 		int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
 		board->unmake_move();
@@ -267,7 +267,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		if (tried_moves > 2 + 2 * root_node && depth >= 3 && !u_move && !inCheck && board->piece_at_square(move.to_square) == -1) {
 			new_depth -= 1;
 		}
-
+		nodes++;
 		board->make_move(move);
 
 		tried_moves++;
