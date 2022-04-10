@@ -82,12 +82,6 @@ int Searcher::aspiration_search(int player, int depth, int prev_eval) {
 		beta = prev_eval + 50;
 		result = alpha_beta(alpha, beta, player, true, depth, ply, false);
 	}
-	//if (result <= alpha) {
-	//	result = alpha_beta(-INFINITE, alpha, player, true, depth, ply, false);
-	//}
-	//else if (result >= beta) {
-	//	result = alpha_beta(beta, INFINITE, player, true, depth, ply, false);
-	//}
 	if (result <= alpha or result >= beta) {
 		result = alpha_beta(alpha, beta, player, true, depth, ply, false);
 	}
