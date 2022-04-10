@@ -268,12 +268,10 @@ public:
 
     U64 Queens(bool IsWhite);
 
-    U64 seen_by_pawn(bool IsWhite, int8_t sq, uint8_t ep);
-
     U64 seen_by_bishop(bool IsWhite, int8_t sq);
 
     U64 seen_by_knight(int8_t sq);
-
+	
     U64 seen_by_rook(bool IsWhite, int8_t sq);
 
     U64 seen_by_king(int8_t sq);
@@ -289,7 +287,7 @@ public:
     U64 legal_queen_moves(bool IsWhite, int8_t sq);
 
     U64 legal_king_moves(bool IsWhite, int8_t sq);
-
+	
     bool is_square_attacked(bool IsWhite, int8_t sq);
 
     void create_pin_masks(bool IsWhite);

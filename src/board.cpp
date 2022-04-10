@@ -321,7 +321,6 @@ bool Board::is_stalemate(bool IsWhite) {
         if (move_mask) {
             return false;
         }
-        //pawn_mask = _blsr_u64(pawn_mask);
     }
     while (bishop_mask) {
         from_index = pop_lsb(bishop_mask);
@@ -329,7 +328,6 @@ bool Board::is_stalemate(bool IsWhite) {
         if (move_mask) {
             return false;
         }
-        //bishop_mask = _blsr_u64(bishop_mask);
     }
     while (rook_mask) {
         from_index = pop_lsb(rook_mask);
@@ -337,7 +335,6 @@ bool Board::is_stalemate(bool IsWhite) {
         if (move_mask) {
             return false;
         }
-        //rook_mask = _blsr_u64(rook_mask);
     }
     while (queen_mask) {
         from_index = pop_lsb(queen_mask);
@@ -345,7 +342,6 @@ bool Board::is_stalemate(bool IsWhite) {
         if (move_mask) {
             return false;
         }
-        //queen_mask = _blsr_u64(queen_mask);
     }
     return true;
 }
@@ -374,7 +370,6 @@ U64 Board::generate_zobrist_hash() {
             hash ^= RANDOM_ARRAY[64 * piece + sq];
         }
         pop_lsb(white);
-        //white = _blsr_u64(white);
     }
     while (black) {
         int sq = _bitscanforward(black);
@@ -384,7 +379,6 @@ U64 Board::generate_zobrist_hash() {
             hash ^= RANDOM_ARRAY[64 * piece + sq];
         }
         pop_lsb(black);
-        //black = _blsr_u64(black);
     }
 
     U64 ep_hash = 0ULL;
@@ -741,55 +735,6 @@ U64 Board::Queens(bool IsWhite)
     return bitboards[BQUEEN];
 }
 
-// squares seen by a pawn
-U64 Board::seen_by_pawn(bool IsWhite, int8_t sq, uint8_t ep) {
-    U64 ep_m = (1ULL << ep);
-    U64 new_mask = 0ULL;
-    U64 mask = (1ULL << sq);
-    if (IsWhite) {
-        new_mask = Pawn_Forward(IsWhite, mask) & ~Occ | Pawn_Forward2(IsWhite, mask) & ~Occ & ~rank_2_4_mask | Pawn_AttackLeft(IsWhite, mask) & ~White & Black & not_a_file | Pawn_AttackRight(IsWhite, mask) & ~White & Black & not_h_file;
-    }
-    if (!IsWhite) {
-        new_mask = Pawn_Backward(IsWhite, mask) & ~Occ | Pawn_Backward2(IsWhite, mask) & ~Occ & ~rank_7_5_mask | Pawn_AttackLeft(IsWhite, mask) & ~Black & White & not_a_file | Pawn_AttackRight(IsWhite, mask) & ~Black & White & not_h_file;
-    }
-    if (ep < 64 and square_distance(sq, ep) == 1) {
-        if (not (mask & pin_hv)) {
-            if (IsWhite) {
-                White &= ~(1ULL << sq);
-                Black &= ~(1ULL << (ep - 8));
-                Occ = Black | White;
-                int king_sq = _bitscanforward(King(IsWhite));
-                if (not(create_checkmask(IsWhite, king_sq))) {
-                    White |= (1ULL << sq);
-                    Black |= (1ULL << (ep - 8));
-                    Occ = Black | White;
-                    return new_mask | ep_m;
-                }
-                White |= (1ULL << sq);
-                Black |= (1ULL << (ep - 8));
-                Occ = Black | White;
-
-            }
-            else {
-                Black &= ~(1ULL << sq);
-                White &= ~(1ULL << (ep + 8));
-                Occ = Black | White;
-                int king_sq = _bitscanforward(King(IsWhite));
-                if (not(create_checkmask(IsWhite, king_sq))) {
-                    Black |= (1ULL << sq);
-                    White |= (1ULL << (ep + 8));
-                    Occ = Black | White;
-                    return new_mask | ep_m;
-                }
-                Black |= (1ULL << sq);
-                White |= (1ULL << (ep + 8));
-                Occ = Black | White;
-            }
-        }
-    }
-    return new_mask;
-}
-
 // squares seen by a bishop
 inline U64 Board::seen_by_bishop(bool IsWhite, int8_t sq) {
     U64 bishop_move = 0ULL;
@@ -1094,6 +1039,7 @@ inline U64 Board::legal_king_moves(bool IsWhite, int8_t sq) {
         Black &= ~(1ULL << sq);
         Occ = Black | White;
     }
+    
     while (moves) {
         to_index = _bitscanforward(moves);
         final_moves |= not(is_square_attacked(IsWhite, to_index)) ? (1ULL << to_index) : 0ULL;
@@ -1148,7 +1094,6 @@ inline U64 Board::legal_king_moves(bool IsWhite, int8_t sq) {
         rook_index = _bitscanreverse(blockers & _rays[WEST][sq]);
         if (rook_index == 56) {
             if (not is_square_attacked(IsWhite, 60) and not is_square_attacked(IsWhite, 59) and not is_square_attacked(IsWhite, 58)) {
-
                 castling_index |= 1ULL << 58;
                 final_moves |= castling_index;
             }
@@ -1157,216 +1102,120 @@ inline U64 Board::legal_king_moves(bool IsWhite, int8_t sq) {
     return final_moves;
 }
 
-// detects if the square is attacked
+// bool if square is attacked
 inline bool Board::is_square_attacked(bool IsWhite, int8_t sq) {
-    U64 us = IsWhite ? White : Black;
-    U64 enemy = IsWhite ? Black : White;
-    unsigned long index = 0;
-
-    if (_rays[NORTH][sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[NORTH][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            // If this is true the ray is not hitting a piece from us
-            if (not(_rays[NORTH][sq] & us)) {
-                return true;
-            }
-            else {
-                // We hit a piece from us. If the distance to it is smaller than to the blocker we cannot block the check
-                int blockedus = _bitscanforward(_rays[NORTH][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH][sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-
-                return true;
-            }
-        }
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH][sq] & us)) {
-                return true;
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    if (_rays[EAST][sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[EAST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[EAST][sq] & us)) {
-                return true;
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[EAST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    if (_rays[WEST][sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[WEST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[WEST][sq] & us)) {
-                return true;
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[WEST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    if (_rays[NORTH_WEST][sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[NORTH_WEST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-
-                return true;
-            }
-        }
-        if (IsWhite and _test_bit(EnemyPawn(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-
-                return true;
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[NORTH_WEST][sq] & us)) {
-                return true;
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[NORTH_WEST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-
-                    return true;
-                }
-            }
-        }
-    }
-
-    if (_rays[NORTH_EAST][sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[NORTH_EAST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (IsWhite and _test_bit(EnemyPawn(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[NORTH_EAST][sq] & us)) {
-                return true;
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[NORTH_EAST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH_WEST][sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH_WEST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (!IsWhite and _test_bit(EnemyPawn(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH_WEST][sq] & us)) {
-                return true;
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH_WEST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH_EAST][sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH_EAST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (!IsWhite and _test_bit(EnemyPawn(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                return true;
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH_EAST][sq] & us)) {
-                return true;
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH_EAST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    if (knightattacks[sq] & (Knights(!IsWhite) & enemy)) {
-        return true;
-    }
-
+    U64 mask = (1ULL << sq);
+	if (Pawn_AttackLeft(IsWhite, mask) & Pawns(!IsWhite) & not_h_file || Pawn_AttackRight(IsWhite, mask) & Pawns(!IsWhite) & not_a_file) return true;
+    if (knightattacks[sq] & Knights(!IsWhite)) return true;
+    if (seen_by_king(sq) & King(!IsWhite)) return true;
+	if (seen_by_bishop(IsWhite, sq) & (Bishops(!IsWhite) | Queens(!IsWhite))) return true;
+    if (seen_by_rook(IsWhite, sq) & (Rooks(!IsWhite) | Queens(!IsWhite))) return true;
     return false;
 }
 
-// creates all pins
+// creates the pin mask
 inline void Board::create_pin_masks(bool IsWhite) {
-    U64 us = IsWhite ? White : Black;
-    int index = -1;
-    while (us) {
-        index = _bitscanforward(us);
-        U64 dg = is_pinned_dg(IsWhite, index);
-        U64 hv = is_pinned_hv(IsWhite, index);
-        pin_dg |= dg ? dg : 0ULL;
-        pin_hv |= hv ? hv : 0ULL;
-        us &= ~(1ULL << index);
+    int8_t sq = _bitscanforward(King(IsWhite));
+    U64 victims = IsWhite ? Black : White;
+    U64 blockers = IsWhite ? White : Black;
+    int8_t index;
+    pin_hv = 0ULL;
+    pin_dg = 0ULL;
+    U64 attacksN = 0ULL;
+    if (_rays[NORTH][sq] & victims) {
+        index = _bitscanforward(victims & _rays[NORTH][sq]);
+        if (piece_type_at(index) == 3 || piece_type_at(index) == 4) {
+            attacksN = _rays[NORTH][sq];
+            attacksN &= ~_rays[NORTH][index];
+        }
+    }
+
+    U64 attacksS = 0ULL;
+    if (_rays[SOUTH][sq] & victims) {
+        index = _bitscanreverse(victims & _rays[SOUTH][sq]);
+        if (piece_type_at(index) == 3 || piece_type_at(index) == 4) {
+            attacksS = _rays[SOUTH][sq];
+            attacksS &= ~_rays[SOUTH][index];
+        }
+    }
+
+    U64 attacksE = 0ULL;
+    if (_rays[EAST][sq] & victims) {
+        index = _bitscanforward(victims & _rays[EAST][sq]);
+        if (piece_type_at(index) == 3 || piece_type_at(index) == 4) {
+            attacksE = _rays[EAST][sq];
+            attacksE &= ~_rays[EAST][index];
+        }
+    }
+
+    U64 attacksW = 0ULL;
+    if (_rays[WEST][sq] & victims) {
+        index = _bitscanreverse(victims & _rays[WEST][sq]);
+        if (piece_type_at(index) == 3 || piece_type_at(index) == 4) {
+            attacksW = _rays[WEST][sq];
+            attacksW &= ~_rays[WEST][index];
+        }
+    }
+	
+	if (popcount(attacksN & blockers) == 1) {
+		pin_hv |= attacksN;
+	}
+    if (popcount(attacksS & blockers) == 1) {
+        pin_hv |= attacksS;
+    }
+    if (popcount(attacksE & blockers) == 1) {
+        pin_hv |= attacksE;
+    }
+    if (popcount(attacksW & blockers) == 1) {
+        pin_hv |= attacksW;
+    }
+	
+    U64 bishop_moveNW = 0ULL;
+    if (_rays[NORTH_WEST][sq] & victims) {
+        index = _bitscanforward(victims & _rays[NORTH_WEST][sq]);
+        if (piece_type_at(index) == 2 || piece_type_at(index) == 4) {
+            bishop_moveNW = _rays[NORTH_WEST][sq];
+            bishop_moveNW &= ~_rays[NORTH_WEST][index];
+        }
+    }
+
+    U64 bishop_moveNE = 0ULL;
+    if (_rays[NORTH_EAST][sq] & victims) {
+        index = _bitscanforward(victims & _rays[NORTH_EAST][sq]);
+        if (piece_type_at(index) == 2 || piece_type_at(index) == 4) {
+            bishop_moveNE = _rays[NORTH_EAST][sq];
+            bishop_moveNE &= ~_rays[NORTH_EAST][index];
+        }
+    }
+
+    U64 bishop_moveSW = 0ULL;
+    if (_rays[SOUTH_WEST][sq] & victims) {
+        index = _bitscanreverse(victims & _rays[SOUTH_WEST][sq]);
+        if (piece_type_at(index) == 2 || piece_type_at(index) == 4) {
+            bishop_moveSW = _rays[SOUTH_WEST][sq];
+            bishop_moveSW &= ~_rays[SOUTH_WEST][index];
+        }
+    }
+
+    U64 bishop_moveSE = 0ULL;
+    if (_rays[SOUTH_EAST][sq] & victims) {
+        index = _bitscanreverse(victims & _rays[SOUTH_EAST][sq]);
+        if (piece_type_at(index) == 2 || piece_type_at(index) == 4) {
+            bishop_moveSE = _rays[SOUTH_EAST][sq];
+            bishop_moveSE &= ~_rays[SOUTH_EAST][index];
+        }
+    }
+    if (popcount(bishop_moveNW & blockers) == 1) {
+        pin_dg |= bishop_moveNW;
+    }
+    if (popcount(bishop_moveNE & blockers) == 1) {
+        pin_dg |= bishop_moveNE;
+    }
+    if (popcount(bishop_moveSW & blockers) == 1) {
+        pin_dg |= bishop_moveSW;
+    }
+    if (popcount(bishop_moveSE & blockers) == 1) {
+        pin_dg |= bishop_moveSE;
     }
 }
 
@@ -1620,7 +1469,7 @@ U64 Board::would_be_attack(bool IsWhite, int8_t sq) {
     return checks;
 }
 
-// detects if the piece is pinned horizontal or vertical
+// detects if the piece is pinned horizontal or vertical and returns the mask
 U64 Board::is_pinned_hv(bool IsWhite, int8_t sq) {
     U64 enemy;
     U64 us;
@@ -1694,7 +1543,7 @@ U64 Board::is_pinned_hv(bool IsWhite, int8_t sq) {
     return checks;
 }
 
-// detects if the piece is pinned diagonal
+// detects if the piece is pinned diagonal and returns the mask
 U64 Board::is_pinned_dg(bool IsWhite, int8_t sq) {
     U64 enemy;
     U64 us;
@@ -1804,9 +1653,6 @@ void Board::init(bool IsWhite) {
     int king_sq = _bitscanforward(King(IsWhite));
     U64 r = create_checkmask(IsWhite, king_sq);
     checkmask = r ? r : 18446744073709551615ULL;
-    // reset pin masks
-    pin_dg = 0ULL;
-    pin_hv = 0ULL;
     create_pin_masks(IsWhite);
 }
 
