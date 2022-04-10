@@ -43,9 +43,11 @@ int main(int argc, char** argv) {
 	std::thread searchThread;
 	bool thread_started = false;
 	signal(SIGINT, signal_callback_handler);
-	TEntry* buffer, * oldbuffer;
-	if ((buffer = (TEntry*)malloc(tt_size * sizeof(TEntry))) == NULL)
+	TEntry* oldbuffer;
+	if ((TTable = (TEntry*)malloc(tt_size * sizeof(TEntry))) == NULL) {
+		std::cout << "Error: Could not allocate memory for TT\n";
 		exit(1);
+	}
 	
 	while (true) {
 		if (argc > 1) {
@@ -75,8 +77,8 @@ int main(int argc, char** argv) {
 			std::size_t start_index = input.find("value");
 			std::string size_str = input.substr(start_index + 6);
 			U64 elements = (static_cast<unsigned long long>(std::stoi(size_str)) * 1000000) / sizeof(TEntry);
-			oldbuffer = buffer;
-			if ((buffer = (TEntry*)realloc(TTable, elements * sizeof(TEntry))) == NULL)
+			oldbuffer = TTable;
+			if ((TTable = (TEntry*)realloc(TTable, elements * sizeof(TEntry))) == NULL)
 			{
 				std::cout << "Error: Could not allocate memory for TT\n";
 				free(oldbuffer);
@@ -90,7 +92,7 @@ int main(int argc, char** argv) {
 		}
 		if (input.find("quit") != std::string::npos) {
 			threads.stop();
-			free(buffer);
+			free(TTable);
 			delete board;
 			exit(0);
 		}
