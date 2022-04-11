@@ -1958,6 +1958,26 @@ void Board::unmake_move() {
     }
 }
 
+void Board::make_null_move() {
+    save_board_state();
+    side_to_move ^= 1;
+    board_hash ^= RANDOM_ARRAY[780];
+    en_passant_square = 64;
+    full_moves++;
+}
+
+void Board::unmake_null_move() {
+    if (move_stack.size() > 0) {
+        BoardState board;
+        board = move_stack.top();
+        side_to_move ^= 1;
+        board_hash ^= RANDOM_ARRAY[780];
+        en_passant_square = board.en_passant;
+        full_moves--;
+        move_stack.pop();
+    }
+}
+
 MoveList Board::generate_legal_moves() {
     Move move;
     MoveList possible_moves{};

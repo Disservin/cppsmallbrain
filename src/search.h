@@ -58,8 +58,6 @@ public:
 
 	int mmlva(Move move);
 
-	bool is_pv_move(Move move, int ply);
-
 	bool compare_moves(Move& m1, Move& m2);
 	
 	int make_bench();

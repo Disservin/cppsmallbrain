@@ -44,7 +44,6 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	}
 	for (int depth = 1; depth <= search_depth; depth++) {
 		search_to_depth = depth;
-		bestmove = {};
 		result = aspiration_search(player, depth, result);
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
@@ -180,8 +179,10 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 			return qsearch(alpha, beta, player, 10, ply);
 		}
 	}
+	// Seldepth
 	if (ply > heighest_depth)
 		heighest_depth = ply;
+	
 	// Check TT for entry
 	U64 key = board->board_hash;
 	U64 index = key % tt_size;
@@ -224,17 +225,14 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		}
 		// Null move reduction
 		if (popcount(board->Occ) >= 13 && !null && depth >= 3) {
-			int old_ep = board->en_passant_square;
-			board->side_to_move ^= 1;
-			board->board_hash ^= RANDOM_ARRAY[780];
-			board->en_passant_square = 64;
-			board->full_moves++;
 			int r = depth > 6 ? 3 : 2;
+			
+			board->make_null_move();
+			
 			int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - r, ply + 1, true);
-			board->side_to_move ^= 1;
-			board->board_hash ^= RANDOM_ARRAY[780];
-			board->en_passant_square = old_ep;
-			board->full_moves--;
+
+			board->unmake_null_move();
+
 			if (score >= beta) { 
 				reduction = 2;
 				if (depth - 3 <= 0) {
@@ -261,14 +259,18 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		}
 		
 		// Late move reduction
-		if (tried_moves > 2 + 2 * root_node && depth >= 3 && !u_move && !inCheck && board->piece_at_square(move.to_square) == -1) {
+		if (tried_moves > 2 + 2 * root_node && depth >= 3 && !u_move 
+			&& !inCheck && board->piece_at_square(move.to_square) == -1) {
 			new_depth -= 1;
 		}
+		// Increase nodes
 		nodes++;
+		
 		board->make_move(move);
 
 		tried_moves++;
 
+		// Apply reduction
 		new_depth -= reduction;
 
 		int score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
@@ -278,24 +280,26 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		// Cut-off
 		if (score > bestvalue) {
 			bestvalue = score;
-			if (depth == search_to_depth) {
-				bestmove = move;
-			}
+			
+			// Save bestmove (PV)
 			pv_table[ply][ply] = move;
 			for (int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++) {
 				pv_table[ply][next_ply] = pv_table[ply + 1][next_ply];
 			}
 			pv_length[ply] = pv_length[ply + 1];
+			
 			if (score > alpha) {
 				alpha = score;		
 				// Beta cut-off
 				if (score >= beta) {
+					// Killer move heuristic
 					if (board->piece_at_square(move.to_square) == -1) {
 						killerMoves[1][ply] = killerMoves[0][ply];
 						killerMoves[0][ply] = move;
 					}
 					break;
 				}
+				// History heuristic
 				if (board->piece_at_square(move.to_square) == -1) {
 					history_table[Is_White][move.from_square][move.to_square] += depth * depth;
 				}
@@ -335,7 +339,7 @@ std::string Searcher::get_pv_line() {
 
 int Searcher::score_move(Move move, bool u_move) {
 	int IsWhite = board->side_to_move ? 0 : 1;
-	if (is_pv_move(move, current_ply)) {
+	if (compare_moves(move, pv_table[0][current_ply])) {
 		return 10000;
 	}
 	else if (u_move && compare_moves(TTable[board->board_hash % tt_size].move, move)) {
@@ -377,13 +381,9 @@ int Searcher::mmlva(Move move) {
 	return mvvlva[victim][attacker];
 }
 
-bool Searcher::is_pv_move(Move move, int ply) {
-	return pv_table[0][ply].from_square == move.from_square && pv_table[0][ply].to_square == move.to_square &&
-		pv_table[0][ply].piece == move.piece && pv_table[0][ply].promotion == move.promotion;
-}
-
 bool Searcher::compare_moves(Move& m1, Move& m2) {
-	return m1.from_square == m2.from_square && m1.to_square == m2.to_square && m1.piece == m2.piece && m1.promotion == m2.promotion;
+	return m1.from_square == m2.from_square && m1.to_square == m2.to_square
+		   && m1.piece == m2.piece && m1.promotion == m2.promotion;
 }
 
 std::string Searcher::get_bestmove() {

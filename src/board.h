@@ -306,6 +306,10 @@ public:
 
     void unmake_move();
 
+    void make_null_move();
+	
+	void unmake_null_move();
+	
     MoveList generate_legal_moves();
 
     MoveList generate_capture_moves();
