@@ -220,8 +220,9 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	if (!inCheck && !pv_node) {
 		int staticEval = evaluation() * player;
 		// Razor
-		if (depth <= 1 && (staticEval + 150) < alpha) {
-			return qsearch(alpha, beta, player, 10, ply);
+		if (depth <= 5 && staticEval < alpha - 300 - 50 * depth * depth) {
+			int value = qsearch(alpha - 1, alpha, player, 10, ply);
+			if (value < alpha) return value;
 		}
 		// Null move reduction
 		if (popcount(board->Occ) >= 13 && !null && depth >= 3) {
