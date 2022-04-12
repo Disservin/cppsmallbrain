@@ -232,6 +232,8 @@ public:
 
     U64 Pawn_AttackRight(bool IsWhite, U64 mask);
 
+    bool non_pawn_material(bool IsWhite);
+
     U64 King(bool IsWhite);
 
     U64 EnemyKing(bool IsWhite);
