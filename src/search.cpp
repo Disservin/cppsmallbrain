@@ -264,26 +264,38 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 			}
 		}
 		
-		// Late move reduction
-		if (tried_moves > 2 + 2 * root_node && depth >= 3 && !u_move 
-			&& !inCheck && board->piece_at_square(move.to_square) == -1 && board->non_pawn_material(Is_White)) {
-			new_depth -= 1;
-		}
-		 
 		// Increase nodes
 		nodes++;
-		
-		board->make_move(move);
-
+		int score{};
 		tried_moves++;
 
 		// Apply reduction
 		new_depth -= reduction;
 
-		int score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
+		board->make_move(move);
+		if (tried_moves == 0) {
+			score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
+		}
+		else {
+			// Late move reduction
+			if (tried_moves > 2 + 2 * root_node && depth >= 3 && !u_move
+				&& !inCheck && board->piece_at_square(move.to_square) == -1 && board->non_pawn_material(Is_White)) {
+				new_depth -= 1;
+			}
+			else {
+				score = alpha + 1;
+
+			}
+			if (score > alpha) {
+				score = -alpha_beta(-alpha - 1, -alpha, -player, false, new_depth, ply + 1, null);
+				if (score > alpha && score < beta) {
+					score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
+				}
+			}
+		}
 
 		board->unmake_move();
-
+		
 		// Cut-off
 		if (score > bestvalue) {
 			bestvalue = score;
