@@ -635,6 +635,11 @@ inline U64 Board::Pawn_AttackLeft(bool IsWhite, U64 mask) {
     else return mask >> 9;
 }
 
+bool Board::non_pawn_material(bool IsWhite) {
+    if (IsWhite) return bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN];
+    else return bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN];
+}
+
 U64 Board::King(bool IsWhite) {
     if (IsWhite) return bitboards[WKING];
     else return bitboards[BKING];

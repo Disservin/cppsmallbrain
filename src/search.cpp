@@ -32,6 +32,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	memset(pv_length, 0, sizeof(pv_length));
 	memset(history_table, 0, sizeof(history_table));
 	heighest_depth = 0;
+	start_age = board->full_moves;
 	
 	if (board->is_game_over()) {
 		std::cout << "info depth 0 score mate 0" << std::endl;
@@ -82,7 +83,7 @@ int Searcher::aspiration_search(int player, int depth, int prev_eval) {
 		result = alpha_beta(alpha, beta, player, true, depth, ply, false);
 	}
 	if (result <= alpha or result >= beta) {
-		result = alpha_beta(alpha, beta, player, true, depth, ply, false);
+		result = alpha_beta(-INFINITE, INFINITE, player, true, depth, ply, false);
 	}
 	return result;
 }
@@ -260,9 +261,10 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		
 		// Late move reduction
 		if (tried_moves > 2 + 2 * root_node && depth >= 3 && !u_move 
-			&& !inCheck && board->piece_at_square(move.to_square) == -1) {
+			&& !inCheck && board->piece_at_square(move.to_square) == -1 && board->non_pawn_material(Is_White)) {
 			new_depth -= 1;
 		}
+		 
 		// Increase nodes
 		nodes++;
 		
@@ -309,7 +311,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 
 	// Store position in TT
 	if (!can_exit_early() and !(bestvalue >= 19000) and !(bestvalue <= -19000) and 
-		(TTable[index].depth <= depth or TTable[index].age + 3 <= board->full_moves)) {
+		(TTable[index].depth < depth or TTable[index].age + 3 <= start_age)) {
 		TTable[index].flag = EXACT;
 		// Upperbound
 		if (bestvalue <= old_alpha) {
@@ -321,7 +323,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		}
 		TTable[index].depth = depth;
 		TTable[index].score = bestvalue;
-		TTable[index].age = board->full_moves;
+		TTable[index].age = start_age;
 		TTable[index].key = key;
 		TTable[index].move = pv_table[0][ply];
 	}
