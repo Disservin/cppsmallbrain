@@ -241,6 +241,11 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 				}
 			}
 		}
+
+		// Static Null Move Pruning
+		if (std::abs(beta) < MATE - max_ply) {
+			if (staticEval - 150 * depth >= beta) return beta;
+		}
 	}
 	
 	uint8_t tried_moves = 0;
