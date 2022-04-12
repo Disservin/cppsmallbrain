@@ -23,6 +23,7 @@ public:
 	int history_table[2][64][64] = { {0},{0}};
 	Move killerMoves[2][max_ply+1] = {0};
 	int8_t heighest_depth = 0;
+	int16_t start_age = 0;
 	
 	enum {
 		UPPERBOUND, LOWERBOUND, EXACT
