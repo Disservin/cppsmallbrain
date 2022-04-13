@@ -417,18 +417,6 @@ U64 Board::generate_zobrist_hash() {
 inline void Board::save_board_state()
 {
     BoardState board;
-    board.wpawn = bitboards[WPAWN];
-    board.wknight = bitboards[WKNIGHT];
-    board.wbishop = bitboards[WBISHOP];
-    board.wrook = bitboards[WROOK];
-    board.wqueen = bitboards[WQUEEN];
-    board.wking = bitboards[WKING];
-    board.bpawn = bitboards[BPAWN];
-    board.bknight = bitboards[BKNIGHT];
-    board.bbishop = bitboards[BBISHOP];
-    board.brook = bitboards[BROOK];
-    board.bqueen = bitboards[BQUEEN];
-    board.bking = bitboards[BKING];
     board.en_passant = en_passant_square;
     board.castle_rights = castling_rights;
     board.board_hash = board_hash;
@@ -1483,7 +1471,7 @@ U64 Board::would_be_attack(bool IsWhite, int8_t sq) {
 bool Board::gives_check(Move& move) {
     make_move(move);
     bool inCheck = is_square_attacked(side_to_move, King(side_to_move));
-    unmake_move();
+    unmake_move(move);
 	return inCheck;
 }
 
@@ -1938,29 +1926,57 @@ void Board::make_move(Move& move) {
     }
 };
 
-void Board::unmake_move() {
+void Board::unmake_move(Move& move) {
     if (move_stack.size() > 0) {
         BoardState board;
         board = move_stack.top();
-        bitboards[WPAWN] = board.wpawn;
-        bitboards[WKNIGHT] = board.wknight;
-        bitboards[WBISHOP] = board.wbishop;
-        bitboards[WROOK] = board.wrook;
-        bitboards[WQUEEN] = board.wqueen;
-        bitboards[WKING] = board.wking;
-        bitboards[BPAWN] = board.bpawn;
-        bitboards[BKNIGHT] = board.bknight;
-        bitboards[BBISHOP] = board.bbishop;
-        bitboards[BROOK] = board.brook;
-        bitboards[BQUEEN] = board.bqueen;
-        bitboards[BKING] = board.bking;
+		
         en_passant_square = board.en_passant;
         castling_rights = board.castle_rights;
         remove_repetition(board_hash);
         board_hash = board.board_hash;
         half_moves = board.half_move;
         std::copy(board.piece_loc, board.piece_loc + 64, board_pieces);
-        side_to_move ^= 1;
+        
+        
+        side_to_move ^= 1;		
+        int piece = move.piece + (side_to_move * 6);
+		
+        bitboards[piece] |= (1ULL << move.from_square);
+        bitboards[piece] &= ~(1ULL << move.to_square);
+		
+        if (move.to_square == en_passant_square && piece == 0)
+			bitboards[6] |= (1ULL << (move.to_square - 8));
+        if (move.to_square == en_passant_square && piece == 6)
+            bitboards[0] |= (1ULL << (move.to_square + 8));
+		
+		if (move.capture != -1)
+            bitboards[move.capture] |= (1ULL << move.to_square);
+		if (move.promotion != -1)
+            bitboards[move.promotion + (6 * side_to_move)] &= ~(1ULL << move.to_square);
+		
+        if (piece == WKING) {
+            if (move.to_square == 6 && move.from_square == 4) {
+                
+                bitboards[WROOK] &= ~(1ULL << 5);
+                bitboards[WROOK] |= (1ULL << 7);
+            }
+            if (move.to_square == 2 && move.from_square == 4) {
+                bitboards[WROOK] &= ~(1ULL << 3);
+                bitboards[WROOK] |= (1ULL << 0);
+            }
+        }
+        if (piece == BKING) {
+            if (move.to_square == 62 && move.from_square == 60) {
+                bitboards[BROOK] |= (1ULL << 63);
+                bitboards[BROOK] &= ~(1ULL << 61);
+            }
+            if (move.to_square == 58 && move.from_square == 60) {
+                bitboards[BROOK] |= (1ULL << 56);
+                bitboards[BROOK] &= ~(1ULL << 59);
+            }
+        }
+		
         update_occupancies();
         move_stack.pop();
         full_moves--;
@@ -2020,6 +2036,8 @@ MoveList Board::generate_legal_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+				move.capture = piece_at_square(to_index);
+				
                 if (square_rank(to_index) == 7 or square_rank(to_index) == 0) {
                     move.promotion = QUEEN;
                     possible_moves.movelist[possible_moves.size] = move;
@@ -2051,6 +2069,7 @@ MoveList Board::generate_legal_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+                move.capture = piece_at_square(to_index);
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
@@ -2065,6 +2084,7 @@ MoveList Board::generate_legal_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+                move.capture = piece_at_square(to_index);
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
@@ -2079,6 +2099,7 @@ MoveList Board::generate_legal_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+                move.capture = piece_at_square(to_index);
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
@@ -2093,6 +2114,7 @@ MoveList Board::generate_legal_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+                move.capture = piece_at_square(to_index);
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
@@ -2107,6 +2129,7 @@ MoveList Board::generate_legal_moves() {
         move.from_square = king_sq;
         move.to_square = to_index;
         move.promotion = -1;
+        move.capture = piece_at_square(to_index);
         possible_moves.movelist[possible_moves.size] = move;
         possible_moves.size++;  
     }
@@ -2144,10 +2167,13 @@ MoveList Board::generate_capture_moves() {
                 move.piece = PAWN;
                 move.from_square = from_index;
                 move.to_square = to_index;
+                move.capture = piece_at_square(to_index);
+                move.promotion = -1;
+				
                 if (to_index == en_passant_square) {
                     continue;
                 }
-                move.promotion = -1;
+                
                 if (square_rank(to_index) == 7 or square_rank(to_index) == 0) {
                     move.promotion = QUEEN;
                     possible_moves.movelist[possible_moves.size] = move;
@@ -2163,7 +2189,6 @@ MoveList Board::generate_capture_moves() {
                     possible_moves.size++;
                 }
                 else {
-                    move.promotion = -1;
                     possible_moves.movelist[possible_moves.size] = move;
                     possible_moves.size++;
                 }
@@ -2180,6 +2205,7 @@ MoveList Board::generate_capture_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+                move.capture = piece_at_square(to_index);
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
@@ -2195,6 +2221,7 @@ MoveList Board::generate_capture_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+                move.capture = piece_at_square(to_index);
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
@@ -2210,6 +2237,7 @@ MoveList Board::generate_capture_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+                move.capture = piece_at_square(to_index);
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
@@ -2225,6 +2253,7 @@ MoveList Board::generate_capture_moves() {
                 move.from_square = from_index;
                 move.to_square = to_index;
                 move.promotion = -1;
+                move.capture = piece_at_square(to_index);
                 possible_moves.movelist[possible_moves.size] = move;
                 possible_moves.size++;
             }
@@ -2240,6 +2269,7 @@ MoveList Board::generate_capture_moves() {
         move.from_square = king_sq;
         move.to_square = to_index;
         move.promotion = -1;
+        move.capture = piece_at_square(to_index);
         possible_moves.movelist[possible_moves.size] = move;
         possible_moves.size++;
     }
@@ -2260,7 +2290,7 @@ U64 Perft::speed_test_perft(int depth, int max) {
             Move move = n_moves.movelist[i];
             this_board->make_move(move);
             nodes += speed_test_perft(depth - 1, depth);
-            this_board->unmake_move();
+            this_board->unmake_move(move);
             if (depth == max) {
                 pf.from_square = move.from_square;
                 pf.to_square = move.to_square;
@@ -2315,7 +2345,7 @@ U64 Perft::bulk_test_perft(int depth, int max) {
             Move move = n_moves.movelist[i];
             this_board->make_move(move);
             nodes += bulk_test_perft(depth - 1, depth);
-            this_board->unmake_move();
+            this_board->unmake_move(move);
             if (depth == max) {
                 pf.from_square = move.from_square;
                 pf.to_square = move.to_square;
