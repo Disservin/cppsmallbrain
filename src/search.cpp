@@ -124,7 +124,7 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 		
 		board->make_move(move);
 		int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
-		board->unmake_move();
+		board->unmake_move(move);
 		
 		if (score > stand_pat) {
 			stand_pat = score;
@@ -282,7 +282,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 			}
 		}
 
-		board->unmake_move();
+		board->unmake_move(move);
 		
 		// Cut-off
 		if (score > bestvalue) {
@@ -300,14 +300,14 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 				// Beta cut-off
 				if (score >= beta) {
 					// Killer move heuristic
-					if (board->piece_at_square(move.to_square) == -1) {
+					if (move.capture == -1) {
 						killerMoves[1][ply] = killerMoves[0][ply];
 						killerMoves[0][ply] = move;
 					}
 					break;
 				}
 				// History heuristic
-				if (board->piece_at_square(move.to_square) == -1) {
+				if (move.capture == -1) {
 					history_table[Is_White][move.from_square][move.to_square] += depth * depth;
 				}
 			}
@@ -355,7 +355,7 @@ int Searcher::score_move(Move move, bool u_move) {
 	else if (move.promotion != -1) {
 		return 700;
 	}
-	else if (board->piece_at_square(move.to_square) != -1) {
+	else if (move.capture != -1) {
 		return mmlva(move);
 	}
 	else if (compare_moves(killerMoves[0][current_ply], move)) {

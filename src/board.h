@@ -29,18 +29,6 @@ struct MoveList {
 };
 
 struct BoardState {
-    U64 wpawn;
-    U64 wknight;
-    U64 wbishop;
-    U64 wrook;
-    U64 wqueen;
-    U64 wking;
-    U64 bpawn;
-    U64 bknight;
-    U64 bbishop;
-    U64 brook;
-    U64 bqueen;
-    U64 bking;
     uint8_t en_passant;
     uint8_t castle_rights;
     int8_t piece_loc[64];
@@ -308,7 +296,7 @@ public:
 
     void make_move(Move& move);
 
-    void unmake_move();
+    void unmake_move(Move& move);
 
     void make_null_move();
 	

@@ -21,6 +21,7 @@ struct Move {
     int8_t  from_square = -1;
     int8_t  to_square = -1;
     int8_t  promotion = -1;
+    int8_t  capture = -1;
 };
 
 //Gets the file index of the square where 0 is the a-file
