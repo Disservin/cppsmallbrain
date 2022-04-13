@@ -3,7 +3,7 @@
 #include "thread_manager.h"
 
 
-void ThreadManager::begin(int depth, int tg, int bench) {
+void ThreadManager::begin(int depth, long long tg, int bench) {
 	if (is_searching()) {
 		stop();
 	}

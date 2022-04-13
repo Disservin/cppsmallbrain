@@ -205,6 +205,8 @@ std::string Board::get_fen() {
         fen += "k";
     if (castling_rights & 8)
         fen += "q";
+    if (castling_rights == 0)
+        fen += " - ";
     if (en_passant_square == no_sq)
         fen += " - ";
     else

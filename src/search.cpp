@@ -12,7 +12,7 @@ extern U64 tt_size;
 
 bool Searcher::can_exit_early() {
 	if (stopped) return true;
-	if (nodes & 1023 and limit_time) {
+	if (limit_time && nodes & 2047) {
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 		if (time_given - time_diff < 0) return true;
@@ -28,9 +28,11 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	nodes = 0;
 
 	begin = std::chrono::high_resolution_clock::now();
+	
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
 	memset(history_table, 0, sizeof(history_table));
+	
 	heighest_depth = 0;
 	start_age = board->full_moves;
 	
@@ -46,6 +48,7 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	for (int depth = 1; depth <= search_depth; depth++) {
 		search_to_depth = depth;
 		result = aspiration_search(player, depth, result);
+		
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 		if (can_exit_early()) {
@@ -116,10 +119,13 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
+		
 		nodes++;
+		
 		board->make_move(move);
 		int score = -qsearch(-beta, -alpha, -player, depth - 1, ply + 1);
 		board->unmake_move();
+		
 		if (score > stand_pat) {
 			stand_pat = score;
 			if (score > alpha) {
@@ -142,12 +148,15 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	// Early exit
 	if (can_exit_early()) return 0;
 
+	if (ply + 1 >= max_ply) return 0;
+	
+	int king_sq = _bitscanforward(board->King(Is_White));
+	bool inCheck = board->is_square_attacked(Is_White, king_sq);
+	
 	// At not root node repetition detection for 2 times
-	if (!root_node) {		
+	if (!root_node) {
 		if (board->is_threefold_rep()) return 0;
 		if (board->half_moves >= 100) {
-			int king_sq = _bitscanforward(board->King(Is_White));
-			bool inCheck = board->is_square_attacked(Is_White, king_sq);
 			if (inCheck) {
 				MoveList moves = board->generate_legal_moves();
 				if (moves.size == 0) return -MATE + ply;
@@ -169,9 +178,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		}
 	}
 	
-	int king_sq = _bitscanforward(board->King(Is_White));
-	bool inCheck = board->is_square_attacked(Is_White, king_sq);
-	if (inCheck) {
+	if (inCheck && depth <= 0) {
 		depth++;
 	}
 	
@@ -181,9 +188,10 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	}
 	
 	// Seldepth
-	if (ply > heighest_depth)
+	if (ply > heighest_depth) {
 		heighest_depth = ply;
-	
+	}
+
 	// Check TT for entry
 	U64 key = board->board_hash;
 	U64 index = key % tt_size;
@@ -253,19 +261,24 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		Move move = n_moves.movelist[i];
 
 		legal_moves++;
+		nodes++;
 		board->make_move(move);
 		
-		if (depth >= 3 && !pv_node && !inCheck && legal_moves > 3 + 2 * root_node) {
-			score = -alpha_beta(-beta, -alpha, -player, false, depth - 2, ply + 1, false);
+		if (legal_moves == 1) {
+			score = -alpha_beta(-beta, -alpha, -player, false, depth - 1, ply + 1, false);
 		}
 		else {
-			score = alpha + 1;
-		}
-		
-		if (score > alpha) {
-			score = -alpha_beta(-alpha - 1, -alpha, -player, false, depth - 1 - reduction, ply + 1, false);
-			if (score > alpha && score < beta) {
-				score = -alpha_beta(-beta, -alpha, -player, false, depth - 1 - reduction, ply + 1, false);
+			if (depth >= 3 && !pv_node && !inCheck && legal_moves > 3 + 2 * root_node) {
+				score = -alpha_beta(-beta, -alpha, -player, false, depth - 2, ply + 1, false);
+			}
+			else {
+				score = alpha + 1;
+			}
+			if (score > alpha) {
+				score = -alpha_beta(-alpha - 1, -alpha, -player, false, depth - 1 - reduction, ply + 1, false);
+				if (score > alpha && score < beta) {
+					score = -alpha_beta(-beta, -alpha, -player, false, depth - 1 - reduction, ply + 1, false);
+				}
 			}
 		}
 

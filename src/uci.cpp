@@ -175,13 +175,20 @@ int main(int argc, char** argv) {
 			std::size_t start_index = input.find("movetime");
 			std::string movetime_str = input.substr(start_index + 6);
 			int movetime = std::stoi(movetime_str);
-			int time_given = time_left(movetime);
-			threads.begin(60, time_given);
+			threads.begin(60, movetime);
 		}
 		if (input.find("go wtime") != std::string::npos) {
 			std::vector<std::string> param = split_input(input);
-			int movetime = board->side_to_move ? std::stoi(param[4]) :std::stoi(param[2]);
-			int time_given = time_left(movetime);
+			int movetime = board->side_to_move ? std::stoi(param[4]) : std::stoi(param[2]);
+			int inc = -1;
+			int movestogo = 0;
+			if (param.size() > 5) {
+				inc = board->side_to_move ? std::stoi(param[8]) : std::stoi(param[6]); 
+			}
+			if (param.size() > 9) {
+				movestogo = std::stoi(param[10]);
+			}
+			unsigned long long time_given = time_left(movetime, inc, movestogo);
 			threads.begin(60, time_given);
 		}
 		if (input == "b") {
