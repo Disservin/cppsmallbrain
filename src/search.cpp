@@ -212,7 +212,6 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	int old_alpha = alpha;
 	bool pv_node = (beta - alpha > 1);
 	
-	int reduction = 0;
 	int staticEval = evaluation() * player;
 	
 
@@ -232,10 +231,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		board->unmake_null_move();
 
 		if (score >= beta) {
-			reduction = 2;
-			if (depth - 3 <= 0) {
-				return qsearch(alpha, beta, player, 10, ply);
-			}
+			return beta;
 		}
 	}
 	
@@ -274,15 +270,15 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		}
 		else {
 			if (depth >= 3 && !pv_node && !inCheck && legal_moves > 3 + 2 * root_node) {
-				score = -alpha_beta(-beta, -alpha, -player, false, depth - 2, ply + 1, false);
+				score = -alpha_beta(-beta, -alpha, -player, false, depth - 3, ply + 1, false);
 			}
 			else {
 				score = alpha + 1;
 			}
 			if (score > alpha) {
-				score = -alpha_beta(-alpha - 1, -alpha, -player, false, depth - 1 - reduction, ply + 1, false);
+				score = -alpha_beta(-alpha - 1, -alpha, -player, false, depth - 1, ply + 1, false);
 				if (score > alpha && score < beta) {
-					score = -alpha_beta(-beta, -alpha, -player, false, depth - 1 - reduction, ply + 1, false);
+					score = -alpha_beta(-beta, -alpha, -player, false, depth - 1, ply + 1, false);
 				}
 			}
 		}
