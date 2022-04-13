@@ -109,13 +109,20 @@ int evaluation() {
 		int piece = board->piece_at_square(square);
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];
+		if (piece == 0 && square_rank(square) == 6) {
+			eval_mg += 20;
+			eval_eg += 50;
+		}
 	}
 	while (pieces_black) {
 		int square = pop_lsb(pieces_black);
 		int piece = board->piece_at_square(square);
-
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
+		if (piece == 6 && square_rank(square) == 1) {
+			eval_mg -= 20;
+			eval_eg -= 50;
+		}
 	}
 	
 	//King Safety
@@ -123,17 +130,15 @@ int evaluation() {
 	int king_sq_black = _bitscanforward(board->King(false));
 	if (king_sq_white == 6) {
 		if (!_test_bit(board->bitboards[board->WPAWN], 14) ||
-			!_test_bit(board->bitboards[board->WPAWN], 15) || 
-			!_test_bit(board->bitboards[board->WPAWN], 23)) {
-			eval_mg -= 50;
+			!_test_bit(board->bitboards[board->WPAWN], 15)) {
+			eval_mg -= 30;
 			eval_eg -= 15;
 		}
 	}
 	if (king_sq_black == 62) {
 		if (!_test_bit(board->bitboards[board->BPAWN], 54) ||
-			!_test_bit(board->bitboards[board->BPAWN], 55) ||
-			!_test_bit(board->bitboards[board->BPAWN], 47)) {
-			eval_mg += 50;
+			!_test_bit(board->bitboards[board->BPAWN], 55)) {
+			eval_mg += 30;
 			eval_eg += 15;
 		}
 	}
