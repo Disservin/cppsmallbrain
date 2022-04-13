@@ -137,6 +137,8 @@ int evaluation() {
 			eval_eg += 15;
 		}
 	}
+	
+	// U64 openfile = (~(fileFill(White)) & ~(fileFill(Black)));
 	U64 hf_w, hf_b;
 	std::tie(hf_w, hf_b) = half_open_file(board->bitboards[board->WPAWN], board->bitboards[board->BPAWN]);
 	int open_rooks = rook_open_file(hf_w, hf_b, board->bitboards[board->WROOK], board->bitboards[board->BROOK]);
@@ -183,9 +185,6 @@ bool is_h_file(int8_t square) {
 }	
 
 std::tuple<U64, U64> half_open_file(U64 White, U64 Black) {
-
-	U64 openfile = (~(fileFill(White)) & ~(fileFill(Black)));
-
 	return { halfopenoropenfile(White), halfopenoropenfile(Black) };
 }
 
@@ -200,20 +199,20 @@ int8_t isolated_pawn(int8_t square, U64 hf_open) {
 
 std::tuple<uint8_t, uint8_t> doubled_pawns(U64 pawns, U64 White, U64 Black) {
 	U64 bb_pawns_white = pawns & White;
-	U64 x = popcount(pawns & (pawns << 8));
+	U64 x = popcount(bb_pawns_white & (bb_pawns_white << 8));
 	U64 bb_pawns_black = pawns & Black;
-	U64 y = popcount(pawns & (pawns >> 8));
+	U64 y = popcount(bb_pawns_black & (bb_pawns_black >> 8));
 	return { x, y };
 }
 
 int8_t supported_pawn(int8_t square, U64 pawns, bool IsWhite) {
 	if (IsWhite) {
-		if (_test_bit(pawns, square - 7) && !is_h_file(square) || _test_bit(pawns, square - 9) && is_a_file(square)) {
+		if ((_test_bit(pawns, square - 7) && !is_h_file(square)) || (_test_bit(pawns, square - 9) && is_a_file(square))) {
 			return 1;
 		}
 	}
 	else {
-		if (_test_bit(pawns, square + 7) && !is_a_file(square) || _test_bit(pawns, square + 9) && is_h_file(square)) {
+		if ((_test_bit(pawns, square + 7) && !is_a_file(square)) || (_test_bit(pawns, square + 9) && is_h_file(square))) {
 			return 1;
 		}
 	}
@@ -221,7 +220,7 @@ int8_t supported_pawn(int8_t square, U64 pawns, bool IsWhite) {
 }
 
 int8_t neighbour_pawns(int8_t square, U64 pawns) {
-	if (_test_bit(pawns, square + 1) && !is_h_file(square) || _test_bit(pawns, square - 1) && !is_a_file(square))
+	if ((_test_bit(pawns, square + 1) && !is_h_file(square)) || (_test_bit(pawns, square - 1) && !is_a_file(square)))
 		return 1;
 	return 0;
 }
@@ -238,11 +237,11 @@ int8_t backwards_pawn(int8_t square, U64 pawn_white, U64 pawn_black, bool IsWhit
 			return 0;
 		int y = 8;
 		while (square-y >= 0) {
-			if (_test_bit(pawn_white, square - (y - 1)) && !is_a_file(square) || (_test_bit(pawn_white, square - (y + 1)) && !is_h_file(square)))
+			if ((_test_bit(pawn_white, square - (y - 1)) && !is_a_file(square)) || ((_test_bit(pawn_white, square - (y + 1)) && !is_h_file(square))))
 				return 1;
 			y += 8;
 		}
-		if (_test_bit(pawn_black, square + (9 * 2)) && !is_h_file(square) || (_test_bit(pawn_black, square + (7 * 2)) && !is_a_file(square)) || _test_bit(pawn_black, square + 8))
+		if ((_test_bit(pawn_black, square + (9 * 2)) && !is_h_file(square)) || (_test_bit(pawn_black, square + (7 * 2)) && !is_a_file(square)) || (_test_bit(pawn_black, square + 8)))
 			return 1;
 	}
 	else {
@@ -250,11 +249,11 @@ int8_t backwards_pawn(int8_t square, U64 pawn_white, U64 pawn_black, bool IsWhit
 			return 0;
 		int y = 8;
 		while (square + y < 64) {
-			if (_test_bit(pawn_black, square + (y - 1)) && !is_a_file(square) || (_test_bit(pawn_black, square + (y + 1)) && !is_h_file(square)))
+			if ((_test_bit(pawn_black, square + (y - 1)) && !is_a_file(square)) || (_test_bit(pawn_black, square + (y + 1)) && !is_h_file(square)))
 				return 1;
 			y += 8;
 		}
-		if (_test_bit(pawn_white, square - (9 * 2)) && !is_h_file(square) || (_test_bit(pawn_white, square - (7 * 2)) && !is_a_file(square)) || _test_bit(pawn_white, square - 8))
+		if ((_test_bit(pawn_white, square - (9 * 2)) && !is_h_file(square)) || (_test_bit(pawn_white, square - (7 * 2)) && !is_a_file(square)) || _test_bit(pawn_white, square - 8))
 			return 1;
 	}
 	return 0;

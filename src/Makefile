@@ -17,5 +17,7 @@ evaluation.o: evaluation.cpp evaluation.h
 thread_manager.o: thread_manager.cpp thread_manager.h
 	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread thread_manager.cpp
 
+timecontroller.o: timecontroller.cpp timecontroller.h
+	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread timecontroller.cpp
 clean:
 	rm *.o smallbrain

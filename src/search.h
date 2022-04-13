@@ -61,5 +61,7 @@ public:
 
 	bool compare_moves(Move& m1, Move& m2);
 	
+	bool store_entry(U64 index, int depth, int bestvalue, int old_alpha, int beta, U64 key);
+	
 	int make_bench();
 };

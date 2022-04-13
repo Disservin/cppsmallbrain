@@ -31,7 +31,6 @@ struct MoveList {
 struct BoardState {
     uint8_t en_passant;
     uint8_t castle_rights;
-    int8_t piece_loc[64];
     uint8_t half_move;
     U64 board_hash;
 };

@@ -87,7 +87,9 @@ int main(int argc, char** argv) {
 			tt_size = elements;
 		}
 		if (input == "ucinewgame") {
-			memset(TTable, 0, tt_size * sizeof(TEntry));
+			for (U64 i = 0; i < tt_size; i++) {
+				TTable[i] = {};
+			}
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 		}
 		if (input.find("quit") != std::string::npos) {
@@ -168,7 +170,7 @@ int main(int argc, char** argv) {
 			int depth = std::stoi(depth_str);
 			threads.begin(depth);
 		}
-		if (input == "go" or input == "go infinite" and not thread_started) {
+		if ((input == "go" || input == "go infinite") && not thread_started) {
 			threads.begin(60);
 		}
 		if (input.find("go movetime") != std::string::npos) {
