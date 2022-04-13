@@ -50,7 +50,7 @@ void Board::apply_fen(std::string fen)
         side_to_move = 1;
     }
     // Placing pieces on the board
-    int pos = 0;
+    size_t pos = 0;
     int sq;
     char letter;
     std::map<char, int> piece_to_int =
@@ -100,7 +100,7 @@ void Board::apply_fen(std::string fen)
     }
     // Encodes castling rights
     castling_rights = 0;
-    for (int i = 0; i < castling.size(); i++) {
+    for (size_t i = 0; i < castling.size(); i++) {
         if (castling[i] == 'K')
         {
             castling_rights |= wk;
@@ -155,7 +155,6 @@ void Board::apply_fen(std::string fen)
 }
 
 std::string Board::get_fen() {
-    int pos = 0;
     int sq;
     char letter;
     std::map<int, char> piece_to_int =
@@ -416,12 +415,11 @@ U64 Board::generate_zobrist_hash() {
 
 inline void Board::save_board_state()
 {
-    BoardState board;
+    BoardState board{};
     board.en_passant = en_passant_square;
     board.castle_rights = castling_rights;
     board.board_hash = board_hash;
     board.half_move = half_moves;
-    std::copy(board_pieces, board_pieces + 64, board.piece_loc);
     move_stack.push(board);
 }
 
@@ -952,12 +950,12 @@ inline U64 Board::legal_pawn_moves(bool IsWhite, int8_t sq, uint8_t ep) {
     if (IsWhite) {
         attack_l = Pawn_AttackLeft(IsWhite, mask) & Black & not_h_file;
         attack_r = Pawn_AttackRight(IsWhite, mask) & Black & not_a_file;
-        pawn_push = Pawn_Forward(IsWhite, mask) & ~Occ | Pawn_Forward2(IsWhite, mask) & ~Occ & ~rank_2_4_mask;
+        pawn_push = (Pawn_Forward(IsWhite, mask) & ~Occ) | (Pawn_Forward2(IsWhite, mask) & ~Occ & ~rank_2_4_mask);
     }
     else {
         attack_l = Pawn_AttackLeft(IsWhite, mask) & White & not_h_file;
         attack_r = Pawn_AttackRight(IsWhite, mask) & White & not_a_file;
-        pawn_push = Pawn_Backward(IsWhite, mask) & ~Occ | Pawn_Backward2(IsWhite, mask) & ~Occ & ~rank_7_5_mask;
+        pawn_push = (Pawn_Backward(IsWhite, mask) & ~Occ) | (Pawn_Backward2(IsWhite, mask) & ~Occ & ~rank_7_5_mask);
     }
 
     //if (not(is_pinned_dg(IsWhite, sq))) { Keep this for safety reason the version below should work
@@ -1936,7 +1934,7 @@ void Board::unmake_move(Move& move) {
         remove_repetition(board_hash);
         board_hash = board.board_hash;
         half_moves = board.half_move;
-        std::copy(board.piece_loc, board.piece_loc + 64, board_pieces);
+
         
         
         side_to_move ^= 1;		
@@ -1944,39 +1942,57 @@ void Board::unmake_move(Move& move) {
 		
         bitboards[piece] |= (1ULL << move.from_square);
         bitboards[piece] &= ~(1ULL << move.to_square);
-		
-        if (move.to_square == en_passant_square && piece == 0)
+        board_pieces[move.from_square] = piece;
+        board_pieces[move.to_square] = -1;
+
+        if (move.to_square == en_passant_square && piece == 0) {
 			bitboards[6] |= (1ULL << (move.to_square - 8));
-        if (move.to_square == en_passant_square && piece == 6)
+            board_pieces[move.to_square - 8] = 6;
+        }
+        if (move.to_square == en_passant_square && piece == 6) {
             bitboards[0] |= (1ULL << (move.to_square + 8));
+            board_pieces[move.to_square + 8] = 0;
+        }
 		
-		if (move.capture != -1)
+        if (move.capture != -1) {
             bitboards[move.capture] |= (1ULL << move.to_square);
-		if (move.promotion != -1)
+            board_pieces[move.to_square] = move.capture;
+        }
+
+        if (move.promotion != -1) {
             bitboards[move.promotion + (6 * side_to_move)] &= ~(1ULL << move.to_square);
+        }
 		
         if (piece == WKING) {
             if (move.to_square == 6 && move.from_square == 4) {
-                
                 bitboards[WROOK] &= ~(1ULL << 5);
                 bitboards[WROOK] |= (1ULL << 7);
+                board_pieces[7] = WROOK;
+                board_pieces[5] = -1;
             }
             if (move.to_square == 2 && move.from_square == 4) {
                 bitboards[WROOK] &= ~(1ULL << 3);
                 bitboards[WROOK] |= (1ULL << 0);
+                board_pieces[0] = WROOK;
+                board_pieces[3] = -1; 
             }
         }
         if (piece == BKING) {
             if (move.to_square == 62 && move.from_square == 60) {
                 bitboards[BROOK] |= (1ULL << 63);
                 bitboards[BROOK] &= ~(1ULL << 61);
+                board_pieces[63] = BROOK;
+                board_pieces[61] = -1;
             }
             if (move.to_square == 58 && move.from_square == 60) {
                 bitboards[BROOK] |= (1ULL << 56);
                 bitboards[BROOK] &= ~(1ULL << 59);
+                board_pieces[56] = BROOK;
+                board_pieces[59] = -1;
+                
             }
         }
-		
+
         update_occupancies();
         move_stack.pop();
         full_moves--;
@@ -2013,7 +2029,6 @@ MoveList Board::generate_legal_moves() {
     MoveList possible_moves{};
     possible_moves.size = 0;
     int from_index = 0;
-    int enemy = side_to_move ^ 1;
     U64 we = side_to_move ? Black : White;
     bool IsWhite = side_to_move ? false : true;
     U64 pawn_mask = (bitboards[BPAWN] | bitboards[WPAWN]) & we;
@@ -2142,7 +2157,6 @@ MoveList Board::generate_capture_moves() {
     MoveList possible_moves{};
     possible_moves.size = 0;
 
-    int enemy = side_to_move ^ 1;
     U64 we = side_to_move ? Black : White;
     bool IsWhite = side_to_move ? false : true;
 
@@ -2312,7 +2326,7 @@ U64 Perft::speed_test_perft(int depth, int max) {
     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
     };
-    for (int i = 0; i < info_array.info_array.size(); i++)
+    for (size_t i = 0; i < info_array.info_array.size(); i++)
     {
         std::cout << square_to_coordinates[info_array.info_array[i].from_square];
         std::cout << square_to_coordinates[info_array.info_array[i].to_square];
@@ -2367,7 +2381,7 @@ U64 Perft::bulk_test_perft(int depth, int max) {
     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
     };
-    for (int i = 0; i < info_array.info_array.size(); i++)
+    for (size_t i = 0; i < info_array.info_array.size(); i++)
     {
         std::cout << square_to_coordinates[info_array.info_array[i].from_square];
         std::cout << square_to_coordinates[info_array.info_array[i].to_square];

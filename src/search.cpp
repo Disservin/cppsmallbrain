@@ -139,16 +139,13 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 
 int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_t depth, int ply, bool null) {
 	bool Is_White = board->side_to_move ? 0 : 1;
-	int bestvalue = -INFINITE;
-	int old_alpha = alpha;
-	bool pv_node = (beta - alpha > 1);
 
 	pv_length[ply] = ply;
 
 	// Early exit
 	if (can_exit_early()) return 0;
 
-	if (ply + 1 >= max_ply) return 0;
+	if (ply + 1 >= max_ply) return evaluation();
 	
 	int king_sq = _bitscanforward(board->King(Is_White));
 	bool inCheck = board->is_square_attacked(Is_White, king_sq);
@@ -195,7 +192,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	// Check TT for entry
 	U64 key = board->board_hash;
 	U64 index = key % tt_size;
-	bool u_move = false;
+	bool tt_move = false;
+	
 	if (TTable[index].key == key and TTable[index].depth >= depth and !root_node) {
 		if (TTable[index].flag == EXACT) return TTable[index].score;
 		else if (TTable[index].flag == LOWERBOUND) {
@@ -207,14 +205,19 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		if (alpha >= beta) return TTable[index].score;
 
 		// use TT move
-		u_move = true;
+		tt_move = true;
 	}
-
+	
+	int bestvalue = -INFINITE;
+	int old_alpha = alpha;
+	bool pv_node = (beta - alpha > 1);
+	
 	int reduction = 0;
 	int staticEval = evaluation() * player;
 	
+
 	// Razor
-	if (depth <= 1 && (staticEval + 150) < alpha && !inCheck && !pv_node) {
+	if (depth == 1 && (staticEval + 150) < alpha && !inCheck && !pv_node) {
 		return qsearch(alpha, beta, player, 10, ply);
 	}
 	
@@ -246,7 +249,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	MoveList n_moves = board->generate_legal_moves();
 
 	// Move ordering
-	std::sort(std::begin(n_moves.movelist), n_moves.movelist + n_moves.size, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
+	std::sort(std::begin(n_moves.movelist), n_moves.movelist + n_moves.size, [&](const Move& m1, const Move& m2) 
+		{return score_move(m1, tt_move) > score_move(m2, tt_move); });
 	
 	// Game over ?
 	if (!n_moves.size) {
@@ -256,12 +260,13 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	
 	int score = 0;
 	uint8_t legal_moves = 0;
+	
 	for (int i = 0; i < n_moves.size; i++) {
-		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
 
 		legal_moves++;
 		nodes++;
+		
 		board->make_move(move);
 		
 		if (legal_moves == 1) {
@@ -290,6 +295,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 			
 			// Save bestmove (PV)
 			pv_table[ply][ply] = move;
+			if (ply + 1 == 60)
+				break;
 			for (int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++) {
 				pv_table[ply][next_ply] = pv_table[ply + 1][next_ply];
 			}
@@ -315,23 +322,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	}
 
 	// Store position in TT
-	if (!can_exit_early() and !(bestvalue >= 19000) and !(bestvalue <= -19000) and 
-		(TTable[index].depth < depth or TTable[index].age + 3 <= start_age)) {
-		TTable[index].flag = EXACT;
-		// Upperbound
-		if (bestvalue <= old_alpha) {
-			TTable[index].flag = UPPERBOUND;
-		}
-		// Lowerbound
-		else if (bestvalue >= beta) {
-			TTable[index].flag = LOWERBOUND;
-		}
-		TTable[index].depth = depth;
-		TTable[index].score = bestvalue;
-		TTable[index].age = start_age;
-		TTable[index].key = key;
-		TTable[index].move = pv_table[0][ply];
-	}
+	store_entry(index, depth, bestvalue, old_alpha, beta, key);
+		
 	return bestvalue;
 }
 
@@ -417,6 +409,27 @@ std::string Searcher::print_move(Move move) {
 		str_move += prom;
 	}
 	return str_move;
+}
+
+bool Searcher::store_entry(U64 index, int depth, int bestvalue, int old_alpha, int beta, U64 key) {
+	if (!can_exit_early() and !(bestvalue >= 19000) and !(bestvalue <= -19000) and
+		(TTable[index].depth < depth or TTable[index].age + 3 <= start_age)) {
+		TTable[index].flag = EXACT;
+		// Upperbound
+		if (bestvalue <= old_alpha) {
+			TTable[index].flag = UPPERBOUND;
+		}
+		// Lowerbound
+		else if (bestvalue >= beta) {
+			TTable[index].flag = LOWERBOUND;
+		}
+		TTable[index].depth = depth;
+		TTable[index].score = bestvalue;
+		TTable[index].age = start_age;
+		TTable[index].key = key;
+		TTable[index].move = pv_table[0][current_ply];
+	}
+	return true;
 }
 
 // A few positions from Eigenmanns Rapid Engine Test
