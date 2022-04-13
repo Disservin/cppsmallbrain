@@ -18,7 +18,7 @@ public:
 	uint8_t search_to_depth = 60;
 	U64 nodes = 0;
 	Move bestmove;
-	int time_given = -1;
+	long long time_given = -1;
 	bool limit_time = false;
 	int history_table[2][64][64] = { {0},{0}};
 	Move killerMoves[2][max_ply+1] = {0};
@@ -32,7 +32,7 @@ public:
 	std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 
 	Board* board;
-	Searcher(Board* brd, int, int tg = -1) {
+	Searcher(Board* brd, int, long long tg = -1) {
 		board = brd;
 		time_given = tg;
 		limit_time = time_given != -1 ? true : false;

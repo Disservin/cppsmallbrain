@@ -8,7 +8,7 @@ extern std::atomic<bool> stopped;
 
 class ThreadManager {
 public:
-	void begin(int depth, int tg = -1, int bench = 0);
+	void begin(int depth, long long tg = -1, int bench = 0);
 	void stop();
 	bool is_searching();
 private:

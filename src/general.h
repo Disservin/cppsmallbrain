@@ -47,13 +47,7 @@ inline bool get_square_color(int square) {
 }
 
 inline bool _test_bit(U64 bit, int sq) {
-    __int64 test = bit;
-    if (_bittest64(&test, sq)) {
-        return true;
-    }
-    else {
-        return false;
-    }
+    return std::bitset<64>(bit).test(sq);
 }
 
 #if defined(__GNUC__)  // GCC, Clang, ICC
@@ -80,25 +74,21 @@ inline uint8_t _bitscanreverse(U64 mask) {
 }
 #endif
 
-//inline int popcount(U64 mask) {
-//
-//#ifndef defined(_MSC_VER) || defined(__INTEL_COMPILER)
-//
-//    return (int)_mm_popcnt_u64(mask);
-//
-//#else
-//
-//    return __builtin_popcountll(mask);
-//
-//#endif
-//}
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 inline uint8_t popcount(U64 mask) {
-    return (uint8_t) std::bitset<64>(mask).count();
-}	
+
+    return (uint8_t)_mm_popcnt_u64(mask);
+}
+#else
+inline uint8_t popcount(U64 mask) {
+    return (uint8_t)__builtin_popcountll(mask);
+};
+#endif
+
+
 inline int8_t pop_lsb(U64& mask) {
     int8_t s = _bitscanforward(mask);
-    //*mask = _blsr_u64(*mask);
-    mask &= mask - 1;
+    mask = _blsr_u64(mask);
     return s;
 }
 
