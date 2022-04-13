@@ -38,6 +38,8 @@ const int knightValue = 320;
 const int bishopValue = 330;
 const int rookValue = 500;
 const int queenValue = 900;
+constexpr int piece_values[2][6] = { { 82, 337, 365, 477, 1025, 0}, { 94, 281, 297, 512,  936, 0} };
+
 static std::map<int, int*> piece_to_mg =
 	{
 	{ 0,   w_pawn_mg},
@@ -92,14 +94,20 @@ int evaluation() {
 	phase += (wrook + brook) * 2;
 	phase += (wqueen + bqueen) * 4;
 	
-	material += (wpawns - bpawns) * pawnValue;
-	material += (wknight - bknight) * knightValue;
-	material += (wbishop - bbishop) * bishopValue;
-	material += (wrook - brook) * rookValue;
-	material += (wqueen - bqueen) * queenValue;
+	eval_mg += (wpawns - bpawns) * piece_values[0][0];
+	eval_eg += (wpawns - bpawns) * piece_values[1][0];
+	
+	eval_mg += (wknight - bknight) * piece_values[0][1];
+	eval_eg += (wknight - bknight) * piece_values[1][1];
 
-	eval_mg += material;
-	eval_eg += material;
+	eval_mg += (wbishop - bbishop) * piece_values[0][2];
+	eval_eg += (wbishop - bbishop) * piece_values[1][2];
+
+	eval_mg += (wrook - brook) * piece_values[0][3];
+	eval_eg += (wrook - brook) * piece_values[1][3];
+	
+	eval_mg += (wqueen - bqueen) * piece_values[0][4];
+	eval_eg += (wqueen - bqueen) * piece_values[1][4];
 	
 	U64 pieces_white = board->White;
 	U64 pieces_black = board->Black;
