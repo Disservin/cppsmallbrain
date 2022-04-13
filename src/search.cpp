@@ -221,7 +221,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	}
 	
 	// Null move reduction
-	if (popcount(board->Occ) >= 13 && !null && depth >= 3 && !inCheck && !pv_node) {
+	if (board->non_pawn_material(Is_White) && !null && depth >= 3 && !inCheck && !pv_node) {
 		int r = depth > 6 ? 3 : 2;
 
 		board->make_null_move();
