@@ -297,7 +297,9 @@ public:
     U64 create_checkmask(bool IsWhite, int8_t sq);
 
     U64 would_be_attack(bool IsWhite, int8_t sq);
-
+    
+    bool gives_check(Move& move);
+	
     U64 is_pinned_hv(bool IsWhite, int8_t sq);
 
     U64 is_pinned_dg(bool IsWhite, int8_t sq);

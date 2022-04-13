@@ -1478,6 +1478,13 @@ U64 Board::would_be_attack(bool IsWhite, int8_t sq) {
     return checks;
 }
 
+bool Board::gives_check(Move& move) {
+    make_move(move);
+    bool inCheck = is_square_attacked(side_to_move, King(side_to_move));
+    unmake_move();
+	return inCheck;
+}
+
 // detects if the piece is pinned horizontal or vertical and returns the mask
 U64 Board::is_pinned_hv(bool IsWhite, int8_t sq) {
     U64 enemy;
