@@ -168,18 +168,18 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 				get_square_color(_bitscanforward(board->bitboards[board->WBISHOP]))) return 0;
 		}
 	}
-
+	
+	int king_sq = _bitscanforward(board->King(Is_White));
+	bool inCheck = board->is_square_attacked(Is_White, king_sq);
+	if (inCheck) {
+		depth++;
+	}
+	
 	// Enter qsearch if not in check else increase depth
 	if (depth <= 0) {
-		int king_sq = _bitscanforward(board->King(Is_White));
-		if ((board->is_square_attacked(Is_White, king_sq))) {
-			depth++;
-		}
-		else {
-			nodes++;
-			return qsearch(alpha, beta, player, 10, ply);
-		}
+		return qsearch(alpha, beta, player, 10, ply);
 	}
+	
 	// Seldepth
 	if (ply > heighest_depth)
 		heighest_depth = ply;
@@ -202,95 +202,70 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		u_move = true;
 	}
 
-	MoveList n_moves = board->generate_legal_moves();
-	uint8_t count = n_moves.size;
+	int reduction = 0;
+	int staticEval = evaluation() * player;
+	
+	// Razor
+	if (depth <= 1 && (staticEval + 150) < alpha && !inCheck && !pv_node) {
+		return qsearch(alpha, beta, player, 10, ply);
+	}
+	
+	// Null move reduction
+	if (popcount(board->Occ) >= 13 && !null && depth >= 3 && !inCheck && !pv_node) {
+		int r = depth > 6 ? 3 : 2;
+
+		board->make_null_move();
+
+		int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - r, ply + 1, true);
+
+		board->unmake_null_move();
+
+		if (score >= beta) {
+			reduction = 2;
+			if (depth - 3 <= 0) {
+				return qsearch(alpha, beta, player, 10, ply);
+			}
+		}
+	}
+	
+	// Static Null Move Pruning
+	if (std::abs(beta) < MATE - max_ply && !inCheck && !pv_node) {
+		if (staticEval - 150 * depth >= beta) return beta;
+	}
+	
 	current_ply = ply;
+	
+	MoveList n_moves = board->generate_legal_moves();
 
 	// Move ordering
-	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
-	
-	bool inCheck = board->checkmask == 18446744073709551615ULL ? false : true; 
+	std::sort(std::begin(n_moves.movelist), n_moves.movelist + n_moves.size, [&](const Move& m1, const Move& m2) {return score_move(m1, u_move) > score_move(m2, u_move); });
 	
 	// Game over ?
-	if (!count) {
+	if (!n_moves.size) {
 		if (inCheck) return -MATE + ply;
 		return 0;
 	}
-
-	int reduction = 0;
-	if (!inCheck && !pv_node) {
-		int staticEval = evaluation() * player;
-		// Razor
-		if (depth <= 1 && (staticEval + 150) < alpha) {
-			return qsearch(alpha, beta, player, 10, ply);
-		}
-		// Null move reduction
-		if (popcount(board->Occ) >= 13 && !null && depth >= 3) {
-			int r = depth > 6 ? 3 : 2;
-			
-			board->make_null_move();
-			
-			int score = -alpha_beta(-beta, -beta + 1, -player, false, depth - 1 - r, ply + 1, true);
-
-			board->unmake_null_move();
-
-			if (score >= beta) { 
-				reduction = 2;
-				if (depth - 3 <= 0) {
-					return qsearch(alpha, beta, player, 10, ply);
-				}
-			}
-		}
-
-		// Static Null Move Pruning
-		if (std::abs(beta) < MATE - max_ply) {
-			if (staticEval - 150 * depth >= beta) return beta;
-		}
-	}
 	
-	uint8_t tried_moves = 0;
-	for (int i = 0; i < count; i++) {
+	int score = 0;
+	uint8_t legal_moves = 0;
+	for (int i = 0; i < n_moves.size; i++) {
 		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
-		
-		// Passed pawn extension
-		int new_depth = depth - 1;
-		if (new_depth == 1 and move.piece == 0) {
-			if (Is_White and square_rank(move.to_square) >= 5) {
-				new_depth++;
-			}
-			if (!Is_White and square_rank(move.to_square) <= 2) {
-				new_depth++;
-			}
-		}
-		
-		// Increase nodes
-		nodes++;
-		int score{};
-		tried_moves++;
 
-		// Apply reduction
-		new_depth -= reduction;
-
+		legal_moves++;
 		board->make_move(move);
-		if (tried_moves == 0) {
-			score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
+		
+		if (depth >= 3 && !pv_node && !inCheck && legal_moves > 3 + 2 * root_node) {
+			score = -alpha_beta(-beta, -alpha, -player, false, depth - 2, ply + 1, false);
 		}
 		else {
-			// Late move reduction
-			if (tried_moves > 2 + 2 * root_node && depth >= 3 && !u_move
-				&& !inCheck && board->piece_at_square(move.to_square) == -1 && board->non_pawn_material(Is_White)) {
-				new_depth -= 1;
-			}
-			else {
-				score = alpha + 1;
-
-			}
-			if (score > alpha) {
-				score = -alpha_beta(-alpha - 1, -alpha, -player, false, new_depth, ply + 1, null);
-				if (score > alpha && score < beta) {
-					score = -alpha_beta(-beta, -alpha, -player, false, new_depth, ply + 1, null);
-				}
+			score = alpha + 1;
+		}
+		
+		if (score > alpha) {
+			score = -alpha_beta(-alpha - 1, -alpha, -player, false, depth - 1 - reduction, ply + 1, false);
+			if (score > alpha && score < beta) {
+				score = -alpha_beta(-beta, -alpha, -player, false, depth - 1 - reduction, ply + 1, false);
 			}
 		}
 
