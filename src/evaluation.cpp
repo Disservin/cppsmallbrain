@@ -118,8 +118,8 @@ int evaluation() {
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];
 		if (piece == 0 && square_rank(square) == 6) {
-			eval_mg += 20;
-			eval_eg += 50;
+			eval_mg += 5;
+			eval_eg += 10;
 		}
 	}
 	while (pieces_black) {
@@ -128,8 +128,8 @@ int evaluation() {
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
 		if (piece == 6 && square_rank(square) == 1) {
-			eval_mg -= 20;
-			eval_eg -= 50;
+			eval_mg -= 5;
+			eval_eg -= 10;
 		}
 	}
 	
@@ -139,24 +139,22 @@ int evaluation() {
 	if (king_sq_white == 6) {
 		if (!_test_bit(board->bitboards[board->WPAWN], 14) ||
 			!_test_bit(board->bitboards[board->WPAWN], 15)) {
-			eval_mg -= 30;
-			eval_eg -= 15;
+			eval_mg -= 10;
 		}
 	}
 	if (king_sq_black == 62) {
 		if (!_test_bit(board->bitboards[board->BPAWN], 54) ||
 			!_test_bit(board->bitboards[board->BPAWN], 55)) {
-			eval_mg += 30;
-			eval_eg += 15;
+			eval_mg += 10;
 		}
 	}
 	
 	// U64 openfile = (~(fileFill(White)) & ~(fileFill(Black)));
-	U64 hf_w, hf_b;
-	std::tie(hf_w, hf_b) = half_open_file(board->bitboards[board->WPAWN], board->bitboards[board->BPAWN]);
-	int open_rooks = rook_open_file(hf_w, hf_b, board->bitboards[board->WROOK], board->bitboards[board->BROOK]);
-	eval_mg += open_rooks * 44;
-	eval_eg += open_rooks * 5;
+	//U64 hf_w, hf_b;
+	//std::tie(hf_w, hf_b) = half_open_file(board->bitboards[board->WPAWN], board->bitboards[board->BPAWN]);
+	//int open_rooks = rook_open_file(hf_w, hf_b, board->bitboards[board->WROOK], board->bitboards[board->BROOK]);
+	//eval_mg += open_rooks * 20;
+	//eval_eg += open_rooks * 5;
 	
 	phase = 24 - phase;
 	phase = (phase * 256 + (24 / 2)) / 24;
