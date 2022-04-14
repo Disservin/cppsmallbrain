@@ -143,7 +143,7 @@ void Board::apply_fen(std::string fen)
 
     // Updates board pieces
     for (int sq = 0; sq < 64; sq++) {
-        if (piece_at(sq) != -1) {
+        if (piece_type_at(sq) != -1) {
             board_pieces[sq] = piece_at(sq);
         }
         else {
@@ -491,7 +491,32 @@ int8_t Board::piece_at(int8_t sq, int given) {
 
 // returns int for piece
 int8_t Board::piece_type_at(int8_t sq) {
-    return piece_to_piece_type(piece_at_square(sq));
+    U64 pawns = bitboards[WPAWN] | bitboards[BPAWN];
+    U64 knights = bitboards[WKNIGHT] | bitboards[BKNIGHT];
+    U64 bishops = bitboards[WBISHOP] | bitboards[BBISHOP];
+    U64 rooks = bitboards[WROOK] | bitboards[BROOK];
+    U64 queens = bitboards[WQUEEN] | bitboards[BQUEEN];
+    U64 kings = bitboards[WKING] | bitboards[BKING];
+
+    if (_test_bit(pawns, sq)) {
+        return 0;
+    }
+    if (_test_bit(knights, sq)) {
+        return 1;
+    }
+    if (_test_bit(bishops, sq)) {
+        return 2;
+    }
+    if (_test_bit(rooks, sq)) {
+        return 3;
+    }
+    if (_test_bit(queens, sq)) {
+        return 4;
+    }
+    if (_test_bit(kings, sq)) {
+        return 5;
+    }
+    return -1;
 }
 
 int8_t Board::piece_to_piece_type(int8_t piece) {
@@ -1636,12 +1661,20 @@ void Board::init(bool IsWhite) {
 }
 
 void Board::make_move(Move& move) {
+
     int from_square = move.from_square;
     int to_square = move.to_square;
     int promotion_piece = move.promotion;
-    int piece = move.piece + (side_to_move * 6);
-    int captured_piece = move.capture;
+    int piece = move.piece;
 
+    if (move.piece == -1) {
+        piece = piece_at_square(from_square);
+    }
+    else {
+        piece = piece + (side_to_move * 6);
+    }
+
+    int8_t captured_piece = -1;
     bool IsWhite = side_to_move ? 0 : 1;
     bool enemy = side_to_move ^ 1;
 
@@ -1649,6 +1682,7 @@ void Board::make_move(Move& move) {
     if (not _test_bit(bitboards[piece], to_square)) {
         save_board_state();
         // Capture
+        captured_piece = piece_at_square(to_square);
         if (captured_piece == WROOK) {
             if (to_square == 7) {
                 if (castling_rights & wk) {
