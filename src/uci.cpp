@@ -104,7 +104,8 @@ int main(int argc, char** argv) {
 			board->apply_fen(fen);
 			board->half_moves = 0;
 			board->full_moves = 2;
-			board->repetition_table.clear();		
+			//board->repetition_table.clear();		
+			memset(board->gameHistory, 0 , sizeof(board->gameHistory));
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
@@ -122,8 +123,9 @@ int main(int argc, char** argv) {
 			board->full_moves = 2;
 			board->half_moves = 0;
 			board->apply_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-			board->repetition_table.clear();
-
+			//board->repetition_table.clear();
+			memset(board->gameHistory, 0, sizeof(board->gameHistory));
+			
 			if (input.find("moves") != std::string::npos) {
 				std::vector<std::string> param = split_input(input);
 				std::size_t index = std::find(param.begin(), param.end(), "moves") - param.begin();
@@ -159,7 +161,7 @@ int main(int argc, char** argv) {
 			int depth = 6;
 			auto begin = std::chrono::high_resolution_clock::now();
 			Perft perft(board);
-			U64 x = perft.bulk_test_perft(depth, depth);
+			U64 x = perft.speed_test_perft(depth, depth);
 			auto end = std::chrono::high_resolution_clock::now();
 			auto time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
 			std::cout <<std::fixed<< "startpos " << " nodes " << unsigned(x) << " nps " << unsigned(x / (time_diff / 1000000000.0f)) << " time " << unsigned(time_diff / 1000000000.0f) << " seconds" << std::endl;

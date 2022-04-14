@@ -163,8 +163,10 @@ public:
 
     std::stack<BoardState> move_stack = {};
     
-    std::unordered_map<U64, uint8_t> repetition_table;
+    //std::unordered_map<U64, uint8_t> repetition_table;
 
+    U64 gameHistory[256]{};
+		
     int8_t board_pieces[64] = {-1};
 
     U64 board_hash = 0ULL;
