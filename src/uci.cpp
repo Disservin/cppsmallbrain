@@ -208,7 +208,8 @@ int main(int argc, char** argv) {
 				std::cout << "en passant square: " << square_to_coordinates[board->en_passant_square] << std::endl;;
 			}
 			std::cout << "halfmove: " << unsigned(board->half_moves) << std::endl;
-			std::cout << "fullmove: " << unsigned(board->full_moves/2) << std::endl;			
+			std::cout << "fullmove: " << unsigned(board->full_moves/2) << std::endl;	
+			std::cout << " threefold " << signed(board->is_threefold_rep()) << std::endl;
 		}
 		if (input == "captures") {
 			MoveList n_moves = board->generate_capture_moves();

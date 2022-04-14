@@ -259,11 +259,11 @@ void Board::remove_repetition(U64 hash) {
 // true if >= 2 repetitions
 bool Board::is_threefold_rep() {
     int8_t count = 0;
-    for (int i = side_to_move; i <= full_moves; i += 2) {
+    for (int i = !side_to_move; i < full_moves; i += 2) {
         if (gameHistory[i] == board_hash) {
 			count++;
         }
-		if (count == 2) return true;	
+		if (count >= 2) return true;	
     }
     return false;
     //if (repetition_table[board_hash] >= 2) {
@@ -275,11 +275,11 @@ bool Board::is_threefold_rep() {
 // true if >= 3 repetitions
 bool Board::is_threefold_rep3() {
     int8_t count = 0;
-    for (int i = side_to_move; i <= full_moves; i += 2) {
+    for (int i = !side_to_move; i < full_moves; i += 2) {
         if (gameHistory[i] == board_hash) {
             count++;
         }
-        if (count == 3) return true;
+        if (count >= 3) return true;
     }
     return false;
     //if (repetition_table[board_hash] >= 3) {
