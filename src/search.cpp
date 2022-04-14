@@ -152,7 +152,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	
 	// At not root node repetition detection for 2 times
 	if (!root_node) {
-		if (board->is_threefold_rep()) return 0;
+		if (board->is_threefold_rep()) return (0 + (2 * (nodes & 1) - 1));
 		if (board->half_moves >= 100) {
 			if (inCheck) {
 				MoveList moves = board->generate_legal_moves();

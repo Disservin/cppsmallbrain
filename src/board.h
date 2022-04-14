@@ -162,8 +162,6 @@ public:
     int8_t doublecheck = 0;
 
     std::stack<BoardState> move_stack = {};
-    
-    //std::unordered_map<U64, uint8_t> repetition_table;
 
     U64 gameHistory[1024]{};
 		
