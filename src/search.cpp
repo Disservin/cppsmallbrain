@@ -119,7 +119,7 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	for (int i = 0; i < count; i++) {
 		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
-		
+
 		nodes++;
 		
 		board->make_move(move);
