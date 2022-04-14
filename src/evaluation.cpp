@@ -38,6 +38,8 @@ const int knightValue = 320;
 const int bishopValue = 330;
 const int rookValue = 500;
 const int queenValue = 900;
+constexpr int piece_values[2][6] = { { 82, 337, 365, 477, 1025, 0}, { 94, 281, 297, 512,  936, 0} };
+
 static std::map<int, int*> piece_to_mg =
 	{
 	{ 0,   w_pawn_mg},
@@ -92,14 +94,20 @@ int evaluation() {
 	phase += (wrook + brook) * 2;
 	phase += (wqueen + bqueen) * 4;
 	
-	material += (wpawns - bpawns) * pawnValue;
-	material += (wknight - bknight) * knightValue;
-	material += (wbishop - bbishop) * bishopValue;
-	material += (wrook - brook) * rookValue;
-	material += (wqueen - bqueen) * queenValue;
+	eval_mg += (wpawns - bpawns) * piece_values[0][0];
+	eval_eg += (wpawns - bpawns) * piece_values[1][0];
+	
+	eval_mg += (wknight - bknight) * piece_values[0][1];
+	eval_eg += (wknight - bknight) * piece_values[1][1];
 
-	eval_mg += material;
-	eval_eg += material;
+	eval_mg += (wbishop - bbishop) * piece_values[0][2];
+	eval_eg += (wbishop - bbishop) * piece_values[1][2];
+
+	eval_mg += (wrook - brook) * piece_values[0][3];
+	eval_eg += (wrook - brook) * piece_values[1][3];
+	
+	eval_mg += (wqueen - bqueen) * piece_values[0][4];
+	eval_eg += (wqueen - bqueen) * piece_values[1][4];
 	
 	U64 pieces_white = board->White;
 	U64 pieces_black = board->Black;
@@ -109,13 +117,20 @@ int evaluation() {
 		int piece = board->piece_at_square(square);
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];
+		if (piece == 0 && square_rank(square) == 6) {
+			eval_mg += 5;
+			eval_eg += 10;
+		}
 	}
 	while (pieces_black) {
 		int square = pop_lsb(pieces_black);
 		int piece = board->piece_at_square(square);
-
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
+		if (piece == 6 && square_rank(square) == 1) {
+			eval_mg -= 5;
+			eval_eg -= 10;
+		}
 	}
 	
 	//King Safety
@@ -123,27 +138,23 @@ int evaluation() {
 	int king_sq_black = _bitscanforward(board->King(false));
 	if (king_sq_white == 6) {
 		if (!_test_bit(board->bitboards[board->WPAWN], 14) ||
-			!_test_bit(board->bitboards[board->WPAWN], 15) || 
-			!_test_bit(board->bitboards[board->WPAWN], 23)) {
-			eval_mg -= 50;
-			eval_eg -= 15;
+			!_test_bit(board->bitboards[board->WPAWN], 15)) {
+			eval_mg -= 10;
 		}
 	}
 	if (king_sq_black == 62) {
 		if (!_test_bit(board->bitboards[board->BPAWN], 54) ||
-			!_test_bit(board->bitboards[board->BPAWN], 55) ||
-			!_test_bit(board->bitboards[board->BPAWN], 47)) {
-			eval_mg += 50;
-			eval_eg += 15;
+			!_test_bit(board->bitboards[board->BPAWN], 55)) {
+			eval_mg += 10;
 		}
 	}
 	
 	// U64 openfile = (~(fileFill(White)) & ~(fileFill(Black)));
-	U64 hf_w, hf_b;
-	std::tie(hf_w, hf_b) = half_open_file(board->bitboards[board->WPAWN], board->bitboards[board->BPAWN]);
-	int open_rooks = rook_open_file(hf_w, hf_b, board->bitboards[board->WROOK], board->bitboards[board->BROOK]);
-	eval_mg += open_rooks * 44;
-	eval_eg += open_rooks * 5;
+	//U64 hf_w, hf_b;
+	//std::tie(hf_w, hf_b) = half_open_file(board->bitboards[board->WPAWN], board->bitboards[board->BPAWN]);
+	//int open_rooks = rook_open_file(hf_w, hf_b, board->bitboards[board->WROOK], board->bitboards[board->BROOK]);
+	//eval_mg += open_rooks * 20;
+	//eval_eg += open_rooks * 5;
 	
 	phase = 24 - phase;
 	phase = (phase * 256 + (24 / 2)) / 24;
