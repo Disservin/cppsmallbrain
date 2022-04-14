@@ -165,7 +165,7 @@ public:
     
     //std::unordered_map<U64, uint8_t> repetition_table;
 
-    U64 gameHistory[256]{};
+    U64 gameHistory[1024]{};
 		
     int8_t board_pieces[64] = {-1};
 
@@ -178,10 +178,6 @@ public:
     void print_bitboard(std::bitset<64> bitset);
 
     void print_board();
-
-    void add_repetition(U64 hash);
-
-    void remove_repetition(U64 hash);
 
     bool is_threefold_rep();
 
