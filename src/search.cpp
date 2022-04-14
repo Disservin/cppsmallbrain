@@ -270,7 +270,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		}
 		else {
 			if (depth >= 3 && !pv_node && !inCheck && legal_moves > 3 + 2 * root_node) {
-				score = -alpha_beta(-beta, -alpha, -player, false, depth - 3, ply + 1, false);
+				score = -alpha_beta(-beta, -alpha, -player, false, depth - 2, ply + 1, false);
 			}
 			else {
 				score = alpha + 1;
