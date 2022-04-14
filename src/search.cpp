@@ -378,7 +378,7 @@ int Searcher::mmlva(Move move) {
 
 bool Searcher::compare_moves(Move& m1, Move& m2) {
 	return m1.from_square == m2.from_square && m1.to_square == m2.to_square
-		   && m1.piece == m2.piece && m1.promotion == m2.promotion;
+		   && m1.piece == m2.piece && m1.promotion == m2.promotion && m1.capture == m2.capture;
 }
 
 std::string Searcher::get_bestmove() {

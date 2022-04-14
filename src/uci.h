@@ -22,6 +22,7 @@ Move convert_uci_to_Move(std::string input) {
         to_index = (rank - 1) * 8 + file - 1;
         move.to_square = to_index;
         move.piece = board->piece_type_at(from_index);
+        move.capture = board->piece_at_square(to_index);
         move.promotion = -1;
         return move;
     }
@@ -52,6 +53,7 @@ Move convert_uci_to_Move(std::string input) {
         };
         move.promotion = piece_to_int[prom];
         move.piece = 0;
+        move.capture = board->piece_at_square(to_index);
         return move;
     }
     else {
@@ -60,6 +62,7 @@ Move convert_uci_to_Move(std::string input) {
         move.from_square = -1;
         move.piece = -1;
         move.promotion = -1;
+        move.capture = -1;
         return move;
     }
 }
