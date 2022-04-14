@@ -236,37 +236,26 @@ void Board::print_board() {
     std::cout << '\n' << std::endl;
 }
 
-void Board::add_repetition(U64 hash) {
-    if (repetition_table.count(hash)) {
-        repetition_table[hash]++;
-    }
-    else {
-        repetition_table[hash] = 1;
-    }
-};
-
-void Board::remove_repetition(U64 hash) {
-    if (repetition_table[hash] == 0) {
-        std::cout << "ERROR REMOVE REPETITION \n";
-    }
-    repetition_table[hash]--;
-    if (repetition_table[hash] == 0) {
-        repetition_table.erase(hash);
-    }
-};
-
 // true if >= 2 repetitions
 bool Board::is_threefold_rep() {
-    if (repetition_table[board_hash] >= 2) {
-        return true;
+    int8_t count = 0;
+    for (int i = !side_to_move; i < full_moves && i + 2 < 1024; i += 2) {
+        if (gameHistory[i] == board_hash) {
+			count++;
+        }
+		if (count >= 2) return true;	
     }
     return false;
 }
 
 // true if >= 3 repetitions
 bool Board::is_threefold_rep3() {
-    if (repetition_table[board_hash] >= 3) {
-        return true;
+    int8_t count = 0;
+    for (int i = !side_to_move; i < full_moves && i + 2 < 1024 ; i += 2) {
+        if (gameHistory[i] == board_hash) {
+            count++;
+        }
+        if (count >= 3) return true;
     }
     return false;
 }
@@ -1881,7 +1870,8 @@ void Board::make_move(Move& move) {
         board_hash ^= RANDOM_ARRAY[780];
         //Update
         update_occupancies();
-        add_repetition(board_hash);
+        //add_repetition(board_hash);
+        gameHistory[full_moves] = board_hash;
         full_moves++;
     }
     else {
@@ -1899,7 +1889,8 @@ void Board::unmake_move(Move& move) {
 		
         en_passant_square = board.en_passant;
         castling_rights = board.castle_rights;
-        remove_repetition(board_hash);
+        //remove_repetition(board_hash);
+        gameHistory[full_moves] = 0;
         board_hash = board.board_hash;
         half_moves = board.half_move;
 
