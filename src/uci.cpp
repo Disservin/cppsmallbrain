@@ -13,7 +13,7 @@
 
 ThreadManager threads;
 Board* board = new Board();
-U64 tt_size = 4294967*2;
+U64 tt_size = 524287;
 TEntry* TTable{};
 
 std::atomic<bool> stopped;
