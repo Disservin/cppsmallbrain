@@ -92,6 +92,8 @@ int Searcher::aspiration_search(int player, int depth, int prev_eval) {
 }
 
 int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
+	if (can_exit_early()) return 0;
+
 	bool IsWhite = board->side_to_move ? 0 : 1;
 	int8_t king_sq = _bitscanforward(board->King(IsWhite));
 	bool in_check = board->is_square_attacked(IsWhite, king_sq);
@@ -117,7 +119,6 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return mmlva(m1) > mmlva(m2); });
 
 	for (int i = 0; i < count; i++) {
-		if (can_exit_early()) break;
 		Move move = n_moves.movelist[i];
 
 		nodes++;
@@ -181,7 +182,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	
 	// Enter qsearch if not in check else increase depth
 	if (depth <= 0) {
-		return qsearch(alpha, beta, player, 10, ply);
+		return qsearch(alpha, beta, player, 30, ply);
 	}
 	
 	// Seldepth
