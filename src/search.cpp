@@ -143,6 +143,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 
 	pv_length[ply] = ply;
 	int old_alpha = alpha;
+	bool pvNode = (beta - alpha > 1);
 
 	// Early exit
 	if (can_exit_early()) return 0;
@@ -196,7 +197,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	U64 index = key % tt_size;
 	bool tt_move = false;
 	
-	if (TTable[index].key == key and TTable[index].depth >= depth and !root_node) {
+	if (TTable[index].key == key && TTable[index].depth >= depth && !root_node && !pvNode) {
 		if (TTable[index].flag == EXACT) return TTable[index].score;
 		else if (TTable[index].flag == LOWERBOUND) {
 			alpha = std::max(alpha, TTable[index].score);
@@ -211,7 +212,6 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	}
 	
 	int bestvalue = -INFINITE;
-	bool pvNode = (beta - alpha > 1);
 	
 	int staticEval = evaluation() * player;
 	
