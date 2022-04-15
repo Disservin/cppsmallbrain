@@ -299,7 +299,7 @@ public:
 	
     MoveList generate_legal_moves();
 
-    MoveList generate_capture_moves();
+    MoveList generate_non_quite_moves();
 };
 
 class Perft {

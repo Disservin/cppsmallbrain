@@ -48,27 +48,33 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	for (int depth = 1; depth <= search_depth; depth++) {
 		search_to_depth = depth;
 		result = aspiration_search(player, depth, result);
-		
+
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
 		if (can_exit_early()) {
-			if (last_pv != "") {
-				std::vector<std::string> param = split_input(last_pv);
-				std::string bm = param[0];
-				std::cout << "bestmove " << bm << std::endl;
+			if (depth == 1) {
+				std::cout << "bestmove " << print_move(pv_table[0][0]) << std::endl;
 				return 0;
 			}
-			std::cout << "bestmove " << get_bestmove() << std::endl;
-			return 0;
+			else {
+				std::cout << "bestmove " << print_move(bestmove) << std::endl;
+				return 0;
+			}
 		}
-		else {
-			last_pv = get_pv_line();
-			std::cout << std::fixed << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << " nps " << unsigned(static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01))) << " time " << unsigned(time_diff) << " pv " << get_pv_line() << std::endl;
-		}
-	}	
-	std::vector<std::string> param = split_input(last_pv);
-	std::string bm = param[0];
-	std::cout << "bestmove " << bm << std::endl;
+
+		std::cout << std::fixed <<
+			"info depth " << unsigned(depth) <<
+			" seldepth " << unsigned(heighest_depth) <<
+			" score cp " << signed(result) <<
+			" nodes " << unsigned(nodes) <<
+			" nps " << unsigned(static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01))) <<
+			" time " << unsigned(time_diff) <<
+			" pv " << get_pv_line() << std::endl;
+
+		bestmove = pv_table[0][0];
+	}
+	std::cout << "bestmove " << print_move(bestmove) << std::endl;
 	return 0;
 }
 
@@ -111,7 +117,7 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	}
 	if (depth == 0) return alpha;
 
-	MoveList n_moves = board->generate_capture_moves();
+	MoveList n_moves = board->generate_non_quite_moves();
 	int count = n_moves.size;
 	current_ply = ply;
 	std::sort(std::begin(n_moves.movelist), n_moves.movelist + count, [&](const Move& m1, const Move& m2) {return mmlva(m1) > mmlva(m2); });
