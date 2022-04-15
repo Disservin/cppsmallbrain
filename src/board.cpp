@@ -2134,7 +2134,7 @@ MoveList Board::generate_non_quite_moves() {
         while (pawn_mask) {
             int from_index = _bitscanforward(pawn_mask);
             U64 all_moves = legal_pawn_moves(IsWhite, from_index, en_passant_square);
-            move_mask = inCheck ? all_moves : all_moves & (Enemy(IsWhite) | rank_8_mask);
+            move_mask = inCheck ? all_moves : all_moves & (Enemy(IsWhite) | rank_8_mask | rank_1_mask);
             while (move_mask) {
                 int to_index = pop_lsb(move_mask);
                 move.piece = PAWN;
