@@ -141,6 +141,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	bool Is_White = board->side_to_move ? 0 : 1;
 
 	pv_length[ply] = ply;
+	int old_alpha = alpha;
 
 	// Early exit
 	if (can_exit_early()) return 0;
@@ -209,19 +210,18 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	}
 	
 	int bestvalue = -INFINITE;
-	int old_alpha = alpha;
-	bool pv_node = (beta - alpha > 1);
+	bool pvNode = (beta - alpha > 1);
 	
 	int staticEval = evaluation() * player;
 	
 
 	// Razor
-	if (depth == 1 && (staticEval + 150) < alpha && !inCheck && !pv_node) {
+	if (depth == 1 && (staticEval + 150) < alpha && !inCheck && !pvNode) {
 		return qsearch(alpha, beta, player, 10, ply);
 	}
 	
 	// Null move reduction
-	if (board->non_pawn_material(Is_White) && !null && depth >= 3 && !inCheck && !pv_node) {
+	if (board->non_pawn_material(Is_White) && !null && depth >= 3 && !inCheck && !pvNode) {
 		int r = depth > 6 ? 3 : 2;
 
 		board->make_null_move();
@@ -236,20 +236,20 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	}
 	
 	// Static Null Move Pruning
-	if (std::abs(beta) < MATE - max_ply && !inCheck && !pv_node) {
+	if (std::abs(beta) < MATE - max_ply && !inCheck && !pvNode) {
 		if (staticEval - 150 * depth >= beta) return beta;
 	}
 	
 	current_ply = ply;
 	
-	MoveList n_moves = board->generate_legal_moves();
+	MoveList moves = board->generate_legal_moves();
 
 	// Move ordering
-	std::sort(std::begin(n_moves.movelist), n_moves.movelist + n_moves.size, [&](const Move& m1, const Move& m2) 
+	std::sort(std::begin(moves.movelist), moves.movelist + moves.size, [&](const Move& m1, const Move& m2) 
 		{return score_move(m1, tt_move) > score_move(m2, tt_move); });
 	
 	// Game over ?
-	if (!n_moves.size) {
+	if (!moves.size) {
 		if (inCheck) return -MATE + ply;
 		return 0;
 	}
@@ -257,8 +257,8 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	int score = 0;
 	uint8_t legal_moves = 0;
 	
-	for (int i = 0; i < n_moves.size; i++) {
-		Move move = n_moves.movelist[i];
+	for (int i = 0; i < moves.size; i++) {
+		Move move = moves.movelist[i];
 
 		legal_moves++;
 		nodes++;
@@ -269,7 +269,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 			score = -alpha_beta(-beta, -alpha, -player, false, depth - 1, ply + 1, false);
 		}
 		else {
-			if (depth >= 3 && !pv_node && !inCheck && legal_moves > 3 + 2 * root_node) {
+			if (depth >= 3 && !pvNode && !inCheck && legal_moves > 3 + 2 * root_node) {
 				score = -alpha_beta(-beta, -alpha, -player, false, depth - 2, ply + 1, false);
 			}
 			else {
@@ -332,12 +332,12 @@ std::string Searcher::get_pv_line() {
 	return output;
 }
 
-int Searcher::score_move(Move move, bool u_move) {
+int Searcher::score_move(Move move, bool tt_move) {
 	int IsWhite = board->side_to_move ? 0 : 1;
 	if (compare_moves(move, pv_table[0][current_ply])) {
 		return 100000;
 	}
-	else if (u_move && compare_moves(TTable[board->board_hash % tt_size].move, move)) {
+	else if (tt_move && compare_moves(TTable[board->board_hash % tt_size].move, move)) {
 		return 90000;
 	}
 	else if (move.promotion != -1) {
