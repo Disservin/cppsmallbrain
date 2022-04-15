@@ -38,7 +38,10 @@ const int knightValue = 320;
 const int bishopValue = 330;
 const int rookValue = 500;
 const int queenValue = 900;
-constexpr int piece_values[2][6] = { { 82, 337, 365, 477, 1025, 0}, { 94, 281, 297, 512,  936, 0} };
+
+static constexpr int piece_values[2][6] = { { 82, 337, 365, 477, 1025, 0}, { 94, 281, 297, 512,  936, 0} };
+static constexpr int pawn_rank_values_mg[7] = { 0, 0, 3, 4, 5, 10, 20 };
+static constexpr int pawn_rank_values_eg[7] = { 0, 0, 4, 5, 10, 20, 50 };
 
 static std::map<int, int*> piece_to_mg =
 	{
@@ -94,20 +97,20 @@ int evaluation() {
 	phase += (wrook + brook) * 2;
 	phase += (wqueen + bqueen) * 4;
 	
-	eval_mg += (wpawns - bpawns) * piece_values[0][0];
-	eval_eg += (wpawns - bpawns) * piece_values[1][0];
+	eval_mg += (wpawns - bpawns) * pawnValue;
+	eval_eg += (wpawns - bpawns) * pawnValue;
 	
-	eval_mg += (wknight - bknight) * piece_values[0][1];
-	eval_eg += (wknight - bknight) * piece_values[1][1];
+	eval_mg += (wknight - bknight) * knightValue;
+	eval_eg += (wknight - bknight) * knightValue;
 
-	eval_mg += (wbishop - bbishop) * piece_values[0][2];
-	eval_eg += (wbishop - bbishop) * piece_values[1][2];
+	eval_mg += (wbishop - bbishop) * bishopValue;
+	eval_eg += (wbishop - bbishop) * bishopValue;
 
-	eval_mg += (wrook - brook) * piece_values[0][3];
-	eval_eg += (wrook - brook) * piece_values[1][3];
+	eval_mg += (wrook - brook) * rookValue;
+	eval_eg += (wrook - brook) * rookValue;
 	
-	eval_mg += (wqueen - bqueen) * piece_values[0][4];
-	eval_eg += (wqueen - bqueen) * piece_values[1][4];
+	eval_mg += (wqueen - bqueen) * queenValue;
+	eval_eg += (wqueen - bqueen) * queenValue;
 	
 	U64 pieces_white = board->White;
 	U64 pieces_black = board->Black;
@@ -117,9 +120,9 @@ int evaluation() {
 		int piece = board->piece_at_square(square);
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];
-		if (piece == 0 && square_rank(square) == 6) {
-			eval_mg += 20;
-			eval_eg += 50;
+		if (piece == 0) {
+			eval_mg += pawn_rank_values_mg[square_rank(square)];
+			eval_eg += pawn_rank_values_eg[square_rank(square)];
 		}
 	}
 	while (pieces_black) {
@@ -127,9 +130,9 @@ int evaluation() {
 		int piece = board->piece_at_square(square);
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
-		if (piece == 6 && square_rank(square) == 1) {
-			eval_mg -= 20;
-			eval_eg -= 50;
+		if (piece == 6) {
+			eval_mg -= pawn_rank_values_mg[square_rank(square)];
+			eval_eg -= pawn_rank_values_eg[square_rank(square)];
 		}
 	}
 	
