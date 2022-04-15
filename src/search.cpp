@@ -298,7 +298,11 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 			pv_length[ply] = pv_length[ply + 1];
 			
 			if (score > alpha) {
-				alpha = score;		
+				alpha = score;	
+				// History heuristic
+				if (move.capture == -1) {
+					history_table[Is_White][move.from_square][move.to_square] += depth * depth;
+				}
 				// Beta cut-off
 				if (score >= beta) {
 					// Killer move heuristic
@@ -307,10 +311,6 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 						killerMoves[0][ply] = move;
 					}
 					break;
-				}
-				// History heuristic
-				if (move.capture == -1) {
-					history_table[Is_White][move.from_square][move.to_square] += depth * depth;
 				}
 			}
 		}
