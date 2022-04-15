@@ -11,7 +11,7 @@
 
 #define U64 unsigned __int64
 
-static constexpr int8_t late_move_pruning_margins[4] = { 4, 8, 12, 24 };
+static constexpr int8_t late_move_pruning_margins[4] = { 10, 15, 20, 24 };
 
 enum Score {
     MATE = 20000,
