@@ -119,8 +119,8 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	for (int i = 0; i < count; i++) {
 		Move move = n_moves.movelist[i];
 
-		if (stand_pat + 400 + ((move.capture%6) + 1) * 100 < alpha &&
-			move.promotion == -1 && !inCheck &&popcount(board->Occ) - 1 > 13 ) {
+		if (stand_pat + 400 + ((move.capture % 6) + 1) * 100 < alpha &&
+			move.promotion == -1 && !inCheck && popcount(board->Occ) - 1 > 13) {
 			continue;
 		}
 		
