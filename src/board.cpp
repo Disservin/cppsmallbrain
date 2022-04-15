@@ -2111,7 +2111,7 @@ MoveList Board::generate_legal_moves() {
     return possible_moves;
 }
 
-MoveList Board::generate_capture_moves() {
+MoveList Board::generate_non_quite_moves() {
     Move move;
     MoveList possible_moves{};
     possible_moves.size = 0;

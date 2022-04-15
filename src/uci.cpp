@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
 			std::cout << " threefold " << signed(board->is_threefold_rep()) << std::endl;
 		}
 		if (input == "captures") {
-			MoveList n_moves = board->generate_capture_moves();
+			MoveList n_moves = board->generate_non_quite_moves();
 			int count = n_moves.size;
 			for (int i = 0; i < count; i++) {
 				Move move = n_moves.movelist[i];
