@@ -40,8 +40,12 @@ const int rookValue = 500;
 const int queenValue = 900;
 
 static constexpr int piece_values[2][6] = { { 82, 337, 365, 477, 1025, 0}, { 94, 281, 297, 512,  936, 0} };
-static constexpr int pawn_rank_values_mg[7] = { 0, 0, 3, 4, 5, 10, 20 };
-static constexpr int pawn_rank_values_eg[7] = { 0, 0, 4, 5, 10, 20, 50 };
+
+static constexpr int8_t pawn_rank_values_mg_w[7] = { 0, 0, 3, 4, 5, 10, 20 };
+static constexpr int8_t pawn_rank_values_eg_w[7] = { 0, 0, 4, 5, 10, 20, 50 };
+
+static constexpr int8_t pawn_rank_values_mg_b[7] = { 20, 10, 5, 4, 3, 0, 0 };
+static constexpr int8_t pawn_rank_values_eg_b[7] = {50, 20, 10, 5, 4, 0, 0 };
 
 static std::map<int, int*> piece_to_mg =
 	{
@@ -121,8 +125,8 @@ int evaluation() {
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];
 		if (piece == 0) {
-			eval_mg += pawn_rank_values_mg[square_rank(square)];
-			eval_eg += pawn_rank_values_eg[square_rank(square)];
+			eval_mg += pawn_rank_values_mg_w[square_rank(square)];
+			eval_eg += pawn_rank_values_eg_w[square_rank(square)];
 		}
 	}
 	while (pieces_black) {
@@ -131,8 +135,8 @@ int evaluation() {
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
 		if (piece == 6) {
-			eval_mg -= pawn_rank_values_mg[square_rank(square)];
-			eval_eg -= pawn_rank_values_eg[square_rank(square)];
+			eval_mg -= pawn_rank_values_mg_b[square_rank(square)];
+			eval_eg -= pawn_rank_values_eg_b[square_rank(square)];
 		}
 	}
 	
