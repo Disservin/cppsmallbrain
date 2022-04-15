@@ -182,7 +182,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 	
 	// Enter qsearch if not in check else increase depth
 	if (depth <= 0) {
-		return qsearch(alpha, beta, player, 30, ply);
+		return qsearch(alpha, beta, player, 15, ply);
 	}
 	
 	// Seldepth
