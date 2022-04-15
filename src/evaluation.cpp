@@ -118,8 +118,8 @@ int evaluation() {
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];
 		if (piece == 0 && square_rank(square) == 6) {
-			eval_mg += 5;
-			eval_eg += 10;
+			eval_mg += 20;
+			eval_eg += 50;
 		}
 	}
 	while (pieces_black) {
@@ -128,8 +128,8 @@ int evaluation() {
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
 		if (piece == 6 && square_rank(square) == 1) {
-			eval_mg -= 5;
-			eval_eg -= 10;
+			eval_mg -= 20;
+			eval_eg -= 50;
 		}
 	}
 	
