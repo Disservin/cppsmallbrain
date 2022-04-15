@@ -97,20 +97,20 @@ int evaluation() {
 	phase += (wrook + brook) * 2;
 	phase += (wqueen + bqueen) * 4;
 	
-	eval_mg += (wpawns - bpawns) * piece_values[0][0];
-	eval_eg += (wpawns - bpawns) * piece_values[1][0];
+	eval_mg += (wpawns - bpawns) * pawnValue;
+	eval_eg += (wpawns - bpawns) * pawnValue;
 	
-	eval_mg += (wknight - bknight) * piece_values[0][1];
-	eval_eg += (wknight - bknight) * piece_values[1][1];
+	eval_mg += (wknight - bknight) * knightValue;
+	eval_eg += (wknight - bknight) * knightValue;
 
-	eval_mg += (wbishop - bbishop) * piece_values[0][2];
-	eval_eg += (wbishop - bbishop) * piece_values[1][2];
+	eval_mg += (wbishop - bbishop) * bishopValue;
+	eval_eg += (wbishop - bbishop) * bishopValue;
 
-	eval_mg += (wrook - brook) * piece_values[0][3];
-	eval_eg += (wrook - brook) * piece_values[1][3];
+	eval_mg += (wrook - brook) * rookValue;
+	eval_eg += (wrook - brook) * rookValue;
 	
-	eval_mg += (wqueen - bqueen) * piece_values[0][4];
-	eval_eg += (wqueen - bqueen) * piece_values[1][4];
+	eval_mg += (wqueen - bqueen) * queenValue;
+	eval_eg += (wqueen - bqueen) * queenValue;
 	
 	U64 pieces_white = board->White;
 	U64 pieces_black = board->Black;

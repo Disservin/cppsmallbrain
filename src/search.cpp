@@ -24,7 +24,8 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	int result = 0;
 	int player = board->side_to_move ? -1 : 1;
 
-	std::string last_pv = "";
+	Move bestmove{}; 
+	
 	nodes = 0;
 
 	begin = std::chrono::high_resolution_clock::now();
@@ -48,27 +49,33 @@ int Searcher::iterative_search(int search_depth, int bench) {
 	for (int depth = 1; depth <= search_depth; depth++) {
 		search_to_depth = depth;
 		result = aspiration_search(player, depth, result);
-		
+
 		auto end = std::chrono::high_resolution_clock::now();
 		auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
 		if (can_exit_early()) {
-			if (last_pv != "") {
-				std::vector<std::string> param = split_input(last_pv);
-				std::string bm = param[0];
-				std::cout << "bestmove " << bm << std::endl;
+			if (depth == 1) {
+				std::cout << "bestmove " << print_move(pv_table[0][0]) << std::endl;
 				return 0;
 			}
-			std::cout << "bestmove " << get_bestmove() << std::endl;
-			return 0;
+			else {
+				std::cout << "bestmove " << print_move(bestmove) << std::endl;
+				return 0;
+			}
 		}
-		else {
-			last_pv = get_pv_line();
-			std::cout << std::fixed << "info depth " << unsigned(depth) << " seldepth " << unsigned(heighest_depth) << " score cp " << signed(result) << " nodes " << unsigned(nodes) << " nps " << unsigned(static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01))) << " time " << unsigned(time_diff) << " pv " << get_pv_line() << std::endl;
-		}
-	}	
-	std::vector<std::string> param = split_input(last_pv);
-	std::string bm = param[0];
-	std::cout << "bestmove " << bm << std::endl;
+		
+		std::cout << std::fixed <<
+			"info depth " << unsigned(depth) <<
+			" seldepth " << unsigned(heighest_depth) <<
+			" score cp " << signed(result) <<
+			" nodes " << unsigned(nodes) <<
+			" nps " << unsigned(static_cast<int>(nodes / ((time_diff / static_cast<double>(1000)) + 0.01))) <<
+			" time " << unsigned(time_diff) <<
+			" pv " << get_pv_line() << std::endl;		
+		
+		bestmove = pv_table[0][0];
+	}
+	std::cout << "bestmove " << print_move(bestmove) << std::endl;
 	return 0;
 }
 
@@ -268,6 +275,11 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		nodes++;
 		
 		board->make_move(move);
+		
+		if (depth == 1 && move.piece == board->WPAWN && move.promotion != -1)
+			depth++;
+		if (depth == 1 && move.piece == board->BPAWN && move.promotion != -1)
+			depth++;
 		
 		if (legal_moves == 1) {
 			score = -alpha_beta(-beta, -alpha, -player, false, depth - 1, ply + 1, false);
