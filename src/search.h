@@ -55,7 +55,7 @@ public:
 
 	std::string print_move(Move move);
 
-	int score_move(Move move, bool u_move);
+	int score_move(Move move, bool tt_move);
 
 	int mmlva(Move move);
 
