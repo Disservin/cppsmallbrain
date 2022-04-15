@@ -335,22 +335,22 @@ std::string Searcher::get_pv_line() {
 int Searcher::score_move(Move move, bool u_move) {
 	int IsWhite = board->side_to_move ? 0 : 1;
 	if (compare_moves(move, pv_table[0][current_ply])) {
-		return 10000;
+		return 100000;
 	}
 	else if (u_move && compare_moves(TTable[board->board_hash % tt_size].move, move)) {
-		return 5000;
+		return 90000;
 	}
 	else if (move.promotion != -1) {
-		return 700;
+		return 80000;
 	}
 	else if (move.capture != -1) {
-		return mmlva(move);
+		return mmlva(move)*100;
 	}
 	else if (compare_moves(killerMoves[0][current_ply], move)) {
-		return 100;
+		return 5000;
 	}
 	else if (compare_moves(killerMoves[1][current_ply], move)) {
-		return 75;
+		return 4000;
 	}
 	else if (history_table[IsWhite][move.from_square][move.to_square]) {
 		return history_table[IsWhite][move.from_square][move.to_square];
@@ -362,12 +362,12 @@ int Searcher::score_move(Move move, bool u_move) {
 
 int Searcher::mmlva(Move move) {
 	static constexpr int mvvlva[7][7] = { {0, 0, 0, 0, 0, 0, 0},
-	{0, 105, 104, 103, 102, 101, 100},
 	{0, 205, 204, 203, 202, 201, 200},
 	{0, 305, 304, 303, 302, 301, 300},
 	{0, 405, 404, 403, 402, 401, 400},
 	{0, 505, 504, 503, 502, 501, 500},
-	{0, 605, 604, 603, 602, 601, 600} };
+	{0, 605, 604, 603, 602, 601, 600},
+	{0, 705, 704, 703, 702, 701, 700} };
 	int attacker = board->piece_type_at(move.from_square) + 1;
 	int victim = board->piece_type_at(move.to_square) + 1;
 	if (victim == -1) {
