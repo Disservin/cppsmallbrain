@@ -96,16 +96,14 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 
 	bool IsWhite = board->side_to_move ? 0 : 1;
 	int8_t king_sq = _bitscanforward(board->King(IsWhite));
-	bool in_check = board->is_square_attacked(IsWhite, king_sq);
+	bool inCheck = board->is_square_attacked(IsWhite, king_sq);
 	int stand_pat = 0;
-	if (in_check) {
+	if (inCheck) {
 		 stand_pat = -MATE + ply;
 		 if (board->is_checkmate(IsWhite)) return -MATE + ply;
 	}
 	else {
 		stand_pat = evaluation() * player;
-		// Delta Pruning
-		if (stand_pat < alpha - 500) return alpha;
 		if (stand_pat >= beta) return beta;
 		if (alpha < stand_pat) {
 			alpha = stand_pat;
