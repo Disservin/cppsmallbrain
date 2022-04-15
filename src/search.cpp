@@ -119,8 +119,8 @@ int Searcher::qsearch(int alpha, int beta, int player, uint8_t depth, int ply) {
 	for (int i = 0; i < count; i++) {
 		Move move = n_moves.movelist[i];
 
-		if (stand_pat + 400 + ((move.capture%6) + 1) * 100 < alpha &&
-			move.promotion == -1 && !inCheck &&popcount(board->Occ) - 1 > 13 ) {
+		if (stand_pat + 400 + ((move.capture % 6) + 1) * 100 < alpha &&
+			move.promotion == -1 && !inCheck && popcount(board->Occ) - 1 > 13) {
 			continue;
 		}
 		
@@ -303,7 +303,11 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 			pv_length[ply] = pv_length[ply + 1];
 			
 			if (score > alpha) {
-				alpha = score;		
+				alpha = score;	
+				// History heuristic
+				if (move.capture == -1) {
+					history_table[Is_White][move.from_square][move.to_square] += depth * depth;
+				}
 				// Beta cut-off
 				if (score >= beta) {
 					// Killer move heuristic
@@ -312,10 +316,6 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 						killerMoves[0][ply] = move;
 					}
 					break;
-				}
-				// History heuristic
-				if (move.capture == -1) {
-					history_table[Is_White][move.from_square][move.to_square] += depth * depth;
 				}
 			}
 		}
