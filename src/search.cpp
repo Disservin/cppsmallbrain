@@ -265,6 +265,12 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 		
 		board->make_move(move);
 		
+		if (depth <= 3 && !pvNode && !inCheck && move.capture == -1 
+			&& move.promotion == -1 && legal_moves > late_move_pruning_margins[depth]) {
+			board->unmake_move(move);
+			continue;
+		}
+
 		if (legal_moves == 1) {
 			score = -alpha_beta(-beta, -alpha, -player, false, depth - 1, ply + 1, false);
 		}

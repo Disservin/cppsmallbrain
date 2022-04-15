@@ -11,6 +11,8 @@
 
 #define U64 unsigned __int64
 
+static constexpr int8_t late_move_pruning_margins[4] = { 0, 8, 12, 24 };
+
 enum Score {
     MATE = 20000,
     INFINITE = MATE + 1,
