@@ -217,7 +217,7 @@ int Searcher::alpha_beta(int alpha, int beta, int player, bool root_node, uint8_
 
 	// Razor
 	if (depth == 1 && (staticEval + 150) < alpha && !inCheck && !pv_node) {
-		return qsearch(alpha, beta, player, 10, ply);
+		return qsearch(alpha, beta, player, 30, ply);
 	}
 	
 	// Null move reduction
