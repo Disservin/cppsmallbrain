@@ -1,8 +1,7 @@
 #include <map>
 #include <tuple>
 
-#include "board.h"
-#include "general.h"
+#include "chess.h"
 #include "evaluation.h"
 
 // Values were taken from Stockfish https://github.com/official-stockfish/Stockfish/blob/master/src/psqt.cpp
@@ -38,247 +37,104 @@ const int knightValue = 320;
 const int bishopValue = 330;
 const int rookValue = 500;
 const int queenValue = 900;
-
-static constexpr int piece_values[2][6] = { { 82, 337, 365, 477, 1025, 0}, { 94, 281, 297, 512,  936, 0} };
-
-static constexpr int8_t pawn_rank_values_mg_w[7] = { 0, 0, 3, 4, 5, 10, 20 };
-static constexpr int8_t pawn_rank_values_eg_w[7] = { 0, 0, 4, 5, 10, 20, 50 };
-
-static constexpr int8_t pawn_rank_values_mg_b[7] = { 20, 10, 5, 4, 3, 0, 0 };
-static constexpr int8_t pawn_rank_values_eg_b[7] = {50, 20, 10, 5, 4, 0, 0 };
+constexpr int piece_values[2][6] = { { 82, 337, 365, 477, 1025, 0}, { 94, 281, 297, 512,  936, 0} };
 
 static std::map<int, int*> piece_to_mg =
-	{
-	{ 0,   w_pawn_mg},
-	{ 1,   w_knight_mg},
-	{ 2,   w_bishop_mg},
-	{ 3,   w_rook_mg },
-	{ 4,   w_queen_mg },
-	{ 5,   w_king_mg },
-	{ 6,   b_pawn_mg},
-	{ 7,   b_knight_mg},
-	{ 8,   b_bishop_mg },
-	{ 9,   b_rook_mg },
-	{ 10,  b_queen_mg },
-	{ 11,  b_king_mg },
-	};
+{
+{ 0,   w_pawn_mg},
+{ 1,   w_knight_mg},
+{ 2,   w_bishop_mg},
+{ 3,   w_rook_mg },
+{ 4,   w_queen_mg },
+{ 5,   w_king_mg },
+{ 6,   b_pawn_mg},
+{ 7,   b_knight_mg},
+{ 8,   b_bishop_mg },
+{ 9,   b_rook_mg },
+{ 10,  b_queen_mg },
+{ 11,  b_king_mg },
+};
 static std::map<int, int*> piece_to_eg =
-	{
-	{ 0,   w_pawn_eg},
-	{ 1,   w_knight_eg},
-	{ 2,   w_bishop_eg},
-	{ 3,   w_rook_eg },
-	{ 4,   w_queen_eg },
-	{ 5,   w_king_eg },
-	{ 6,   b_pawn_eg},
-	{ 7,   b_knight_eg},
-	{ 8,   b_bishop_eg },
-	{ 9,   b_rook_eg },
-	{ 10,  b_queen_eg },
-	{ 11,  b_king_eg },
-	};
+{
+{ 0,   w_pawn_eg},
+{ 1,   w_knight_eg},
+{ 2,   w_bishop_eg},
+{ 3,   w_rook_eg },
+{ 4,   w_queen_eg },
+{ 5,   w_king_eg },
+{ 6,   b_pawn_eg},
+{ 7,   b_knight_eg},
+{ 8,   b_bishop_eg },
+{ 9,   b_rook_eg },
+{ 10,  b_queen_eg },
+{ 11,  b_king_eg },
+};
 
-int evaluation() {
+using namespace Chess;
+
+int evaluation(Board& board) {
 	int eval_mg = 0;
 	int eval_eg = 0;
 	int material = 0;
 	int phase = 0;
-	
-	int wpawns = popcount(board->bitboards[0]);
-	int wknight = popcount(board->bitboards[1]);
-	int wbishop = popcount(board->bitboards[2]);
-	int wrook = popcount(board->bitboards[3]);
-	int wqueen = popcount(board->bitboards[4]);
 
-	int bpawns = popcount(board->bitboards[6]);
-	int bknight = popcount(board->bitboards[7]);
-	int bbishop = popcount(board->bitboards[8]);
-	int brook = popcount(board->bitboards[9]);
-	int bqueen = popcount(board->bitboards[10]);
-	
+	int wpawns = popCount(board.PiecesBB[WhitePawn]);
+	int wknight = popCount(board.PiecesBB[WhiteKnight]);
+	int wbishop = popCount(board.PiecesBB[WhiteBishop]);
+	int wrook = popCount(board.PiecesBB[WhiteRook]);
+	int wqueen = popCount(board.PiecesBB[WhiteQueen]);
+
+	int bpawns = popCount(board.PiecesBB[BlackPawn]);
+	int bknight = popCount(board.PiecesBB[BlackKnight]);
+	int bbishop = popCount(board.PiecesBB[BlackBishop]);
+	int brook = popCount(board.PiecesBB[BlackRook]);
+	int bqueen = popCount(board.PiecesBB[BlackQueen]);
+
 	phase += wknight + bknight;
 	phase += wbishop + bbishop;
 	phase += (wrook + brook) * 2;
 	phase += (wqueen + bqueen) * 4;
-	
-	eval_mg += (wpawns - bpawns) * pawnValue;
-	eval_eg += (wpawns - bpawns) * pawnValue;
-	
-	eval_mg += (wknight - bknight) * knightValue;
-	eval_eg += (wknight - bknight) * knightValue;
 
-	eval_mg += (wbishop - bbishop) * bishopValue;
-	eval_eg += (wbishop - bbishop) * bishopValue;
+	eval_mg += (wpawns - bpawns) * piece_values[0][0];
+	eval_eg += (wpawns - bpawns) * piece_values[1][0];
 
-	eval_mg += (wrook - brook) * rookValue;
-	eval_eg += (wrook - brook) * rookValue;
-	
-	eval_mg += (wqueen - bqueen) * queenValue;
-	eval_eg += (wqueen - bqueen) * queenValue;
-	
-	U64 pieces_white = board->White;
-	U64 pieces_black = board->Black;
+	eval_mg += (wknight - bknight) * piece_values[0][1];
+	eval_eg += (wknight - bknight) * piece_values[1][1];
+
+	eval_mg += (wbishop - bbishop) * piece_values[0][2];
+	eval_eg += (wbishop - bbishop) * piece_values[1][2];
+
+	eval_mg += (wrook - brook) * piece_values[0][3];
+	eval_eg += (wrook - brook) * piece_values[1][3];
+
+	eval_mg += (wqueen - bqueen) * piece_values[0][4];
+	eval_eg += (wqueen - bqueen) * piece_values[1][4];
+
+	Bitboard pieces_white = board.allPieces<White>();
+	Bitboard pieces_black = board.allPieces<Black>();
 
 	while (pieces_white) {
-		int square = pop_lsb(pieces_white);
-		int piece = board->piece_at_square(square);
+		Square square = poplsb(pieces_white);
+		Piece piece = board.getPiece(square);
 		eval_mg += piece_to_mg[piece][square];
 		eval_eg += piece_to_eg[piece][square];
-		if (piece == 0) {
-			eval_mg += pawn_rank_values_mg_w[square_rank(square)];
-			eval_eg += pawn_rank_values_eg_w[square_rank(square)];
+		if (piece == 0 && rank_of(square) == 6) {
+			eval_mg += 20;
+			eval_eg += 50;
 		}
 	}
 	while (pieces_black) {
-		int square = pop_lsb(pieces_black);
-		int piece = board->piece_at_square(square);
+		Square square = poplsb(pieces_black);
+		Piece piece = board.getPiece(square);
 		eval_mg -= piece_to_mg[piece][square];
 		eval_eg -= piece_to_eg[piece][square];
-		if (piece == 6) {
-			eval_mg -= pawn_rank_values_mg_b[square_rank(square)];
-			eval_eg -= pawn_rank_values_eg_b[square_rank(square)];
+		if (piece == 6 && rank_of(square) == 1) {
+			eval_mg -= 20;
+			eval_eg -= 50;
 		}
 	}
-	
-	//King Safety
-	int king_sq_white = _bitscanforward(board->King(true));
-	int king_sq_black = _bitscanforward(board->King(false));
-	if (king_sq_white == 6) {
-		if (!_test_bit(board->bitboards[board->WPAWN], 14) ||
-			!_test_bit(board->bitboards[board->WPAWN], 15)) {
-			eval_mg -= 10;
-		}
-	}
-	if (king_sq_black == 62) {
-		if (!_test_bit(board->bitboards[board->BPAWN], 54) ||
-			!_test_bit(board->bitboards[board->BPAWN], 55)) {
-			eval_mg += 10;
-		}
-	}
-	
-	// U64 openfile = (~(fileFill(White)) & ~(fileFill(Black)));
-	//U64 hf_w, hf_b;
-	//std::tie(hf_w, hf_b) = half_open_file(board->bitboards[board->WPAWN], board->bitboards[board->BPAWN]);
-	//int open_rooks = rook_open_file(hf_w, hf_b, board->bitboards[board->WROOK], board->bitboards[board->BROOK]);
-	//eval_mg += open_rooks * 20;
-	//eval_eg += open_rooks * 5;
-	
+
 	phase = 24 - phase;
 	phase = (phase * 256 + (24 / 2)) / 24;
-	return ((eval_mg * (256 - phase)) + (eval_eg * phase))/256;
-}
-
-U64 nortFill(U64 gen) {
-	gen |= (gen << 8);
-	gen |= (gen << 16);
-	gen |= (gen << 32);
-	return gen;
-}
-U64 soutFill(U64 gen) {
-	gen |= (gen >> 8);
-	gen |= (gen >> 16);
-	gen |= (gen >> 32);
-	return gen;
-}
-U64 fileFill(U64 gen) {
-	return (nortFill(gen) | soutFill(gen));
-} 
-	
-U64 halfopenoropenfile(U64 gen) {
-	return ~fileFill(gen);
-}
-
-bool is_a_file(int8_t square) {
-	if ((square & 7) == 0) {
-		return true;
-	}
-	return false;
-}
-
-bool is_h_file(int8_t square) {
-	if ((square & 7) == 7) {
-		return true;
-	}
-	return false;
-}	
-
-std::tuple<U64, U64> half_open_file(U64 White, U64 Black) {
-	return { halfopenoropenfile(White), halfopenoropenfile(Black) };
-}
-
-int8_t isolated_pawn(int8_t square, U64 hf_open) {
-	if ((not is_a_file(square) and _test_bit(hf_open, square - 1)) ||
-		(not is_h_file(square) and _test_bit(hf_open, square + 1)) ||
-		(_test_bit(hf_open, square + 1) && _test_bit(hf_open, square - 1))) {
-		return 1;
-	}
-	return 0;
-}
-
-std::tuple<uint8_t, uint8_t> doubled_pawns(U64 pawns, U64 White, U64 Black) {
-	U64 bb_pawns_white = pawns & White;
-	U64 x = popcount(bb_pawns_white & (bb_pawns_white << 8));
-	U64 bb_pawns_black = pawns & Black;
-	U64 y = popcount(bb_pawns_black & (bb_pawns_black >> 8));
-	return { x, y };
-}
-
-int8_t supported_pawn(int8_t square, U64 pawns, bool IsWhite) {
-	if (IsWhite) {
-		if ((_test_bit(pawns, square - 7) && !is_h_file(square)) || (_test_bit(pawns, square - 9) && is_a_file(square))) {
-			return 1;
-		}
-	}
-	else {
-		if ((_test_bit(pawns, square + 7) && !is_a_file(square)) || (_test_bit(pawns, square + 9) && is_h_file(square))) {
-			return 1;
-		}
-	}
-	return 0;
-}
-
-int8_t neighbour_pawns(int8_t square, U64 pawns) {
-	if ((_test_bit(pawns, square + 1) && !is_h_file(square)) || (_test_bit(pawns, square - 1) && !is_a_file(square)))
-		return 1;
-	return 0;
-}
-
-int8_t connected_pawns(int8_t square, U64 pawns, bool IsWhite) {
-	if (neighbour_pawns(square, pawns) or supported_pawn(square, pawns, IsWhite))
-		return 1;
-	return 0;
-}
-
-int8_t backwards_pawn(int8_t square, U64 pawn_white, U64 pawn_black, bool IsWhite) {
-	if (IsWhite) {
-		if (neighbour_pawns(square, pawn_white))
-			return 0;
-		int y = 8;
-		while (square-y >= 0) {
-			if ((_test_bit(pawn_white, square - (y - 1)) && !is_a_file(square)) || ((_test_bit(pawn_white, square - (y + 1)) && !is_h_file(square))))
-				return 1;
-			y += 8;
-		}
-		if ((_test_bit(pawn_black, square + (9 * 2)) && !is_h_file(square)) || (_test_bit(pawn_black, square + (7 * 2)) && !is_a_file(square)) || (_test_bit(pawn_black, square + 8)))
-			return 1;
-	}
-	else {
-		if (neighbour_pawns(square, pawn_black))
-			return 0;
-		int y = 8;
-		while (square + y < 64) {
-			if ((_test_bit(pawn_black, square + (y - 1)) && !is_a_file(square)) || (_test_bit(pawn_black, square + (y + 1)) && !is_h_file(square)))
-				return 1;
-			y += 8;
-		}
-		if ((_test_bit(pawn_white, square - (9 * 2)) && !is_h_file(square)) || (_test_bit(pawn_white, square - (7 * 2)) && !is_a_file(square)) || _test_bit(pawn_white, square - 8))
-			return 1;
-	}
-	return 0;
-}
-
-int8_t rook_open_file(U64 hf_w, U64 hf_b, U64 White_rooks, U64 Black_rooks) {
-	int8_t x = popcount(White_rooks & hf_w);
-	int8_t y = popcount(Black_rooks & hf_b);
-	return x-y;
+	return ((eval_mg * (256 - phase)) + (eval_eg * phase)) / 256;
 }

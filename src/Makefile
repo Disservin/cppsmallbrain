@@ -1,9 +1,8 @@
+smallbrain: chess.o uci.o search.o evaluation.o threadmanager.o
+	g++ -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread chess.o uci.o search.o evaluation.o threadmanager.o -o smallbrain
 
-smallbrain: board.o uci.o search.o evaluation.o timecontroller.o thread_manager.o
-	g++ -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread board.o uci.o search.o evaluation.o timecontroller.o thread_manager.o -o smallbrain
-
-board.o: board.cpp board.h
-	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread board.cpp
+chess.o: chess.cpp chess.h
+	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread chess.cpp
 
 uci.o: uci.cpp uci.h
 	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread uci.cpp
@@ -14,10 +13,8 @@ search.o: search.cpp search.h
 evaluation.o: evaluation.cpp evaluation.h
 	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread evaluation.cpp
 
-thread_manager.o: thread_manager.cpp thread_manager.h
-	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread thread_manager.cpp
+threadmanager.o: threadmanager.cpp threadmanager.h
+	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread threadmanager.cpp
 
-timecontroller.o: timecontroller.cpp timecontroller.h
-	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ -static -lpthread timecontroller.cpp
 clean:
 	rm *.o smallbrain

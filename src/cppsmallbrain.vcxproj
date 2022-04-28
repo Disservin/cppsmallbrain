@@ -18,6 +18,22 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="chess.h" />
+    <ClInclude Include="evaluation.h" />
+    <ClInclude Include="search.h" />
+    <ClInclude Include="threadmanager.h" />
+    <ClInclude Include="tt.h" />
+    <ClInclude Include="uci.h" />
+    <ClInclude Include="zobrist.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="chess.cpp" />
+    <ClCompile Include="evaluation.cpp" />
+    <ClCompile Include="search.cpp" />
+    <ClCompile Include="threadmanager.cpp" />
+    <ClCompile Include="uci.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -144,25 +160,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="board.cpp" />
-    <ClCompile Include="evaluation.cpp" />
-    <ClCompile Include="search.cpp" />
-    <ClCompile Include="thread_manager.cpp" />
-    <ClCompile Include="timecontroller.cpp" />
-    <ClCompile Include="uci.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="board.h" />
-    <ClInclude Include="evaluation.h" />
-    <ClInclude Include="general.h" />
-    <ClInclude Include="search.h" />
-    <ClInclude Include="thread_manager.h" />
-    <ClInclude Include="timecontroller.h" />
-    <ClInclude Include="tt.h" />
-    <ClInclude Include="uci.h" />
-    <ClInclude Include="zobrist.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

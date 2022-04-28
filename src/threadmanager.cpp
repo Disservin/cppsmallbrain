@@ -1,15 +1,15 @@
 #include <thread>
 
-#include "thread_manager.h"
+#include "threadmanager.h"
 
 
-void ThreadManager::begin(int depth, long long tg, int bench) {
+void ThreadManager::begin(Board& board, int depth, bool bench) {
 	if (is_searching()) {
 		stop();
 	}
 	stopped = false;
-	Searcher searcher_class = Searcher(board, depth, tg);
-	threads = std::thread(&Searcher::iterative_search, searcher_class, depth, bench);
+	Search searcher_class = Search(board);
+	threads = std::thread(&Search::iterative_deepening, searcher_class, depth, bench);
 }
 void ThreadManager::stop() {
 	stopped = true;

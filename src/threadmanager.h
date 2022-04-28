@@ -1,14 +1,15 @@
 #pragma once
 #include <thread>
+#include <atomic>
 
-#include "board.h"
+#include "chess.h"
 #include "search.h"
 
 extern std::atomic<bool> stopped;
 
 class ThreadManager {
 public:
-	void begin(int depth, long long tg = -1, int bench = 0);
+	void begin(Board& board, int depth, bool bench=false);
 	void stop();
 	bool is_searching();
 private:
