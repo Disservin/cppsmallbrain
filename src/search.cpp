@@ -1,6 +1,16 @@
 #include "search.h"
 #include "evaluation.h"
 
+bool Search::exit_early() {
+    if (stopped) return true;
+    if (nodes & 2047 && searchtime != 0) {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        if (searchtime - time_diff <= 0) return true;
+    }
+    return false;
+}
+
 int Search::mmlva(Move move) {
     static constexpr int mvvlva[7][7] = { {0, 0, 0, 0, 0, 0, 0},
     {0, 205, 204, 203, 202, 201, 200},
@@ -49,7 +59,7 @@ int Search::score_move(Move move) {
 
 template <Color color>
 int Search::qsearch(int depth, int alpha, int beta, int player, int ply){
-    if (stopped) return 0;
+    if (exit_early()) return 0;
     int stand_pat = evaluation(board) * player;
     Square king_sq = board.KingSq<color>();
     bool inCheck = board.isSquareAttacked<~color>(king_sq);
@@ -64,8 +74,8 @@ int Search::qsearch(int depth, int alpha, int beta, int player, int ply){
     if (depth == 0) return stand_pat;
 
     Moves moveList = board.generateLegalMoves<color>();
-    //std::sort(std::begin(moveList.moves), moveList.moves + moveList.count, [&](const Move& m1, const Move& m2)
-    //    {return mmlva(m1) > mmlva(m2); });
+    std::sort(std::begin(moveList.moves), moveList.moves + moveList.count, [&](const Move& m1, const Move& m2)
+        {return mmlva(m1) > mmlva(m2); });
 	
     for (int i = 0; i < (int)moveList.count; i++){
         Move move = moveList.moves[i];
@@ -87,7 +97,7 @@ int Search::qsearch(int depth, int alpha, int beta, int player, int ply){
 
 template <Color color>
 int Search::absearch(int depth, int alpha, int beta, int player, int ply, bool null){
-    if (stopped) return 0;
+    if (exit_early()) return 0;
 
     if (ply == 0) {
         if (board.isRepetition()) return (0 + (2 * (nodes & 1) - 1));
@@ -219,7 +229,7 @@ int Search::aspiration_search(int player, int depth, int prev_eval){
     return result;
 }
 
-int Search::iterative_deepening(int search_depth, bool bench){
+int Search::iterative_deepening(int search_depth, bool bench, unsigned long long time){
     int result = 0;
     Color color = board.sideToMove;
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -234,6 +244,7 @@ int Search::iterative_deepening(int search_depth, bool bench){
             else {
                 result = aspiration_search<Black>(-1, depth, result);
             }
+            if (exit_early()) break;
             prev_bestmove = bestMove;
             std::string move = board.printUciMove(bestMove);
         }
@@ -242,6 +253,7 @@ int Search::iterative_deepening(int search_depth, bool bench){
         std::cout << nodes << " nodes " << signed((nodes / (ms + 1)) * 1000) << " nps " << std::endl;
         return 0;
     }
+    searchtime = time;
     for (int depth = 1; depth <= search_depth; depth++){
         searchDepth = depth;
         if (color == White){
@@ -250,7 +262,7 @@ int Search::iterative_deepening(int search_depth, bool bench){
         else{
             result = aspiration_search<Black>(-1, depth, result);
         }
-        if (stopped){
+        if (exit_early()){
             std::string move = board.printUciMove(bestMove);
             std::cout << "bestmove " << move << std::endl;
             return 0;

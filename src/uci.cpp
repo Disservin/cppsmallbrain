@@ -173,6 +173,20 @@ int main(int argc, char** argv){
             thread.begin(board, depth);
             // search.startsearch(depth);
         }
+        if (input.find("go wtime") != std::string::npos) {
+            std::vector<std::string> param = split_input(input);
+            int movetime = board.sideToMove ? std::stoi(param[4]) : std::stoi(param[2]);
+            int inc = -1;
+            int movestogo = 0;
+            if (param.size() > 5) {
+                inc = board.sideToMove ? std::stoi(param[8]) : std::stoi(param[6]);
+            }
+            if (param.size() > 9) {
+                movestogo = std::stoi(param[10]);
+            }
+            unsigned long long time_given = movetime / 20;
+            thread.begin(board, 60, false, time_given);
+        }
 
     }
 }
