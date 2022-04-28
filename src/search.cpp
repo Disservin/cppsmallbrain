@@ -245,8 +245,8 @@ int Search::iterative_deepening(int search_depth, bool bench, unsigned long long
                 result = aspiration_search<Black>(-1, depth, result);
             }
             if (exit_early()) break;
-            prev_bestmove = bestMove;
-            std::string move = board.printUciMove(bestMove);
+            prev_bestmove = pv_table[0][0];
+            std::string move = board.printUciMove(pv_table[0][0]);
         }
         auto t2 = std::chrono::high_resolution_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
@@ -263,12 +263,12 @@ int Search::iterative_deepening(int search_depth, bool bench, unsigned long long
             result = aspiration_search<Black>(-1, depth, result);
         }
         if (exit_early()){
-            std::string move = board.printUciMove(bestMove);
+            std::string move = board.printUciMove(pv_table[0][0]);
             std::cout << "bestmove " << move << std::endl;
             return 0;
         }
-        prev_bestmove = bestMove;
-        std::string move = board.printUciMove(bestMove);
+        prev_bestmove = pv_table[0][0];
+        std::string move = board.printUciMove(pv_table[0][0]);
         auto t2 = std::chrono::high_resolution_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
         std::cout <<"info depth " << signed(depth) << " score cp " 
