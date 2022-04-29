@@ -115,9 +115,7 @@ int main(int argc, char** argv) {
 					board->make_move(move);
 				}
 			}
-			while (!board->move_stack.empty()) {
-				board->move_stack.pop();
-			}
+			board->move_stack_index = 0;
 		}
 		if (input.find("position startpos") != std::string::npos) {			
 			board->full_moves = 2;
@@ -135,9 +133,7 @@ int main(int argc, char** argv) {
 					board->make_move(move);				
 				}
 			}
-			while (!board->move_stack.empty()) {
-				board->move_stack.pop();
-			}
+			board->move_stack_index = 0;
 		}
 		if (input.find("go perft") != std::string::npos) {
 			std::size_t start_index = input.find("perft");

@@ -152,6 +152,22 @@ void Board::apply_fen(std::string fen)
     }
     // Updates board hash
     board_hash = generate_zobrist_hash();
+
+    initializeLookupTables();
+}
+
+void Board::initializeLookupTables() {
+    //initialize squares between table
+    U64 sqs;
+    for (int8_t sq1 = 0; sq1 <= 63; ++sq1) {
+        for (int8_t sq2 = 0; sq2 <= 63; ++sq2) {
+            sqs = (1ULL << sq1) | (1ULL << sq2);
+            if (square_file(sq1) == square_file(sq2) || square_rank(sq1) == square_rank(sq2))
+                SQUARES_BETWEEN_BB[sq1][sq2] = GetRookAttacks(sq1, sqs) & GetRookAttacks(sq2, sqs);
+            else if (diagonal_of(sq1) == diagonal_of(sq2) || anti_diagonal_of(sq1) == anti_diagonal_of(sq2))
+                SQUARES_BETWEEN_BB[sq1][sq2] = GetBishopAttacks(sq1, sqs) & GetBishopAttacks(sq2, sqs);
+        }
+    }
 }
 
 std::string Board::get_fen() {
@@ -377,10 +393,8 @@ U64 Board::generate_zobrist_hash() {
 
     U64 ep_hash = 0ULL;
     if (en_passant_square != 64) {
-        U64 ep_square = 1ULL << en_passant_square;
-        U64 ep_mask = (Pawn_AttackLeft(!IsWhite, ep_square) & not_h_file) | (Pawn_AttackRight(!IsWhite, ep_square) & not_a_file);
         U64 color_p = IsWhite ? White : Black;
-        if (ep_mask & (bitboards[WPAWN] | bitboards[BPAWN]) & color_p) {
+        if (GetPawnAttacks(!IsWhite, en_passant_square) & (bitboards[WPAWN] | bitboards[BPAWN]) & color_p) {
             ep_hash = RANDOM_ARRAY[772 + square_file(en_passant_square)];
         }
     }
@@ -409,7 +423,8 @@ inline void Board::save_board_state()
     board.castle_rights = castling_rights;
     board.board_hash = board_hash;
     board.half_move = half_moves;
-    move_stack.push(board);
+    move_stack[move_stack_index] = board;
+    move_stack_index++;
 }
 
 inline void Board::update_occupancies() {
@@ -559,32 +574,13 @@ std::string Board::piece_type(int8_t piece) {
     }
 }
 
-inline U64 Board::Pawn_Forward(bool IsWhite, U64 mask) {
-    if (IsWhite) return mask << 8;
-    else return mask >> 8;
+void Board::removePiece(int8_t piece, int8_t sq) {
+	bitboards[piece] &= ~(1ULL << sq);
+	board_pieces[sq] = -1;
 }
-
-inline U64 Board::Pawn_Forward2(bool IsWhite, U64 mask) {
-    if (IsWhite) return (Pawn_Forward(IsWhite, mask) & ~Occ) << 8;
-    else return (Pawn_Forward(IsWhite, mask) & ~Occ) >> 8;
-}
-
-inline U64 Board::Pawn_Backward(bool IsWhite, U64 mask) {
-    return Pawn_Forward(IsWhite, mask);
-}
-
-inline U64 Board::Pawn_Backward2(bool IsWhite, U64 mask) {
-    return Pawn_Forward2(IsWhite, mask);
-}
-
-inline U64 Board::Pawn_AttackRight(bool IsWhite, U64 mask) {
-    if (IsWhite) return mask << 9;
-    else return mask >> 7;
-}
-
-inline U64 Board::Pawn_AttackLeft(bool IsWhite, U64 mask) {
-    if (IsWhite) return mask << 7;
-    else return mask >> 9;
+void Board::placePiece(int8_t piece, int8_t sq) {
+	bitboards[piece] |= (1ULL << sq);
+	board_pieces[sq] = piece;
 }
 
 bool Board::non_pawn_material(bool IsWhite) {
@@ -696,258 +692,91 @@ U64 Board::Queens(bool IsWhite)
     return bitboards[BQUEEN];
 }
 
-// squares seen by a bishop
-inline U64 Board::seen_by_bishop(bool IsWhite, int8_t sq) {
-    U64 bishop_move = 0ULL;
-    U64 victims = IsWhite ? Black : White;
-    U64 blockers = IsWhite ? White : Black;
-    int index = 0;
-    bishop_move |= _rays[NORTH_WEST][sq];
+inline U64 Board::PawnPush(bool IsWhite, int8_t sq) {
+	if (IsWhite) return (U64)1 << (sq + 8);
+	return (U64)1 << (sq - 8);
+}
 
-    if (_rays[NORTH_WEST][sq] & victims) {
-        index = _bitscanforward(victims & _rays[NORTH_WEST][sq]);
-        bishop_move &= ~_rays[NORTH_WEST][index];
-    }
-    if (_rays[NORTH_WEST][sq] & blockers) {
-        index = _bitscanforward(blockers & _rays[NORTH_WEST][sq]);
-        bishop_move &= ~_rays[NORTH_WEST][index - 7];
-    }
+// Hyperbola Quintessence algorithm (for sliding pieces)
+U64 Board::hyp_quint(int8_t square, U64 occ, U64 mask) {
+    return (((mask & occ) - (1ULL << square) * 2) ^
+        reverse(reverse(mask & occ) - reverse((1ULL << square)) * 2)) & mask;
+}
 
-    bishop_move |= _rays[NORTH_EAST][sq];
-    if (_rays[NORTH_EAST][sq] & victims) {
-        index = _bitscanforward(victims & _rays[NORTH_EAST][sq]);
-        bishop_move &= ~_rays[NORTH_EAST][index];
-    }
-    if (_rays[NORTH_EAST][sq] & blockers) {
-        index = _bitscanforward(blockers & _rays[NORTH_EAST][sq]);
-        bishop_move &= ~_rays[NORTH_EAST][index - 9];
-    }
+U64 Board::GetPawnAttacks(bool IsWhite, int8_t sq) {
+    if (IsWhite) return GetPawnAttacksS_TABLE[0][sq];
+    return GetPawnAttacksS_TABLE[1][sq];
+}
 
-    bishop_move |= _rays[SOUTH_WEST][sq];
-    if (_rays[SOUTH_WEST][sq] & victims) {
-        index = _bitscanreverse(victims & _rays[SOUTH_WEST][sq]);
-        bishop_move &= ~_rays[SOUTH_WEST][index];
-    }
-    if (_rays[SOUTH_WEST][sq] & blockers) {
-        index = _bitscanreverse(blockers & _rays[SOUTH_WEST][sq]);
-        bishop_move &= ~_rays[SOUTH_WEST][index + 9];
-    }
+// get bishop attacks using Hyperbola Quintessence
+U64 Board::GetBishopAttacks(int8_t square, U64 occ) {
+    return hyp_quint(square, occ, MASK_DIAGONAL[diagonal_of(square)]) |
+        hyp_quint(square, occ, MASK_ANTI_DIAGONAL[anti_diagonal_of(square)]);
+}
 
-    bishop_move |= _rays[SOUTH_EAST][sq];
-    if (_rays[SOUTH_EAST][sq] & victims) {
-        index = _bitscanreverse(victims & _rays[SOUTH_EAST][sq]);
-        bishop_move &= ~_rays[SOUTH_EAST][index];
-    }
-    if (_rays[SOUTH_EAST][sq] & blockers) {
-        index = _bitscanreverse(blockers & _rays[SOUTH_EAST][sq]);
-        bishop_move &= ~_rays[SOUTH_EAST][index + 7];
-    }
-    bishop_move &= ~(1ULL << sq);
-    return bishop_move;
+// get rook attacks using Hyperbola Quintessence
+U64 Board::GetRookAttacks(int8_t square, U64 occ) {
+    return hyp_quint(square, occ, MASK_FILE[square_file(square)]) |
+            hyp_quint(square, occ, MASK_RANK[square_rank(square)]);
+}
+
+// get queen attacks using Hyperbola Quintessence
+U64 Board::GetQueenAttacks(int8_t square, U64 occ) {
+    return GetBishopAttacks(square, occ) | GetRookAttacks(square, occ);
 }
 
 // squares seen by a knight
-inline U64 Board::seen_by_knight(int8_t sq) {
+inline U64 Board::GetKnightAttacks(int8_t sq) {
     return knightattacks[sq];
 }
 
-// squares seen by a rook
-inline U64 Board::seen_by_rook(bool IsWhite, int8_t sq) {
-    U64 rook_move = 0ULL;
-    U64 victims = IsWhite ? Black : White;
-    U64 blockers = IsWhite ? White : Black;
-    int index = 0;
-
-    rook_move |= (1ULL << sq);
-    rook_move |= _rays[NORTH][sq];
-
-    if (_rays[NORTH][sq] & victims) {
-        index = _bitscanforward(victims & _rays[NORTH][sq]);
-        rook_move &= ~_rays[NORTH][index];
-    }
-    if (_rays[NORTH][sq] & blockers) {
-        index = _bitscanforward(blockers & _rays[NORTH][sq]);
-        rook_move &= ~_rays[NORTH][index - 8];
-    }
-
-    rook_move |= _rays[SOUTH][sq];
-    if (_rays[SOUTH][sq] & victims) {
-        index = _bitscanreverse(victims & _rays[SOUTH][sq]);
-        rook_move &= ~_rays[SOUTH][index];
-    }
-    if (_rays[SOUTH][sq] & blockers) {
-        index = _bitscanreverse(blockers & _rays[SOUTH][sq]);
-        rook_move &= ~_rays[SOUTH][index + 8];
-    }
-
-    rook_move |= _rays[EAST][sq];
-    if (_rays[EAST][sq] & victims) {
-        index = _bitscanforward(victims & _rays[EAST][sq]);
-        rook_move &= ~_rays[EAST][index];
-
-    }
-    if (_rays[EAST][sq] & blockers) {
-        index = _bitscanforward(blockers & _rays[EAST][sq]);
-        rook_move &= ~_rays[EAST][index - 1];
-    }
-
-    rook_move |= _rays[WEST][sq];
-    if (_rays[WEST][sq] & victims) {
-        index = _bitscanreverse(victims & _rays[WEST][sq]);
-        rook_move &= ~_rays[WEST][index];
-    }
-    if (_rays[WEST][sq] & blockers) {
-        index = _bitscanreverse(blockers & _rays[WEST][sq]);
-        rook_move &= ~_rays[WEST][index + 1];
-    }
-    rook_move &= ~(1ULL << sq);
-    return rook_move;
-}
-
 // squares seen by a king
-inline U64 Board::seen_by_king(int8_t sq) {
-    U64 king_move = 0ULL;
-    king_move |= (1ULL << sq);
-
-    U64 king_up = king_move << 8 & ~rank_1_mask;
-    U64 king_down = king_move >> 8 & ~rank_8_mask;
-    U64 king_right = king_move << 1 & not_a_file;
-    U64 king_left = king_move >> 1 & not_h_file;
-    U64 king_up_right = king_move << 9 & not_a_file;
-    U64 king_up_left = king_move << 7 & not_h_file;
-    U64 king_down_right = king_move >> 7 & not_a_file;
-    U64 king_down_left = (king_move >> 9) & not_h_file;
-
-    return (king_up | king_down | king_right | king_left | king_up_right | king_up_left | king_down_right | king_down_left);
+inline U64 Board::GetKingAttacks(int8_t sq) {
+    return KING_ATTACKS_TABLE[sq];
 }
 
 // legal pawn moves
 inline U64 Board::legal_pawn_moves(bool IsWhite, int8_t sq, uint8_t ep) {
-    U64 mask = 1ULL << sq;
-    U64 attack_l = 0ULL;
-    U64 attack_r = 0ULL;
-    U64 pawn_push = 0ULL;
-    U64 ep_take = 0ULL;
-    U64 ep_m = (1ULL << ep);
-    U64 valid_attacks = 0ULL;
-    //Save double check
-    int save_db = doublecheck;
-    // DIAGONAL EN PASSANT PINS DO NOT EXIST !!
-    if (ep < 64 and square_distance(sq, ep) == 1) {
-        if (not (mask & pin_hv)) {
-            if (IsWhite) {
-                bitboards[BPAWN] &= ~(1ULL << (ep - 8));
-                bitboards[WPAWN] &= ~(1ULL << sq);
-                White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
-                Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
-                Occ = Black | White;
-                int king_sq = _bitscanforward(King(IsWhite));
-                if (not(create_checkmask(IsWhite, king_sq)) and square_rank(sq) == 4) {
-                    if (square_file(ep) != 7 and square_file(sq) == 0) {
-                        ep_take |= ep_m;
-                    }
-                    if (square_file(ep) != 0 and square_file(sq) == 7) {
-                        ep_take |= ep_m;
-                    }
-                    if (square_file(ep) != 0 and square_file(sq) != 7) {
-                        ep_take |= ep_m;
-                    }
-                    if (square_file(ep) == 0 and square_file(sq) == 1) {
-                        ep_take |= ep_m;
-                    }
-                    if (square_file(ep) == 7 and square_file(sq) == 6) {
-                        ep_take |= ep_m;
-                    }
-                }
-                bitboards[WPAWN] |= 1ULL << sq;
-                bitboards[BPAWN] |= 1ULL << (ep - 8);
-                White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
-                Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
-                Occ = Black | White;
-            }
-            else {
-                bitboards[BPAWN] &= ~(1ULL << sq);
-                bitboards[WPAWN] &= ~(1ULL << (ep + 8));
-                White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
-                Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
-                Occ = Black | White;
-                int king_sq = _bitscanforward(King(IsWhite));
-                if (not(create_checkmask(IsWhite, king_sq)) and square_rank(sq) == 3) {
-                    if (square_file(ep) != 7 and square_file(sq) == 0) {
-                        ep_take |= ep_m;
-                    }
-                    if (square_file(ep) != 0 and square_file(sq) == 7) {
-                        ep_take |= ep_m;
-                    }
-                    if (square_file(ep) != 0 and square_file(sq) != 7) {
-                        ep_take |= ep_m;
-                    }
-                    if (square_file(ep) == 0 and square_file(sq) == 1) {
-                        ep_take |= ep_m;
-                    }
-                    if (square_file(ep) == 7 and square_file(sq) == 6) {
-                        ep_take |= ep_m;
-                    }
-                }
-                bitboards[BPAWN] |= 1ULL << sq;
-                bitboards[WPAWN] |= 1ULL << (ep + 8);
-                White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
-                Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
-                Occ = Black | White;
-            }
-        }
-    }
-    //Reset doublecheck
-    doublecheck = save_db;
-    // Ep for vertical takes 8/2p5/3p2k1/KP5r/5pP1/8/4P3/6R1 b - g3 0 3
-    if (ep != 64 and IsWhite and square_distance(sq, ep) == 1 and square_rank(sq) == 4) {
-        if (would_be_attack(true, ep - 8) and not ep_take and doublecheck == 0) {
-            ep_take |= ep_m;
-        }
-    }
-    if (ep != 64 and !IsWhite and square_distance(sq, ep) == 1 and square_rank(sq) == 3) {
-        if (would_be_attack(false, ep + 8) and not ep_take and doublecheck == 0) {
-            ep_take |= ep_m;
-        }
-    }
+    U64 enemy = (IsWhite) ? Black : White;
+    // If we are pinned diagonally we can only do captures which are on the pin_dg and on the checkmask
+    if (pin_dg & (1ULL << sq)) return GetPawnAttacks(IsWhite, sq) & pin_dg & checkmask & enemy;
+    // Calculate pawn pushs
+    U64 push = PawnPush(IsWhite, sq) & ~Occ;
+    push |= (IsWhite) ? square_rank(sq) == 1 ? (push << 8) & ~Occ : 0ULL : square_rank(sq) == 6 ? (push >> 8) & ~Occ : 0ULL;
+    // If we are pinned horizontally we can do no moves but if we are pinned vertically we can only do pawn pushs
+    if (pin_hv & (1ULL << sq)) return push & pin_hv & checkmask;
+    int8_t offset = (IsWhite) ? -8 : 8;
+    U64 attacks = GetPawnAttacks(IsWhite, sq);
+    // If we are in check and  the en passant square lies on our attackmask and the en passant piece gives check
+    // return the ep mask as a move square
+    if (checkmask != 18446744073709551615ULL && attacks & (1ULL << ep) && checkmask & (1ULL << (ep + offset))) return (attacks & (1ULL << ep));
+    // If we are in check we can do all moves that are on the checkmask
+    if (checkmask != 18446744073709551615ULL) return ((attacks & enemy) | push) & checkmask;
 
-    if (IsWhite) {
-        attack_l = Pawn_AttackLeft(IsWhite, mask) & Black & not_h_file;
-        attack_r = Pawn_AttackRight(IsWhite, mask) & Black & not_a_file;
-        pawn_push = (Pawn_Forward(IsWhite, mask) & ~Occ) | (Pawn_Forward2(IsWhite, mask) & ~Occ & ~rank_2_4_mask);
+    U64 moves = ((attacks & enemy) | push) & checkmask;
+    // We need to make extra sure that ep moves dont leave the king in check
+    // 7k/8/8/K1Pp3r/8/8/8/8 w - d6 0 1 
+    // Horizontal rook pins our pawn through another pawn, our pawn can push but not take enpassant 
+    // remove both the pawn that made the push and our pawn that could take in theory and check if that would give check
+    if (ep != no_sq && square_distance(sq, ep) == 1 && (1ULL << ep) & attacks) {
+        int8_t ourPawn = IsWhite ? WPAWN : BPAWN;
+		int8_t theirPawn = IsWhite ? BPAWN : WPAWN;
+        int8_t KingSQ = _bitscanforward(King(IsWhite));
+        removePiece(ourPawn, sq);
+        removePiece(theirPawn, ep + offset);
+        placePiece(ourPawn, ep);
+        White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
+        Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
+        Occ = Black | White;
+        if (!is_square_attacked(IsWhite, KingSQ)) moves |= (1ULL << ep);
+        placePiece(ourPawn, sq);
+        placePiece(theirPawn, ep + offset);
+        removePiece(ourPawn, ep);
+        White = bitboards[WPAWN] | bitboards[WKNIGHT] | bitboards[WBISHOP] | bitboards[WROOK] | bitboards[WQUEEN] | bitboards[WKING];
+        Black = bitboards[BPAWN] | bitboards[BKNIGHT] | bitboards[BBISHOP] | bitboards[BROOK] | bitboards[BQUEEN] | bitboards[BKING];
+        Occ = Black | White;
     }
-    else {
-        attack_l = Pawn_AttackLeft(IsWhite, mask) & White & not_h_file;
-        attack_r = Pawn_AttackRight(IsWhite, mask) & White & not_a_file;
-        pawn_push = (Pawn_Backward(IsWhite, mask) & ~Occ) | (Pawn_Backward2(IsWhite, mask) & ~Occ & ~rank_7_5_mask);
-    }
-
-    //if (not(is_pinned_dg(IsWhite, sq))) { Keep this for safety reason the version below should work
-    if (not _test_bit(pin_dg, sq)) {
-        valid_attacks |= attack_r;
-        valid_attacks |= attack_l;
-    }
-    else {
-        valid_attacks |= attack_l & pin_dg;
-        valid_attacks |= attack_r & pin_dg;
-        return valid_attacks & checkmask;
-    }
-    if (_test_bit(pin_hv, sq)) {
-        return pawn_push & pin_hv & checkmask;
-    }
-    // 8/8/3p4/1Pp3kr/1K3R2/8/4P1P1/8 w - c6 0 3
-    int king_sq = _bitscanforward(King(IsWhite));
-    if (IsWhite and ep != 64 and square_distance(king_sq, ep - 8) == 1 and square_distance(sq, ep - 8) == 1) {
-        if (square_distance(king_sq, ep - 8) == 1 and doublecheck == 1 and not _test_bit(pin_hv, sq)) {// not is_pinned_hv(IsWhite, sq)) {
-            return (ep_take);
-        }
-    }
-    if (!IsWhite and ep != 64 and square_distance(king_sq, ep + 8) == 1 and square_distance(sq, ep + 8) == 1) {
-        if (square_distance(king_sq, ep + 8) == 1 and doublecheck == 1 and not _test_bit(pin_hv, sq)) { //not is_pinned_hv(IsWhite, sq)) {
-            return (ep_take);
-        }
-    }
-    return (pawn_push | valid_attacks | ep_take) & checkmask;
+    return moves;
 }
 
 // legal knight moves
@@ -955,30 +784,30 @@ inline U64 Board::legal_knight_moves(bool IsWhite, int8_t sq) {
     if (_test_bit(pin_dg, sq) or _test_bit(pin_hv, sq)) {
         return 0ULL;
     }
-    return seen_by_knight(sq) & EnemyOrEmpty(IsWhite) & checkmask;
+    return GetKnightAttacks(sq) & EnemyOrEmpty(IsWhite) & checkmask;
 }
 
 // legal bishop moves
 inline U64 Board::legal_bishop_moves(bool IsWhite, int8_t sq) {
     if (_test_bit(pin_dg, sq)) {
-        return seen_by_bishop(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_dg;
+        return GetBishopAttacks(sq, Occ) & EnemyOrEmpty(IsWhite) & checkmask & pin_dg;
     }
     if (_test_bit(pin_hv, sq)) {
         return 0ULL;
     }
 
-    return seen_by_bishop(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask;
+    return GetBishopAttacks(sq, Occ) & EnemyOrEmpty(IsWhite) & checkmask;
 }
 
 // legal rook moves
 inline U64 Board::legal_rook_moves(bool IsWhite, int8_t sq) {
     if (_test_bit(pin_hv, sq)) {
-        return seen_by_rook(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask & pin_hv;
+        return GetRookAttacks(sq, Occ) & EnemyOrEmpty(IsWhite) & checkmask & pin_hv;
     }
     if (_test_bit(pin_dg, sq)) {
         return 0ULL;
     }
-    return seen_by_rook(IsWhite, sq) & EnemyOrEmpty(IsWhite) & checkmask;
+    return GetRookAttacks(sq, Occ) & EnemyOrEmpty(IsWhite) & checkmask;
 }
 
 // legal queen moves
@@ -988,7 +817,7 @@ inline U64 Board::legal_queen_moves(bool IsWhite, int8_t sq) {
 
 // legal king moves
 inline U64 Board::legal_king_moves(bool IsWhite, int8_t sq) {
-    U64 moves = seen_by_king(sq) & EnemyOrEmpty(IsWhite);
+    U64 moves = GetKingAttacks(sq) & EnemyOrEmpty(IsWhite);
     U64 final_moves = 0ULL;
     int to_index;
     // Remove King 
@@ -1000,7 +829,7 @@ inline U64 Board::legal_king_moves(bool IsWhite, int8_t sq) {
         Black &= ~(1ULL << sq);
         Occ = Black | White;
     }
-    
+
     while (moves) {
         to_index = _bitscanforward(moves);
         final_moves |= not(is_square_attacked(IsWhite, to_index)) ? (1ULL << to_index) : 0ULL;
@@ -1017,603 +846,122 @@ inline U64 Board::legal_king_moves(bool IsWhite, int8_t sq) {
     }
 
     // Castling
-    unsigned long rook_index;
-    U64 blockers = Occ;
-    U64 castling_index = 0ULL;
-    //King side White
-    if (castling_rights & wk and (_rays[EAST][sq] & blockers) and IsWhite) {
-        rook_index = _bitscanforward(blockers & _rays[EAST][sq]);
-        if (rook_index == 7) {
-            if (not is_square_attacked(IsWhite, 4) and not is_square_attacked(IsWhite, 5) and not is_square_attacked(IsWhite, 6)) {
-                castling_index |= 1ULL << 6;
-                final_moves |= castling_index;
+    if (18446744073709551615ULL == checkmask) {
+        if (IsWhite) {
+            if (castling_rights & wk
+                && !(Occ & (1ULL << SQ_F1))
+                && !(Occ & (1ULL << SQ_G1))
+                && (bitboards[WROOK] & (1ULL << SQ_H1))
+                && !is_square_attacked(IsWhite, SQ_F1)
+                && !is_square_attacked(IsWhite, SQ_G1)) {
+				final_moves |= (1ULL << SQ_G1);
+            }
+            if (castling_rights & wq
+                && !(Occ & (1ULL << SQ_D1))
+                && !(Occ & (1ULL << SQ_C1))
+                && !(Occ & (1ULL << SQ_B1))
+                && (bitboards[WROOK] & (1ULL << SQ_A1))
+                && !is_square_attacked(IsWhite, SQ_D1)
+                && !is_square_attacked(IsWhite, SQ_C1)) {
+                final_moves |= (1ULL << SQ_C1);
+            }
+        }
+        else {
+            if (castling_rights & bk
+                && !(Occ & (1ULL << SQ_F8))
+                && !(Occ & (1ULL << SQ_G8))
+                && (bitboards[BROOK] & (1ULL << SQ_H8))
+                && !is_square_attacked(IsWhite, SQ_F8)
+                && !is_square_attacked(IsWhite, SQ_G8)) {
+                final_moves |= (1ULL << SQ_G8);
+            }
+            if (castling_rights & bq
+                && !(Occ & (1ULL << SQ_D8))
+                && !(Occ & (1ULL << SQ_C8))
+                && !(Occ & (1ULL << SQ_B8))
+                && (bitboards[BROOK] & (1ULL << SQ_A8))
+                && !is_square_attacked(IsWhite, SQ_D8)
+                && !is_square_attacked(IsWhite, SQ_C8)) {
+                final_moves |= (1ULL << SQ_C8);
             }
         }
     }
-    //Queen side White
-    if (castling_rights & wq and (_rays[WEST][sq] & blockers) and IsWhite) {
-        rook_index = _bitscanreverse(blockers & _rays[WEST][sq]);
-        if (rook_index == 0) {
-            if (not is_square_attacked(IsWhite, 4) and not is_square_attacked(IsWhite, 3) and not is_square_attacked(IsWhite, 2)) {
-                castling_index |= 1ULL << 2;
-                final_moves |= castling_index;
-            }
-        }
-    }
-    //King side Black
-    if (castling_rights & bk and (_rays[EAST][sq] & blockers) and not IsWhite) {
-        rook_index = _bitscanforward(blockers & _rays[EAST][sq]);
-        if (rook_index == 63) {
-            if (not is_square_attacked(IsWhite, 62) and not is_square_attacked(IsWhite, 61) and not is_square_attacked(IsWhite, 60)) {
-                castling_index |= 1ULL << 62;
-                final_moves |= castling_index;
-            }
-        }
-    }
-    //Queen side Black
-    if (castling_rights & bq and (_rays[WEST][sq] & blockers) and not IsWhite) {
-        rook_index = _bitscanreverse(blockers & _rays[WEST][sq]);
-        if (rook_index == 56) {
-            if (not is_square_attacked(IsWhite, 60) and not is_square_attacked(IsWhite, 59) and not is_square_attacked(IsWhite, 58)) {
-                castling_index |= 1ULL << 58;
-                final_moves |= castling_index;
-            }
-        }
-    }
+
     return final_moves;
 }
 
 // bool if square is attacked
 inline bool Board::is_square_attacked(bool IsWhite, int8_t sq) {
     U64 mask = (1ULL << sq);
-	if (Pawn_AttackLeft(IsWhite, mask) & Pawns(!IsWhite) & not_h_file || Pawn_AttackRight(IsWhite, mask) & Pawns(!IsWhite) & not_a_file) return true;
+	if (GetPawnAttacks(IsWhite, sq) & Pawns(!IsWhite)) return true;
     if (knightattacks[sq] & Knights(!IsWhite)) return true;
-    if (seen_by_king(sq) & King(!IsWhite)) return true;
-	if (seen_by_bishop(IsWhite, sq) & (Bishops(!IsWhite) | Queens(!IsWhite))) return true;
-    if (seen_by_rook(IsWhite, sq) & (Rooks(!IsWhite) | Queens(!IsWhite))) return true;
+    if (GetKingAttacks(sq) & King(!IsWhite)) return true;
+	if (GetBishopAttacks(sq, OwnColor(IsWhite) | Enemy(IsWhite)) & (Bishops(!IsWhite) | Queens(!IsWhite))) return true;
+    if (GetRookAttacks(sq, OwnColor(IsWhite) | Enemy(IsWhite)) & (Rooks(!IsWhite) | Queens(!IsWhite))) return true;
     return false;
 }
 
 // creates the pin mask
 inline void Board::create_pin_masks(bool IsWhite) {
     int8_t sq = _bitscanforward(King(IsWhite));
-    U64 victims = IsWhite ? Black : White;
-    U64 blockers = IsWhite ? White : Black;
-    int8_t index;
-    pin_hv = 0ULL;
-    pin_dg = 0ULL;
-    U64 attacksN = 0ULL;
-    if (_rays[NORTH][sq] & victims) {
-        index = _bitscanforward(victims & _rays[NORTH][sq]);
-        if (piece_type_at(index) == 3 || piece_type_at(index) == 4) {
-            attacksN = _rays[NORTH][sq];
-            attacksN &= ~_rays[NORTH][index];
-        }
+    U64 them = (IsWhite) ? Black : White;
+    U64 rook_mask = (Rooks(!IsWhite) | Queens(!IsWhite)) & GetRookAttacks(sq, them);
+    U64 bishop_mask = (Bishops(!IsWhite) | Queens(!IsWhite)) & GetBishopAttacks(sq, them);
+    U64 rook_pin = 0ULL;
+    U64 bishop_pin = 0ULL;
+    while (rook_mask) {
+        int8_t index = pop_lsb(rook_mask);
+        U64 possible_pin = (SQUARES_BETWEEN_BB[sq][index] | (1ULL << index));
+        U64 us = (IsWhite) ? White : Black;
+        if (popcount(possible_pin & us) == 1)
+            rook_pin |= possible_pin;
     }
+    while (bishop_mask) {
+        int8_t index = pop_lsb(bishop_mask);
+        U64 possible_pin = (SQUARES_BETWEEN_BB[sq][index] | (1ULL << index));
+        U64 us = (IsWhite) ? White : Black;
+        if (popcount(possible_pin & us) == 1)
+            bishop_pin |= possible_pin;
+    }
+    pin_hv = rook_pin;
+    pin_dg = bishop_pin;
 
-    U64 attacksS = 0ULL;
-    if (_rays[SOUTH][sq] & victims) {
-        index = _bitscanreverse(victims & _rays[SOUTH][sq]);
-        if (piece_type_at(index) == 3 || piece_type_at(index) == 4) {
-            attacksS = _rays[SOUTH][sq];
-            attacksS &= ~_rays[SOUTH][index];
-        }
-    }
-
-    U64 attacksE = 0ULL;
-    if (_rays[EAST][sq] & victims) {
-        index = _bitscanforward(victims & _rays[EAST][sq]);
-        if (piece_type_at(index) == 3 || piece_type_at(index) == 4) {
-            attacksE = _rays[EAST][sq];
-            attacksE &= ~_rays[EAST][index];
-        }
-    }
-
-    U64 attacksW = 0ULL;
-    if (_rays[WEST][sq] & victims) {
-        index = _bitscanreverse(victims & _rays[WEST][sq]);
-        if (piece_type_at(index) == 3 || piece_type_at(index) == 4) {
-            attacksW = _rays[WEST][sq];
-            attacksW &= ~_rays[WEST][index];
-        }
-    }
-	
-	if (popcount(attacksN & blockers) == 1) {
-		pin_hv |= attacksN;
-	}
-    if (popcount(attacksS & blockers) == 1) {
-        pin_hv |= attacksS;
-    }
-    if (popcount(attacksE & blockers) == 1) {
-        pin_hv |= attacksE;
-    }
-    if (popcount(attacksW & blockers) == 1) {
-        pin_hv |= attacksW;
-    }
-	
-    U64 bishop_moveNW = 0ULL;
-    if (_rays[NORTH_WEST][sq] & victims) {
-        index = _bitscanforward(victims & _rays[NORTH_WEST][sq]);
-        if (piece_type_at(index) == 2 || piece_type_at(index) == 4) {
-            bishop_moveNW = _rays[NORTH_WEST][sq];
-            bishop_moveNW &= ~_rays[NORTH_WEST][index];
-        }
-    }
-
-    U64 bishop_moveNE = 0ULL;
-    if (_rays[NORTH_EAST][sq] & victims) {
-        index = _bitscanforward(victims & _rays[NORTH_EAST][sq]);
-        if (piece_type_at(index) == 2 || piece_type_at(index) == 4) {
-            bishop_moveNE = _rays[NORTH_EAST][sq];
-            bishop_moveNE &= ~_rays[NORTH_EAST][index];
-        }
-    }
-
-    U64 bishop_moveSW = 0ULL;
-    if (_rays[SOUTH_WEST][sq] & victims) {
-        index = _bitscanreverse(victims & _rays[SOUTH_WEST][sq]);
-        if (piece_type_at(index) == 2 || piece_type_at(index) == 4) {
-            bishop_moveSW = _rays[SOUTH_WEST][sq];
-            bishop_moveSW &= ~_rays[SOUTH_WEST][index];
-        }
-    }
-
-    U64 bishop_moveSE = 0ULL;
-    if (_rays[SOUTH_EAST][sq] & victims) {
-        index = _bitscanreverse(victims & _rays[SOUTH_EAST][sq]);
-        if (piece_type_at(index) == 2 || piece_type_at(index) == 4) {
-            bishop_moveSE = _rays[SOUTH_EAST][sq];
-            bishop_moveSE &= ~_rays[SOUTH_EAST][index];
-        }
-    }
-    if (popcount(bishop_moveNW & blockers) == 1) {
-        pin_dg |= bishop_moveNW;
-    }
-    if (popcount(bishop_moveNE & blockers) == 1) {
-        pin_dg |= bishop_moveNE;
-    }
-    if (popcount(bishop_moveSW & blockers) == 1) {
-        pin_dg |= bishop_moveSW;
-    }
-    if (popcount(bishop_moveSE & blockers) == 1) {
-        pin_dg |= bishop_moveSE;
-    }
 }
 
 // creates the checkmask
 U64 Board::create_checkmask(bool IsWhite, int8_t sq) {
-    U64 us = IsWhite ? White : Black;
-    U64 enemy = IsWhite ? Black : White;
     U64 checks = 0ULL;
-    int index = 0;
-
-    // reset doublecheck var
+    U64 pawn_mask   = Pawns(!IsWhite) & GetPawnAttacks(IsWhite, sq);
+    U64 knight_mask = Knights(!IsWhite) & GetKnightAttacks(sq);
+    U64 bishop_mask = (Bishops(!IsWhite) | Queens(!IsWhite)) & GetBishopAttacks(sq, Occ) & ~OwnColor(IsWhite);
+    U64 rook_mask   = (Rooks(!IsWhite) | Queens(!IsWhite)) & GetRookAttacks(sq, Occ) & ~OwnColor(IsWhite);
     doublecheck = 0;
-
-    if (_rays[NORTH][sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[NORTH][sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            // If this is true the ray is not hitting a piece from us
-            if (not(_rays[NORTH][sq] & us)) {
-                checks |= _rays[NORTH][sq] & ~_rays[NORTH][index];
-                doublecheck++;
-            }
-            else {
-                // We hit a piece from us. If the distance to it is smaller than to the blocker we cannot block the check
-                int blockedus = _bitscanforward(_rays[NORTH][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    checks |= _rays[NORTH][sq] & ~_rays[NORTH][index];
-                    doublecheck++;
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH][sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH][sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH][sq] & us)) {
-                checks |= _rays[SOUTH][sq] & ~_rays[SOUTH][index];
-                doublecheck++;
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    checks |= _rays[SOUTH][sq] & ~_rays[SOUTH][index];
-                    doublecheck++;
-                }
-            }
-        }
-    }
-
-    if (_rays[EAST][sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[EAST][sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[EAST][sq] & us)) {
-                checks |= _rays[EAST][sq] & ~_rays[EAST][index];
-                doublecheck++;
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[EAST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    checks |= _rays[EAST][sq] & ~_rays[EAST][index];
-                    doublecheck++;
-                }
-            }
-        }
-    }
-
-    if (_rays[WEST][sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[WEST][sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[WEST][sq] & us)) {
-                checks |= _rays[WEST][sq] & ~_rays[WEST][index];
-                doublecheck++;
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[WEST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    checks |= _rays[WEST][sq] & ~_rays[WEST][index];
-                    doublecheck++;
-                }
-            }
-        }
-    }
-
-    if (_rays[NORTH_WEST][sq] & enemy) {
-
-        index = _bitscanforward(enemy & _rays[NORTH_WEST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                checks |= _rays[NORTH_WEST][sq] & ~_rays[NORTH_WEST][index];
-                doublecheck++;
-            }
-        }
-        if (IsWhite and _test_bit(EnemyPawn(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                checks |= _rays[NORTH_WEST][sq] & ~_rays[NORTH_WEST][index];
-                doublecheck++;
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[NORTH_WEST][sq] & us)) {
-                checks |= _rays[NORTH_WEST][sq] & ~_rays[NORTH_WEST][index];
-                doublecheck++;
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[NORTH_WEST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    checks |= _rays[NORTH_WEST][sq] & ~_rays[NORTH_WEST][index];
-                    doublecheck++;
-                }
-            }
-        }
-    }
-
-    if (_rays[NORTH_EAST][sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[NORTH_EAST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                checks |= _rays[NORTH_EAST][sq] & ~_rays[NORTH_EAST][index];
-                doublecheck++;
-            }
-        }
-        if (IsWhite and _test_bit(EnemyPawn(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                checks |= _rays[NORTH_EAST][sq] & ~_rays[NORTH_EAST][index];
-                doublecheck++;
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-
-            if (not(_rays[NORTH_EAST][sq] & us)) {
-                checks |= _rays[NORTH_EAST][sq] & ~_rays[NORTH_EAST][index];
-                doublecheck++;
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[NORTH_EAST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    checks |= _rays[NORTH_EAST][sq] & ~_rays[NORTH_EAST][index];
-                    doublecheck++;
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH_WEST][sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH_WEST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                checks |= _rays[SOUTH_WEST][sq] & ~_rays[SOUTH_WEST][index];
-                doublecheck++;
-            }
-        }
-        if (!IsWhite and _test_bit(EnemyPawn(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                checks |= _rays[SOUTH_WEST][sq] & ~_rays[SOUTH_WEST][index];
-                doublecheck++;
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH_WEST][sq] & us)) {
-                checks |= _rays[SOUTH_WEST][sq] & ~_rays[SOUTH_WEST][index];
-                doublecheck++;
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH_WEST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    checks |= _rays[SOUTH_WEST][sq] & ~_rays[SOUTH_WEST][index];
-                    doublecheck++;
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH_EAST][sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH_EAST][sq]);
-        if (_test_bit(EnemyKing(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                checks |= _rays[SOUTH_EAST][sq] & ~_rays[SOUTH_EAST][index];
-                doublecheck++;
-            }
-        }
-        if (!IsWhite and _test_bit(EnemyPawn(IsWhite), index)) {
-            if (square_distance(sq, index) == 1) {
-                checks |= _rays[SOUTH_EAST][sq] & ~_rays[SOUTH_EAST][index];
-                doublecheck++;
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH_EAST][sq] & us)) {
-                checks |= _rays[SOUTH_EAST][sq] & ~_rays[SOUTH_EAST][index];
-                doublecheck++;
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH_EAST][sq] & us);
-                if (square_distance(index, sq) < square_distance(blockedus, sq)) {
-                    checks |= _rays[SOUTH_EAST][sq] & ~_rays[SOUTH_EAST][index];
-                    doublecheck++;
-                }
-            }
-        }
-    }
-
-    if (knightattacks[sq] & (Knights(!IsWhite) & enemy)) {
+    if (pawn_mask) {
+        checks |= pawn_mask;
         doublecheck++;
-        checks |= knightattacks[sq] & Knights(!IsWhite) & enemy;
     }
-
-    return checks;
-}
-
-// checks if removing the piece at square would be an attack on our king
-U64 Board::would_be_attack(bool IsWhite, int8_t sq) {
-    U64 us = IsWhite ? White : Black;
-    U64 enemy = IsWhite ? Black : White;
-    U64 checks = 0ULL;
-    int index = 0;
-    int king_sq = _bitscanforward(King(IsWhite));
-    enemy &= ~(1ULL << sq);
-
-    if (_rays[NORTH][king_sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[NORTH][king_sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            // If this is true the ray is not hitting a piece from us
-            if (not(_rays[NORTH][king_sq] & us)) {
-                checks |= _rays[NORTH][king_sq] & ~_rays[NORTH][index];
-            }
-            else {
-                // We hit a piece from us. If the distance to it is smaller than to the blocker we cannot block the check
-                int blockedus = _bitscanforward(_rays[NORTH][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[NORTH][king_sq] & ~_rays[NORTH][index];
-                }
-            }
-        }
+    if (knight_mask) {
+        checks |= knight_mask;
+        doublecheck++;
     }
-
-    if (_rays[SOUTH][king_sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH][king_sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH][king_sq] & us)) {
-                checks |= _rays[SOUTH][king_sq] & ~_rays[SOUTH][index];
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[SOUTH][king_sq] & ~_rays[SOUTH][index];
-                }
-            }
-        }
+    if (bishop_mask) {
+        int8_t index = _bitscanforward(bishop_mask);
+        checks |= SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
+        doublecheck++;
     }
-
+    if (rook_mask) {
+        int8_t index = _bitscanforward(rook_mask);
+        checks |= SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
+        doublecheck++;
+    }
     return checks;
 }
 
 bool Board::gives_check(Move& move) {
     make_move(move);
-    bool inCheck = is_square_attacked(side_to_move, King(side_to_move));
+    bool inCheck = is_square_attacked(side_to_move, _bitscanforward(King(side_to_move)));
     unmake_move(move);
 	return inCheck;
-}
-
-// detects if the piece is pinned horizontal or vertical and returns the mask
-U64 Board::is_pinned_hv(bool IsWhite, int8_t sq) {
-    U64 enemy;
-    U64 us;
-    enemy = IsWhite ? Black : White;
-    us = IsWhite ? White : Black;
-    int index;
-    U64 checks = 0ULL;
-    int king_sq = _bitscanforward(King(IsWhite));
-    us &= ~(1ULL << sq);
-    if (_rays[NORTH][king_sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[NORTH][king_sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            // If this is true the ray is not hitting a piece from us
-            if (not(_rays[NORTH][king_sq] & us)) {
-                checks |= _rays[NORTH][king_sq] & ~_rays[NORTH][index];
-            }
-            else {
-                // We hit a piece from us. If the distance to it is smaller than to the blocker we cannot block the check
-                int blockedus = _bitscanforward(_rays[NORTH][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[NORTH][king_sq] & ~_rays[NORTH][index];
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH][king_sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH][king_sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH][king_sq] & us)) {
-                checks |= _rays[SOUTH][king_sq] & ~_rays[SOUTH][index];
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[SOUTH][king_sq] & ~_rays[SOUTH][index];
-                }
-            }
-        }
-    }
-
-    if (_rays[EAST][king_sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[EAST][king_sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[EAST][king_sq] & us)) {
-                checks |= _rays[EAST][king_sq] & ~_rays[EAST][index];
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[EAST][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[EAST][king_sq] & ~_rays[EAST][index];
-                }
-            }
-        }
-    }
-
-    if (_rays[WEST][king_sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[WEST][king_sq]);
-        if (_test_bit(EnemyRookQueen(IsWhite), index)) {
-            if (not(_rays[WEST][king_sq] & us)) {
-                checks |= _rays[WEST][king_sq] & ~_rays[WEST][index];
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[WEST][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[WEST][king_sq] & ~_rays[WEST][index];
-                }
-            }
-        }
-    }
-    return checks;
-}
-
-// detects if the piece is pinned diagonal and returns the mask
-U64 Board::is_pinned_dg(bool IsWhite, int8_t sq) {
-    U64 enemy;
-    U64 us;
-    if (IsWhite) {
-        enemy = Black;
-        us = White;
-    }
-    else {
-        enemy = White;
-        us = Black;
-    }
-    int index;
-    U64 checks = 0ULL;
-    int king_sq = _bitscanforward(King(IsWhite));
-
-    us &= ~(1ULL << sq);
-    if (_rays[NORTH_WEST][king_sq] & enemy) {
-
-        index = _bitscanforward(enemy & _rays[NORTH_WEST][king_sq]);
-        if (_test_bit(EnemyKingPawn(IsWhite), index)) {
-            if (square_distance(king_sq, index) == 1) {
-                checks |= _rays[NORTH_WEST][king_sq] & ~_rays[NORTH_WEST][index];
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[NORTH_WEST][king_sq] & us)) {
-                checks |= _rays[NORTH_WEST][king_sq] & ~_rays[NORTH_WEST][index];
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[NORTH_WEST][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[NORTH_WEST][king_sq] & ~_rays[NORTH_WEST][index];
-                }
-            }
-        }
-    }
-
-    if (_rays[NORTH_EAST][king_sq] & enemy) {
-        index = _bitscanforward(enemy & _rays[NORTH_EAST][king_sq]);
-        if (_test_bit(EnemyKingPawn(IsWhite), index)) {
-            if (square_distance(king_sq, index) == 1) {
-                checks |= _rays[NORTH_EAST][king_sq] & ~_rays[NORTH_EAST][index];
-            }
-        }
-
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-
-            if (not(_rays[NORTH_EAST][king_sq] & us)) {
-                checks |= _rays[NORTH_EAST][king_sq] & ~_rays[NORTH_EAST][index];
-            }
-            else {
-                int blockedus = _bitscanforward(_rays[NORTH_EAST][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[NORTH_EAST][king_sq] & ~_rays[NORTH_EAST][index];
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH_WEST][king_sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH_WEST][king_sq]);
-        if (_test_bit(EnemyKingPawn(IsWhite), index)) {
-            if (square_distance(king_sq, index) == 1) {
-                checks |= _rays[SOUTH_WEST][king_sq] & ~_rays[SOUTH_WEST][index];
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH_WEST][king_sq] & us)) {
-                checks |= _rays[SOUTH_WEST][king_sq] & ~_rays[SOUTH_WEST][index];
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH_WEST][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[SOUTH_WEST][king_sq] & ~_rays[SOUTH_WEST][index];
-                }
-            }
-        }
-    }
-
-    if (_rays[SOUTH_EAST][king_sq] & enemy) {
-        index = _bitscanreverse(enemy & _rays[SOUTH_EAST][king_sq]);
-        if (_test_bit(EnemyKingPawn(IsWhite), index)) {
-            if (square_distance(king_sq, index) == 1) {
-                checks |= _rays[SOUTH_EAST][king_sq] & ~_rays[SOUTH_EAST][index];
-            }
-        }
-        if (_test_bit(EnemyBishopQueen(IsWhite), index)) {
-            if (not(_rays[SOUTH_EAST][king_sq] & us)) {
-                checks |= _rays[SOUTH_EAST][king_sq] & ~_rays[SOUTH_EAST][index];
-            }
-            else {
-                int blockedus = _bitscanreverse(_rays[SOUTH_EAST][king_sq] & us);
-                if (square_distance(index, king_sq) < square_distance(blockedus, king_sq)) {
-                    checks |= _rays[SOUTH_EAST][king_sq] & ~_rays[SOUTH_EAST][index];
-                }
-            }
-        }
-    }
-    if (not(_test_bit(checks, sq))) {
-        return 0ULL;
-    }
-    return checks;
 }
 
 // initialises variables for move generation
@@ -1625,7 +973,6 @@ void Board::init(bool IsWhite) {
 }
 
 void Board::make_move(Move& move) {
-
     int from_square = move.from_square;
     int to_square = move.to_square;
     int promotion_piece = move.promotion;
@@ -1636,265 +983,219 @@ void Board::make_move(Move& move) {
     bool IsWhite = side_to_move ? 0 : 1;
     bool enemy = side_to_move ^ 1;
 
-    // piece needs to be set at its bitboard remove this for performance if you are 100% theres a piece at that square
-    if (not _test_bit(bitboards[piece], to_square)) {
-        save_board_state();
-        // Capture
-        if (captured_piece == WROOK) {
-            if (to_square == 7) {
-                if (castling_rights & wk) {
-                    castling_rights ^= wk;
-                    board_hash ^= RANDOM_ARRAY[768];
-                }
-            }
-            if (to_square == 0) {
-                if (castling_rights & wq) {
-                    castling_rights ^= wq;
-                    board_hash ^= RANDOM_ARRAY[768 + 1];
-                }
-            }
+    save_board_state();
+    // Capture
+    if (captured_piece == WROOK) {
+        if (to_square == 7 && castling_rights & wk) {
+            castling_rights ^= wk;
+            board_hash ^= RANDOM_ARRAY[768];
         }
-        if (captured_piece == BROOK) {
-            if (to_square == 63) {
-                if (castling_rights & bk) {
-                    castling_rights ^= bk;
-                    board_hash ^= RANDOM_ARRAY[768 + 2];
-                }
-            }
-            if (to_square == 56) {
-                if (castling_rights & bq) {
-                    castling_rights ^= bq;
-                    board_hash ^= RANDOM_ARRAY[768 + 3];
-                }
-            }
+        if (to_square == 0 && castling_rights & wq) {
+            castling_rights ^= wq;
+            board_hash ^= RANDOM_ARRAY[768 + 1];
         }
-        // Halfmove
-        if (piece == WPAWN or piece == BPAWN or captured_piece != -1) {
-            half_moves = 0;
+    }
+    if (captured_piece == BROOK) {
+        if (to_square == 63 && castling_rights & bk) {
+            castling_rights ^= bk;
+            board_hash ^= RANDOM_ARRAY[768 + 2];
         }
-        else {
-            half_moves++;
+        if (to_square == 56 && castling_rights & bq) {
+            castling_rights ^= bq;
+            board_hash ^= RANDOM_ARRAY[768 + 3];
         }
-        // King move loses castle rights
-        if (piece == WKING) {
-            if (to_square != 6 and to_square != 2) {
-                if (castling_rights & 1) {
-                    castling_rights &= ~(1);
-                    board_hash ^= RANDOM_ARRAY[768];
-                }
-                if (castling_rights & 2) {
-                    castling_rights &= ~(2);
-                    board_hash ^= RANDOM_ARRAY[768 + 1];
-                }
-            }
-        }
-        if (piece == BKING) {
-            if (to_square != 62 and to_square != 58) {
-                if (castling_rights & 4) {
-                    castling_rights &= ~(4);
-                    board_hash ^= RANDOM_ARRAY[768 + 2];
-                }
-                if (castling_rights & 8) {
-                    castling_rights &= ~(8);
-                    board_hash ^= RANDOM_ARRAY[768 + 3];
-                }
-            }
-
-        }
-        // Rook move loses castle rights
-        if (piece == WROOK) {
-            if (from_square == 7 and castling_rights & wk) {
-                castling_rights ^= wk;
-                board_hash ^= RANDOM_ARRAY[768];
-            }
-            if (from_square == 0 and castling_rights & wq) {
-                castling_rights ^= wq;
-                board_hash ^= RANDOM_ARRAY[768 + 1];
-            }
-        }
-        if (piece == BROOK) {
-            if (from_square == 63 and castling_rights & bk) {
-                castling_rights ^= bk;
-                board_hash ^= RANDOM_ARRAY[768 + 2];
-            }
-            if (from_square == 56 and castling_rights & bq) {
-                castling_rights ^= bq;
-                board_hash ^= RANDOM_ARRAY[768 + 3];
-            }
-        }
-
+    }
+    // Halfmove
+    if (piece == WPAWN or piece == BPAWN or captured_piece != -1) {
+        half_moves = 0;
+    }
+    else {
+        half_moves++;
+    }
+    // King move loses castle rights
+    if (piece == WKING) {
         // Actual castling
-        if (piece == WKING and square_distance(from_square, to_square) == 2) {
+        if (square_distance(from_square, to_square) == 2) {
             if (to_square == 6 and _test_bit(bitboards[WROOK], 7)) {
                 if (castling_rights & wk) {
-                    if (castling_rights & wq) {
-                        board_hash ^= RANDOM_ARRAY[768 + 1];
-                    }
-                    castling_rights &= ~(1);
-                    castling_rights &= ~(2);
                     bitboards[WROOK] &= ~(1ULL << 7);
                     bitboards[WROOK] |= (1ULL << 5);
+					
                     board_pieces[7] = -1;
                     board_pieces[5] = WROOK;
-                    board_hash ^= RANDOM_ARRAY[768];
+					
                     board_hash ^= RANDOM_ARRAY[64 * (2 * 3 + 1) + 7];
                     board_hash ^= RANDOM_ARRAY[64 * (2 * 3 + 1) + 5];
                 }
             }
             if (to_square == 2 and _test_bit(bitboards[WROOK], 0)) {
                 if (castling_rights & wq) {
-                    if (castling_rights & wk) {
-                        board_hash ^= RANDOM_ARRAY[768];
-                    }
-                    castling_rights &= ~(1);
-                    castling_rights &= ~(2);
                     bitboards[WROOK] &= ~(1ULL << 0);
                     bitboards[WROOK] |= (1ULL << 3);
+					
                     board_pieces[0] = -1;
                     board_pieces[3] = WROOK;
-                    board_hash ^= RANDOM_ARRAY[768 + 1];
+
 
                     board_hash ^= RANDOM_ARRAY[64 * (2 * 3 + 1) + 0];
                     board_hash ^= RANDOM_ARRAY[64 * (2 * 3 + 1) + 3];
                 }
             }
         }
-        if (piece == BKING and square_distance(from_square, to_square) == 2) {
+        if (castling_rights & wk)
+            board_hash ^= RANDOM_ARRAY[768];
+		
+        if (castling_rights & wq)
+            board_hash ^= RANDOM_ARRAY[768 + 1];
+		
+        castling_rights &= ~(1);
+        castling_rights &= ~(2);
+    }
+    if (piece == BKING) {
+        if (square_distance(from_square, to_square) == 2) {
             if (to_square == 62 and _test_bit(bitboards[BROOK], 63)) {
                 if (castling_rights & bk) {
-                    if (castling_rights & bq) {
-                        board_hash ^= RANDOM_ARRAY[768 + 3];
-                    }
-                    castling_rights &= ~(4);
-                    castling_rights &= ~(8);
                     bitboards[BROOK] &= ~(1ULL << 63);
                     bitboards[BROOK] |= (1ULL << 61);
+					
                     board_pieces[63] = -1;
                     board_pieces[61] = BROOK;
-                    board_hash ^= RANDOM_ARRAY[768 + 2];
+
                     board_hash ^= RANDOM_ARRAY[64 * (2 * 3) + 63];
                     board_hash ^= RANDOM_ARRAY[64 * (2 * 3) + 61];
                 }
             }
             if (to_square == 58 and _test_bit(bitboards[BROOK], 56)) {
                 if (castling_rights & bq) {
-                    if (castling_rights & bk) {
-                        board_hash ^= RANDOM_ARRAY[768 + 2];
-                    }
-                    castling_rights &= ~(4);
-                    castling_rights &= ~(8);
                     bitboards[BROOK] &= ~(1ULL << 56);
                     bitboards[BROOK] |= (1ULL << 59);
+					
                     board_pieces[56] = -1;
                     board_pieces[59] = BROOK;
-                    board_hash ^= RANDOM_ARRAY[768 + 3];
+
                     board_hash ^= RANDOM_ARRAY[64 * (2 * 3) + 56];
                     board_hash ^= RANDOM_ARRAY[64 * (2 * 3) + 59];
                 }
             }
         }
-
-        // Remove enemy piece if en passant capture
-        if ((abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9)) {
-            if (piece == WPAWN and square_rank(to_square) == 5 and piece_at_square(to_square - 8) == BPAWN and piece_at_square(to_square) == -1) { //
-                en_passant_square = no_sq;
-                bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
-                board_pieces[to_square - 8] = -1;
-                board_hash ^= RANDOM_ARRAY[64 * (2 * 0) + to_square - 8];
-                board_hash ^= RANDOM_ARRAY[772 + square_file(to_square)];
-
-            }
-            if (piece == BPAWN and square_rank(to_square) == 2 and piece_at_square(to_square + 8) == WPAWN and piece_at_square(to_square) == -1) {
-                en_passant_square = no_sq;
-                bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
-                board_pieces[to_square + 8] = -1;
-                board_hash ^= RANDOM_ARRAY[64 * (2 * 0 + 1) + to_square + 8];
-                board_hash ^= RANDOM_ARRAY[772 + square_file(to_square)];
-            }
+        if (castling_rights & bq)
+            board_hash ^= RANDOM_ARRAY[768 + 3];
+        
+        if (castling_rights & bk)
+            board_hash ^= RANDOM_ARRAY[768 + 2];
+        
+        castling_rights &= ~(4);
+        castling_rights &= ~(8);
+    }
+    // Rook move loses castle rights
+    if (piece == WROOK) {
+        if (from_square == 7 && castling_rights & wk) {
+            castling_rights ^= wk;
+            board_hash ^= RANDOM_ARRAY[768];
         }
-        // remove en passant if it wasnt played immediately
-        if (en_passant_square != no_sq) {
-            board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
+        if (from_square == 0 && castling_rights & wq) {
+            castling_rights ^= wq;
+            board_hash ^= RANDOM_ARRAY[768 + 1];
+        }
+    }
+    if (piece == BROOK) {
+        if (from_square == 63 && castling_rights & bk) {
+            castling_rights ^= bk;
+            board_hash ^= RANDOM_ARRAY[768 + 2];
+        }
+        if (from_square == 56 && castling_rights & bq) {
+            castling_rights ^= bq;
+            board_hash ^= RANDOM_ARRAY[768 + 3];
+        }
+    }
+
+    // Remove enemy piece if en passant capture
+    if ((abs(from_square - to_square) == 7 or abs(from_square - to_square) == 9)) {
+        if (piece == WPAWN and square_rank(to_square) == 5 and piece_at_square(to_square - 8) == BPAWN and piece_at_square(to_square) == -1) { //
             en_passant_square = no_sq;
-        }
+            bitboards[BPAWN] &= ~(1ULL << (to_square - 8));
+            board_pieces[to_square - 8] = -1;
+            board_hash ^= RANDOM_ARRAY[64 * (2 * 0) + to_square - 8];
+            board_hash ^= RANDOM_ARRAY[772 + square_file(to_square)];
 
-        // set en passant square if pawns double move
-        if (piece == WPAWN and (from_square - to_square) == -16) {
-            U64 ep_square = 1ULL << (from_square + 8);
-            U64 ep_mask = ((Pawn_AttackLeft(IsWhite, ep_square)) & not_h_file) | ((Pawn_AttackRight(IsWhite, ep_square) & not_a_file));
-            if (ep_mask & bitboards[BPAWN]) {
-                en_passant_square = from_square + 8;
-                board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
-            }
         }
-        if (piece == BPAWN and (from_square - to_square) == 16) {
-            U64 ep_square = 1ULL << (from_square - 8);
-            U64 ep_mask = ((Pawn_AttackLeft(IsWhite, ep_square)) & not_h_file) | ((Pawn_AttackRight(IsWhite, ep_square) & not_a_file));
-            if (ep_mask & bitboards[WPAWN]) {
-                en_passant_square = from_square - 8;
-                board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
-            }
+        if (piece == BPAWN and square_rank(to_square) == 2 and piece_at_square(to_square + 8) == WPAWN and piece_at_square(to_square) == -1) {
+            en_passant_square = no_sq;
+            bitboards[WPAWN] &= ~(1ULL << (to_square + 8));
+            board_pieces[to_square + 8] = -1;
+            board_hash ^= RANDOM_ARRAY[64 * (2 * 0 + 1) + to_square + 8];
+            board_hash ^= RANDOM_ARRAY[772 + square_file(to_square)];
         }
+    }
+    // remove en passant if it wasnt played immediately
+    if (en_passant_square != no_sq) {
+        board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
+        en_passant_square = no_sq;
+    }
 
-        // Remove piece
-        bitboards[piece] &= ~(1ULL << from_square);
-        // Set piece
-        bitboards[piece] |= (1ULL << to_square);
-        // Remove
-        board_pieces[from_square] = -1;
-        // Set
-        board_pieces[to_square] = piece;
-        // Remove
-        board_hash ^= RANDOM_ARRAY[64 * (2 * move.piece + IsWhite) + from_square];
-        // Set
+    // set en passant square if pawns double move
+    if (piece == WPAWN and (from_square - to_square) == -16) {
+        if (GetPawnAttacks(true, from_square + 8) & bitboards[BPAWN]) {
+            en_passant_square = from_square + 8;
+            board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
+        }
+    }
+    if (piece == BPAWN and (from_square - to_square) == 16) {
+        if (GetPawnAttacks(false, from_square - 8) & bitboards[WPAWN]) {
+            en_passant_square = from_square - 8;
+            board_hash ^= RANDOM_ARRAY[772 + square_file(en_passant_square)];
+        }
+    }
+
+    // Remove piece
+    bitboards[piece] &= ~(1ULL << from_square);
+    // Set piece
+    bitboards[piece] |= (1ULL << to_square);
+    // Remove
+    board_pieces[from_square] = -1;
+    // Set
+    board_pieces[to_square] = piece;
+    // Remove
+    board_hash ^= RANDOM_ARRAY[64 * (2 * move.piece + IsWhite) + from_square];
+    // Set
+    board_hash ^= RANDOM_ARRAY[64 * (2 * move.piece + IsWhite) + to_square];
+    // Remove captured piece
+    if (captured_piece != -1) {
+        bitboards[captured_piece] &= ~(1ULL << to_square);
+        board_hash ^= RANDOM_ARRAY[64 * (2 * (captured_piece - (6 * enemy)) + !IsWhite) + to_square];
+    }
+
+    // Promotion
+    if (promotion_piece > 0 and promotion_piece < 7) {
+        board_hash ^= RANDOM_ARRAY[64 * (2 * promotion_piece + IsWhite) + to_square];
         board_hash ^= RANDOM_ARRAY[64 * (2 * move.piece + IsWhite) + to_square];
-        // Remove captured piece
-        if (captured_piece != -1) {
-            bitboards[captured_piece] &= ~(1ULL << to_square);
-            board_hash ^= RANDOM_ARRAY[64 * (2 * (captured_piece - (6 * enemy)) + !IsWhite) + to_square];
-        }
 
-        // Promotion
-        if (promotion_piece > 0 and promotion_piece < 7) {
-            board_hash ^= RANDOM_ARRAY[64 * (2 * promotion_piece + IsWhite) + to_square];
-            board_hash ^= RANDOM_ARRAY[64 * (2 * move.piece + IsWhite) + to_square];
-
-            promotion_piece = promotion_piece + (side_to_move * 6);
-            bitboards[piece] &= ~(1ULL << to_square);
-            bitboards[promotion_piece] |= (1ULL << to_square);
-            board_pieces[to_square] = promotion_piece;
-        }
-
-        // Swap color
-        side_to_move ^= 1;
-        board_hash ^= RANDOM_ARRAY[780];
-        //Update
-        update_occupancies();
-        //add_repetition(board_hash);
-        gameHistory[full_moves] = board_hash;
-        full_moves++;
+        promotion_piece = promotion_piece + (side_to_move * 6);
+        bitboards[piece] &= ~(1ULL << to_square);
+        bitboards[promotion_piece] |= (1ULL << to_square);
+        board_pieces[to_square] = promotion_piece;
     }
-    else {
-        // Not valid move
-        print_board();
-        std::cout << "piece " << piece_type(piece) << " from " << from_square << " to " << to_square << "\n";
-        std::cout << "Not valid move" << castling_rights << std::endl;
-    }
+
+    // Swap color
+    side_to_move ^= 1;
+    board_hash ^= RANDOM_ARRAY[780];
+    //Update
+    update_occupancies();
+
+    gameHistory[full_moves] = board_hash;
+    full_moves++;
 };
 
 void Board::unmake_move(Move& move) {
-    if (move_stack.size() > 0) {
-        BoardState board;
-        board = move_stack.top();
+    if (move_stack_index >= 0) {
+        move_stack_index--;
+        BoardState board = move_stack[move_stack_index];
 		
         en_passant_square = board.en_passant;
         castling_rights = board.castle_rights;
-        //remove_repetition(board_hash);
         gameHistory[full_moves] = 0;
         board_hash = board.board_hash;
         half_moves = board.half_move;
-
-        
         
         side_to_move ^= 1;		
         int piece = move.piece + (side_to_move * 6);
@@ -1953,9 +1254,7 @@ void Board::unmake_move(Move& move) {
         }
 
         update_occupancies();
-        move_stack.pop();
         full_moves--;
-
     }
     else {
         //Tried to unmake a move although theres no previous move
@@ -1972,35 +1271,33 @@ void Board::make_null_move() {
 }
 
 void Board::unmake_null_move() {
-    if (move_stack.size() > 0) {
-        BoardState board;
-        board = move_stack.top();
+    if (move_stack_index >= 0) {
+        move_stack_index--;
+        BoardState board = move_stack[move_stack_index];
         side_to_move ^= 1;
         board_hash ^= RANDOM_ARRAY[780];
         en_passant_square = board.en_passant;
         full_moves--;
-        move_stack.pop();
     }
 }
 
 MoveList Board::generate_legal_moves() {
-    Move move;
+    Move move{};
     MoveList possible_moves{};
     possible_moves.size = 0;
     int from_index = 0;
     U64 we = side_to_move ? Black : White;
     bool IsWhite = side_to_move ? false : true;
-    U64 pawn_mask = (bitboards[BPAWN] | bitboards[WPAWN]) & we;
-    U64 knight_mask = (bitboards[BKNIGHT] | bitboards[WKNIGHT]) & we;
-    U64 bishop_mask = (bitboards[BBISHOP] | bitboards[WBISHOP]) & we;
-    U64 rook_mask = (bitboards[BROOK] | bitboards[WROOK]) & we;
-    U64 queen_mask = (bitboards[BQUEEN] | bitboards[WQUEEN]) & we;
-    U64 king_mask = (bitboards[BKING] | bitboards[WKING]) & we;
-    int king_sq = _bitscanforward(king_mask);
+
     init(IsWhite);
     U64 move_mask = 0ULL;
     
     if (doublecheck < 2) {
+        U64 pawn_mask = (bitboards[BPAWN] | bitboards[WPAWN]) & we;
+        U64 knight_mask = (bitboards[BKNIGHT] | bitboards[WKNIGHT]) & we;
+        U64 bishop_mask = (bitboards[BBISHOP] | bitboards[WBISHOP]) & we;
+        U64 rook_mask = (bitboards[BROOK] | bitboards[WROOK]) & we;
+        U64 queen_mask = (bitboards[BQUEEN] | bitboards[WQUEEN]) & we;
         while (pawn_mask) {
             from_index = _bitscanforward(pawn_mask);
             move_mask = legal_pawn_moves(IsWhite, from_index, en_passant_square);
@@ -2095,7 +1392,8 @@ MoveList Board::generate_legal_moves() {
             pop_lsb(queen_mask);
         }
     }
-
+	
+    int king_sq = _bitscanforward(King(IsWhite));
     move_mask = legal_king_moves(IsWhite, king_sq);
     while (move_mask) {
         int to_index = pop_lsb(move_mask);
@@ -2107,7 +1405,6 @@ MoveList Board::generate_legal_moves() {
         possible_moves.movelist[possible_moves.size] = move;
         possible_moves.size++;  
     }
-    
     return possible_moves;
 }
 
@@ -2247,6 +1544,16 @@ MoveList Board::generate_non_quite_moves() {
         possible_moves.size++;
     }
     return possible_moves;
+}
+
+// returns diagonal of given square
+uint8_t Board::diagonal_of(int8_t sq) {
+    return 7 + square_rank(sq) - square_file(sq);
+}
+
+// returns anti diagonal of given square
+uint8_t Board::anti_diagonal_of(int8_t sq) {
+    return square_rank(sq) + square_file(sq);
 }
 
 U64 Perft::speed_test_perft(int depth, int max) {

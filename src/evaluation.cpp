@@ -137,14 +137,14 @@ int evaluation() {
 	int king_sq_white = _bitscanforward(board->King(true));
 	int king_sq_black = _bitscanforward(board->King(false));
 	if (king_sq_white == 6) {
-		if (!_test_bit(board->bitboards[board->WPAWN], 14) ||
-			!_test_bit(board->bitboards[board->WPAWN], 15)) {
+		if (!_test_bit(board->bitboards[WPAWN], 14) ||
+			!_test_bit(board->bitboards[WPAWN], 15)) {
 			eval_mg -= 10;
 		}
 	}
 	if (king_sq_black == 62) {
-		if (!_test_bit(board->bitboards[board->BPAWN], 54) ||
-			!_test_bit(board->bitboards[board->BPAWN], 55)) {
+		if (!_test_bit(board->bitboards[BPAWN], 54) ||
+			!_test_bit(board->bitboards[BPAWN], 55)) {
 			eval_mg += 10;
 		}
 	}
