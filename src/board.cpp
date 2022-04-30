@@ -945,11 +945,17 @@ U64 Board::create_checkmask(bool IsWhite, int8_t sq) {
         doublecheck++;
     }
     if (bishop_mask) {
+        if (popcount(bishop_mask) > 1)
+            doublecheck++;
+
         int8_t index = _bitscanforward(bishop_mask);
         checks |= SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
         doublecheck++;
     }
     if (rook_mask) {
+        if (popcount(rook_mask) > 1)
+            doublecheck++;
+
         int8_t index = _bitscanforward(rook_mask);
         checks |= SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
         doublecheck++;
@@ -1581,7 +1587,7 @@ U64 Perft::speed_test_perft(int depth, int max) {
             }
         }
     }
-    
+
     U64 c = 0;
     std::string square_to_coordinates[64] = {
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
